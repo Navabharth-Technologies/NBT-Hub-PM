@@ -31,13 +31,13 @@ const SECTIONS = [
       { key: 'father_husband_name', label: "Father/Husband's Name", type: 'text' },
       { key: 'category', label: 'Category', type: 'select', options: ['General', 'OBC', 'SC', 'ST', 'Other'] },
       { key: 'pan_number', label: 'PAN Number', type: 'text', placeholder: 'ABCDE1234F' },
-      { key: 'pan_proof', label: 'PAN Card Proof', type: 'file' },
+      { key: 'pancard_photo', label: 'PAN Card Proof', type: 'file' },
       { key: 'aadhar_number', label: 'Aadhar Number', type: 'text', placeholder: '1234 5678 9012' },
-      { key: 'aadhar_proof', label: 'Aadhar Card Proof', type: 'file' },
+      { key: 'adharcard_photo', label: 'Aadhar Card Proof', type: 'file' },
       { key: 'voter_id', label: 'Voter ID Number', type: 'text' },
-      { key: 'voter_proof', label: 'Voter ID Proof', type: 'file' },
+      { key: 'voter_card', label: 'Voter ID Proof', type: 'file' },
       { key: 'passport_no', label: 'Passport No', type: 'text' },
-      { key: 'passport_proof', label: 'Passport Proof', type: 'file' },
+      { key: 'passport', label: 'Passport Proof', type: 'file' },
     ]
   },
   {
@@ -91,7 +91,7 @@ const SECTIONS = [
   },
   {
     id: 'exit',
-    label: 'Exit & Retention',
+    label: 'Experience',
     icon: <History size={20} />,
     color: '#ef4444',
     fields: [
@@ -99,6 +99,8 @@ const SECTIONS = [
       { key: 'lwd', label: 'Last Working Day (LWD)', type: 'text' },
       { key: 'attrition_bucket', label: 'Attrition Bucket', type: 'select', options: ['N/A', 'Resignation', 'Performance', 'Behavioral', 'Medical'] },
       { key: 'reason', label: 'Reason of Separation', type: 'text' },
+      { key: 'experience_letter', label: 'Experience Letter', type: 'file' },
+      { key: 'previous_payslip', label: 'Previous Company 3 Month Payslip', type: 'file' },
     ]
   },
   {
@@ -136,11 +138,12 @@ export default function PersonalInfo({ onBack }) {
   const { user, updateUserData } = useAuth();
   const [form, setForm] = useState({
     emp_name: '', gender: 'Male', dob: '', age: '', religion: '', blood_group: '', marital_status: 'Single', nationality: 'Indian', father_husband_name: '', pan_number: '', aadhar_number: '', category: 'General',
-    pan_proof: '', aadhar_proof: '', voter_id: '', voter_proof: '', passport_no: '', passport_proof: '',
+    pancard_photo: '', adharcard_photo: '', voter_id: '', voter_card: '', passport_no: '', passport: '',
     designation: '', department: '', process: '', supervisor_l1: '', supervisor_l2: '', doj: '', ft_pt: 'Full Time', status: 'Active', place: '', moved: '', official_email: '',
     contact_no: '', emergency_contact_no: '', personal_email: '', present_address: '', permanent_address: '', state: '',
     qualification: '', edu_completion_year: '', college: '', university: '', previous_org: '', previous_exp: '', source: '', languages_known: '',
     separation: '', lwd: '', attrition_bucket: 'N/A', reason: '',
+    experience_letter: '', previous_payslip: '',
     bank_name: '', bank_account_no: '', ifsc_code: '', bank_branch: '', gross_salary_a: '', salary: '', pt: '',
     bgv_status: 'Pending', appointment_letter: 'Not Sent', approved_by_ceo: 'No', onboarding_doc_completed: 'No', id_card: 'Not Issued', onboarding_link: '',
     profile_pic: ''
@@ -151,6 +154,7 @@ export default function PersonalInfo({ onBack }) {
   const [touched, setTouched] = useState({});
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [previewDoc, setPreviewDoc] = useState(null);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const isMobile = winWidth < 768;
   const isTablet = winWidth < 1024;
@@ -162,7 +166,7 @@ export default function PersonalInfo({ onBack }) {
   useEffect(() => {
     const savedId = localStorage.getItem('last_selected_emp_id');
     const currentUserId = user?.employee_id || user?.id || user?.email || user?.EmpID;
-    
+
     if (savedId && employees.some(e => String(e.employee_id || e.id) === String(savedId))) {
       setSelectedEmpId(savedId);
     } else if (currentUserId) {
@@ -202,11 +206,12 @@ export default function PersonalInfo({ onBack }) {
 
         const emptyForm = {
           emp_name: '', gender: 'Male', dob: '', age: '', religion: '', blood_group: '', marital_status: 'Single', nationality: 'Indian', father_husband_name: '', pan_number: '', aadhar_number: '', category: 'General',
-          pan_proof: '', aadhar_proof: '', voter_id: '', voter_proof: '', passport_no: '', passport_proof: '',
+          pancard_photo: '', adharcard_photo: '', voter_id: '', voter_card: '', passport_no: '', passport: '',
           designation: '', department: '', process: '', supervisor_l1: '', supervisor_l2: '', doj: '', ft_pt: 'Full Time', status: 'Active', place: '', moved: '', official_email: '',
           contact_no: '', emergency_contact_no: '', personal_email: '', present_address: '', permanent_address: '', state: '',
           qualification: '', edu_completion_year: '', college: '', university: '', previous_org: '', previous_exp: '', source: '', languages_known: '',
           separation: '', lwd: '', attrition_bucket: 'N/A', reason: '',
+          experience_letter: '', previous_payslip: '',
           bank_name: '', bank_account_no: '', ifsc_code: '', bank_branch: '', gross_salary_a: '', salary: '', pt: '',
           bgv_status: 'Pending', appointment_letter: 'Not Sent', approved_by_ceo: 'No', onboarding_doc_completed: 'No', id_card: 'Not Issued', onboarding_link: '',
           profile_pic: ''
@@ -222,7 +227,7 @@ export default function PersonalInfo({ onBack }) {
           let response = await res.json();
           let data = response.data || response.profile || response.record || response;
           if (Array.isArray(data)) data = data[0];
-          
+
           if (!data || typeof data !== 'object') return;
 
           const cleanData = {};
@@ -231,10 +236,16 @@ export default function PersonalInfo({ onBack }) {
             const normalizedVal = (val === null || val === undefined) ? '' : val;
             const lowerKey = apiKey.toLowerCase();
             let targetKey = Object.keys(emptyForm).find(formKey => formKey.toLowerCase() === lowerKey) || apiKey;
-            
-            // Iron-Clad mapping for profile picture column variations
-            if (lowerKey === 'profile_picture') targetKey = 'profile_pic';
-            
+
+            // Aggressive mapping for backend column variations
+            if (lowerKey.includes('pan_card') || lowerKey === 'pancard') targetKey = 'pancard_photo';
+            if (lowerKey.includes('aadhar_card') || lowerKey.includes('adhar_card') || lowerKey === 'adharcard') targetKey = 'adharcard_photo';
+            if (lowerKey.includes('voter_card') || lowerKey.includes('voter_id')) targetKey = 'voter_card';
+            if (lowerKey.includes('passport')) targetKey = 'passport';
+            if (lowerKey.includes('experience_letter')) targetKey = 'experience_letter';
+            if (lowerKey.includes('previous_payslip') || lowerKey.includes('payslip')) targetKey = 'previous_payslip';
+            if (lowerKey === 'profile_picture' || lowerKey === 'profile_pic') targetKey = 'profile_pic';
+
             cleanData[targetKey] = normalizedVal;
           });
 
@@ -251,88 +262,118 @@ export default function PersonalInfo({ onBack }) {
     if (!file) return;
     setIsEditing(true);
     setUploadingFiles(prev => ({ ...prev, [key]: true }));
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm(prev => ({ ...prev, [key]: reader.result }));
+    };
+    reader.readAsDataURL(file);
+
     try {
       const token = localStorage.getItem('token');
       if (key === 'profile_pic') {
         const formData = new FormData();
         formData.append('image', file);
-        formData.append('employee_id', selectedEmpId);
+        formData.append('file', file);
+        const empId = parseInt(selectedEmpId || 0);
+        formData.append('managerId', empId);
+        formData.append('employee_id', empId);
+        formData.append('employeeId', empId);
+        formData.append('emp_id', empId);
+        formData.append('userId', empId);
+        formData.append('user_id', empId);
+        formData.append('id', empId);
 
-        const res = await fetch(API_ENDPOINTS.PROFILE_UPLOAD_IMAGE, {
+        const res = await fetch(API_ENDPOINTS.MANAGER_UPLOAD_IMAGE, {
           method: 'POST',
-          headers: { 
-            'Authorization': `Bearer ${token}` 
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
           body: formData
         });
 
         if (res.ok) {
           const data = await res.json();
-          const url = data.url || data.filePath || data.path || data.record?.path;
+          const url = data.url || data.filePath || data.path || data.record?.path || data.profile_pic || data.profile_picture || data.data?.url || data.data?.path;
           if (url) {
             setForm(prev => ({ ...prev, [key]: url }));
-            
-            // Persist the URL via PROFILE_UPDATE ONLY if updating SELF
+
             const currentUserId = String(user?.employee_id || user?.id || user?.EmpID);
             const isSelf = String(selectedEmpId) === currentUserId;
 
             if (isSelf) {
-              await fetch(API_ENDPOINTS.PROFILE_UPDATE, {
+              await fetch(API_ENDPOINTS.UPDATE_PROFILE, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ 
-                  profile_pic: url, 
+                body: JSON.stringify({
+                  profile_pic: url,
                   profile_picture: url,
-                  email: user?.email 
+                  email: user?.email,
+                  employee_id: selectedEmpId,
+                  id: selectedEmpId
                 })
               });
               updateUserData({ profile_pic: url, profile_picture: url });
             }
 
-            // ALWAYS persist to the Target Profile Record (Metadata Table)
             await fetch(API_ENDPOINTS.EMPLOYEE_PROFILE_UPDATE, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-              body: JSON.stringify({ 
-                profile_pic: url, 
+              body: JSON.stringify({
+                profile_pic: url,
                 profile_picture: url,
                 employee_id: selectedEmpId,
-                id: selectedEmpId 
+                id: selectedEmpId
               })
             });
 
-            setToast({ type: 'success', msg: `PROFILE PIC Attached!` });
+            setToast({ type: 'success', msg: `Profile pic updated successfully` });
           }
         }
       } else {
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('fileData', file);
+        formData.append('userId', selectedEmpId);
+        
+        let docType = key;
+        if (key === 'pancard_photo') docType = 'pan_card';
+        if (key === 'adharcard_photo') docType = 'aadhar_card';
+        if (key === 'voter_card') docType = 'voter_id_proof';
+        if (key === 'passport') docType = 'passport_proof';
+        formData.append('docType', docType); 
+
         formData.append('employee_id', selectedEmpId);
         formData.append('type', key);
+
         const res = await fetch(API_ENDPOINTS.PROFILE_UPLOAD_DOCUMENT, {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers: { 'Authorization': `Bearer ${user?.token || localStorage.getItem('token')}` },
           body: formData
         });
+
         if (res.ok) {
           const data = await res.json();
-          const url = data.url || data.filePath || data.path || data.record?.path;
+          const url = data.url || data.filePath || data.path || data.record?.path || data.data?.url || data.data?.path || data.fileUrl || data.document_path || data.file;
+          
           if (url) {
             setForm(prev => ({ ...prev, [key]: url }));
 
-            // Persist the document URL to the DB immediately
+            const updatePayload = {
+              employee_id: selectedEmpId,
+              id: selectedEmpId,
+              [key]: url,
+              [docType]: url
+            };
+
             await fetch(API_ENDPOINTS.EMPLOYEE_PROFILE_UPDATE, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-              body: JSON.stringify({ 
-                [key]: url, 
-                employee_id: selectedEmpId, 
-                id: selectedEmpId 
-              })
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.token || token}` },
+              body: JSON.stringify(updatePayload)
             });
 
-            setToast({ type: 'success', msg: `${key.replace('_', ' ').toUpperCase()} Attached!` });
+            setToast({ type: 'success', msg: `${key.replace(/_/g, ' ')} updated successfully` });
           }
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          setToast({ type: 'error', msg: errData.message || `Upload failed` });
         }
       }
     } catch (err) {
@@ -391,8 +432,8 @@ export default function PersonalInfo({ onBack }) {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f4f7fa', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
-      
-      <div style={{ flex: 1, padding: isMobile ? '15px' : '40px', boxSizing: 'border-box', overflowX: 'hidden', width: '100%', marginTop: isMobile ? '80px' : '70px' }}>
+
+      <div style={{ flex: 1, padding: isMobile ? '15px' : '40px 26px', boxSizing: 'border-box', overflowX: 'hidden', width: '100%', marginTop: isMobile ? '80px' : '70px' }}>
         <AnimatePresence>
           {toast && (
             <motion.div
@@ -412,6 +453,97 @@ export default function PersonalInfo({ onBack }) {
           )}
         </AnimatePresence>
 
+        <AnimatePresence>
+          {previewDoc && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPreviewDoc(null)}
+              style={{
+                position: 'fixed', inset: 0, backgroundColor: 'rgba(11, 30, 63, 0.8)',
+                backdropFilter: 'blur(8px)', zIndex: 10000, display: 'flex',
+                alignItems: 'center', justifyContent: 'center', padding: isMobile ? '20px' : '40px'
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  backgroundColor: 'white', borderRadius: '28px', padding: '12px',
+                  maxWidth: '90%', maxHeight: '90%', position: 'relative',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                  border: '4px solid white', overflow: 'hidden'
+                }}
+              >
+                <button
+                  onClick={() => setPreviewDoc(null)}
+                  style={{
+                    position: 'absolute', top: '15px', right: '15px', width: '40px', height: '40px',
+                    borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.9)', border: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 1, color: '#0B1E3F'
+                  }}
+                >
+                  <Trash2 size={20} />
+                </button>
+
+                <div style={{ maxHeight: '80vh', overflowY: 'auto', borderRadius: '20px', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
+                  {(previewDoc.url.toLowerCase().endsWith('.pdf') || previewDoc.url.includes('application/pdf')) ? (
+                    <iframe 
+                      src={previewDoc.url} 
+                      style={{ width: isMobile ? '80vw' : '600px', height: '80vh', border: 'none', borderRadius: '20px' }} 
+                      title="Document Preview"
+                    />
+                  ) : (previewDoc.url.includes('image/') || previewDoc.url.startsWith('data:image/') || !previewDoc.url.startsWith('data:')) ? (
+                    <img
+                      src={previewDoc.url}
+                      alt="Proof Preview"
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '80vh', 
+                        display: 'block', 
+                        borderRadius: '20px',
+                        objectFit: 'contain'
+                      }}
+                      onError={(e) => {
+                        // If image fails, show the fallback download UI
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = `
+                          <div style="display: flex; flex-direction: column; align-items: center; padding: 40px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
+                            <div style="font-weight: 700; color: #0B1E3F; margin-bottom: 8px;">Preview Not Available</div>
+                            <div style="font-size: 14px; color: #64748b;">This file type cannot be viewed directly.</div>
+                          </div>
+                        `;
+                      }}
+                    />
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '48px', marginBottom: '16px' }}>📁</div>
+                      <div style={{ fontWeight: '700', color: '#0B1E3F', marginBottom: '8px' }}>Preview Not Available</div>
+                      <div style={{ fontSize: '14px', color: '#64748b' }}>This file type cannot be viewed directly.</div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ padding: '15px', textAlign: 'center' }}>
+                  <div style={{ fontWeight: '900', color: '#0B1E3F', fontSize: '14px', textTransform: 'uppercase' }}>{previewDoc.label}</div>
+                  <a 
+                    href={previewDoc.url} 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    style={{ fontSize: '12px', color: '#315A9E', fontWeight: '800', textDecoration: 'none', marginTop: '5px', display: 'inline-block' }}
+                  >
+                    OPEN IN NEW TAB
+                  </a>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div style={{ display: 'flex', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', marginBottom: '32px', flexDirection: isMobile ? 'column' : 'row', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <button onClick={onBack} style={{ padding: '12px', borderRadius: '14px', backgroundColor: 'white', border: '1.5px solid #e2e8f0', cursor: 'pointer' }}>
@@ -422,7 +554,7 @@ export default function PersonalInfo({ onBack }) {
               <p style={{ fontSize: '14px', color: '#64748b', margin: '2px 0 0 0', fontWeight: '600' }}>Employee metadata record</p>
             </div>
           </div>
-          
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexDirection: isMobile ? 'column' : 'row' }}>
             <div style={{ position: 'relative', minWidth: isMobile ? '100%' : '240px' }}>
               <Users size={16} color="#64748b" style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', zIndex: 1 }} />
@@ -457,7 +589,7 @@ export default function PersonalInfo({ onBack }) {
               disabled={saving}
               style={{
                 padding: '14px 28px', backgroundColor: isEditing ? '#315A9E' : 'white', color: isEditing ? 'white' : '#0B1E3F',
-                border: isEditing ? 'none' : '1.5px solid #0B1E3F', borderRadius: '16px', fontWeight: '900', cursor: 'pointer',
+                border: '3px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', borderRadius: '16px', fontWeight: '900', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: '8px'
               }}
             >
@@ -467,22 +599,51 @@ export default function PersonalInfo({ onBack }) {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '280px 1fr', gap: '24px', alignItems: 'start' }}>
-          <div style={{ display: 'flex', flexDirection: isMobile ? 'row' : 'column', gap: '10px', overflowX: 'auto', paddingBottom: isMobile ? '10px' : '0' }}>
-            {SECTIONS.map(sec => (
-              <motion.button
-                key={sec.id}
-                onClick={() => setActiveSection(sec.id)}
-                style={{
-                  padding: '16px 20px', borderRadius: '18px', border: `1.5px solid ${activeSection === sec.id ? '#0B1E3F' : '#e2e8f0'}`,
-                  backgroundColor: activeSection === sec.id ? '#0B1E3F' : 'white', color: activeSection === sec.id ? 'white' : '#475569',
-                  display: 'flex', alignItems: 'center', gap: '14px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap'
-                }}
-              >
-                <div style={{ color: activeSection === sec.id ? 'white' : sec.color }}>{cloneElement(sec.icon, { size: 20 })}</div>
-                {sec.label}
-              </motion.button>
-            ))}
+        <div style={{ display: isMobile ? 'flex' : 'grid', flexDirection: isMobile ? 'column' : 'row', gridTemplateColumns: isMobile ? 'none' : '280px 1fr', gap: isMobile ? '20px' : '24px', alignItems: 'start', width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ width: '100%', margin: '0', boxSizing: 'border-box', flexShrink: 0 }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: isMobile ? 'row' : 'column', 
+              gap: '10px',
+              overflowX: isMobile ? 'auto' : 'visible',
+              paddingBottom: isMobile ? '15px' : '0',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch',
+              scrollSnapType: isMobile ? 'x mandatory' : 'none'
+            }}>
+              {SECTIONS.map(sec => {
+                const isActive = activeSection === sec.id;
+                return (
+                  <motion.button
+                    key={sec.id}
+                    whileHover={!isMobile ? { x: 4 } : {}}
+                    onClick={() => setActiveSection(sec.id)}
+                    style={{
+                      padding: isMobile ? '10px 18px' : '16px 20px', 
+                      borderRadius: isMobile ? '12px' : '18px', 
+                      cursor: 'pointer',
+                      backgroundColor: isActive ? '#0B1E3F' : 'white',
+                      color: isActive ? 'white' : '#475569',
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: isMobile ? '10px' : '14px',
+                      fontWeight: '800', 
+                      fontSize: isMobile ? '12px' : '15px', 
+                      textAlign: 'left',
+                      border: `3px solid ${isActive ? '#0B1E3F' : '#cbd5e1'}`,
+                      transition: 'all 0.2s',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      scrollSnapAlign: isMobile ? 'start' : 'none'
+                    }}
+                  >
+                    <div style={{ color: isActive ? 'white' : sec.color }}>{cloneElement(sec.icon, { size: isMobile ? 16 : 20 })}</div>
+                    <div>{sec.label}</div>
+                  </motion.button>
+                );
+              })}
+            </div>
           </div>
 
           <motion.div
@@ -512,22 +673,22 @@ export default function PersonalInfo({ onBack }) {
                     )}
                   </div>
                   {isEditing && (
-                    <button 
+                    <button
                       onClick={() => profileInputRef.current?.click()}
-                      style={{ 
-                        position: 'absolute', bottom: '5px', right: '5px', background: '#315A9E', 
-                        width: '36px', height: '36px', borderRadius: '50%', display: 'flex', 
-                        alignItems: 'center', justifyContent: 'center', cursor: 'pointer', 
-                        border: '3px solid white', zIndex: 10, boxShadow: '0 4px 10px rgba(0,0,0,0.2)' 
+                      style={{
+                        position: 'absolute', bottom: '5px', right: '5px', background: '#315A9E',
+                        width: '36px', height: '36px', borderRadius: '50%', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                        border: '3px solid white', zIndex: 10, boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
                       }}
                     >
                       <Upload size={18} color="white" />
-                      <input 
+                      <input
                         ref={profileInputRef}
-                        type="file" 
-                        accept="image/*" 
-                        onChange={(e) => handleFileSelect('profile_pic', e.target.files[0])} 
-                        style={{ display: 'none' }} 
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileSelect('profile_pic', e.target.files[0])}
+                        style={{ display: 'none' }}
                       />
                     </button>
                   )}
@@ -539,24 +700,72 @@ export default function PersonalInfo({ onBack }) {
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '24px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '24px', width: '100%', boxSizing: 'border-box' }}>
               {currentSection.fields.map(field => {
                 const isDisabled = !isEditing || (LOCKED_FIELDS.includes(field.key) && !isAdmin);
                 return (
-                  <div key={field.key} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div key={field.key} style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
                     <label style={{ fontSize: '13px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase' }}>{field.label}</label>
                     {field.type === 'file' ? (
-                      <div style={{ border: '2px dashed #cbd5e1', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#f8fafc', position: 'relative' }}>
+                      <div
+                        style={{
+                          border: isMobile ? '2px dashed #cbd5e1' : '3px dashed #cbd5e1', borderRadius: '16px', padding: '20px',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center',
+                          background: '#f8fafc', position: 'relative', transition: 'all 0.3s ease',
+                          cursor: 'pointer', width: '100%', boxSizing: 'border-box'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.borderColor = '#315A9E';
+                          e.currentTarget.style.transform = 'translateY(-5px)';
+                          e.currentTarget.style.boxShadow = '0 10px 20px rgba(49, 90, 158, 0.1)';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.borderColor = '#cbd5e1';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
                         {form[field.key] ? (
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                             <FileCheck size={24} color="#10b981" />
-                            <a href={`${BASE_URL}${form[field.key].startsWith('/') ? '' : '/'}${form[field.key]}`} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: '#315A9E', fontWeight: '900', textDecoration: 'none' }}>VIEW PROOF</a>
+                            <button 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const rawUrl = form[field.key];
+                                if (!rawUrl) return;
+
+                                let url = rawUrl;
+                                // Fix case where backend mistakenly prepends BASE_URL to base64 string
+                                if (typeof url === 'string' && url.includes('data:') && url.includes('base64')) {
+                                  url = url.substring(url.indexOf('data:'));
+                                } else if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('data:')) {
+                                  url = `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+                                }
+                                setPreviewDoc({ url, label: field.label });
+                              }}
+                              style={{ 
+                                border: 'none', background: 'transparent', fontSize: '12px', 
+                                color: '#315A9E', fontWeight: '900', cursor: 'pointer',
+                                padding: '4px 8px', borderRadius: '8px'
+                              }}
+                            >
+                              VIEW PROOF
+                            </button>
+                            {isEditing && (
+                              <button onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, [field.key]: '' })); setIsEditing(true); }} style={{ border: 'none', background: 'transparent', color: '#ef4444', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }}>REMOVE</button>
+                            )}
                           </div>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                             <Upload size={24} color="#315A9E" />
-                            <div style={{ fontSize: '12px', fontWeight: '900', color: '#0B1E3F' }}>UPLOAD</div>
+                            <div style={{ fontSize: '12px', fontWeight: '900', color: '#0B1E3F' }}>UPLOAD DOCUMENT</div>
                             <input type="file" onChange={e => handleFileSelect(field.key, e.target.files[0])} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
+                          </div>
+                        )}
+                        {uploadingFiles[field.key] && (
+                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}>
+                            <RefreshCw size={24} className="spin" color="#315A9E" />
                           </div>
                         )}
                       </div>
@@ -565,7 +774,7 @@ export default function PersonalInfo({ onBack }) {
                         value={form[field.key]}
                         disabled={isDisabled}
                         onChange={e => handleChange(field.key, e.target.value)}
-                        style={{ width: '100%', padding: '16px 20px', borderRadius: '16px', fontWeight: '700', border: '2px solid #e2e8f0', backgroundColor: isDisabled ? '#f1f5f9' : 'white' }}
+                        style={{ width: '100%', padding: '16px 20px', borderRadius: '16px', fontWeight: '700', border: isMobile ? '2px solid #cbd5e1' : '3px solid #cbd5e1', backgroundColor: isDisabled ? '#f1f5f9' : 'white', boxSizing: 'border-box' }}
                       >
                         {field.options.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
@@ -575,7 +784,7 @@ export default function PersonalInfo({ onBack }) {
                         value={form[field.key]}
                         readOnly={isDisabled}
                         onChange={e => handleChange(field.key, e.target.value)}
-                        style={{ width: '100%', padding: '16px 20px', borderRadius: '16px', fontWeight: '700', border: '2px solid #e2e8f0', backgroundColor: isDisabled ? '#f1f5f9' : 'white' }}
+                        style={{ width: '100%', padding: '16px 20px', borderRadius: '16px', fontWeight: '700', border: isMobile ? '2px solid #cbd5e1' : '3px solid #cbd5e1', backgroundColor: isDisabled ? '#f1f5f9' : 'white', boxSizing: 'border-box' }}
                       />
                     )}
                   </div>

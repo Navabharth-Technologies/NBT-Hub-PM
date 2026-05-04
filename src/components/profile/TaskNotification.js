@@ -61,7 +61,8 @@ const TaskNotification = ({ onOpenTask }) => {
     if (!user?.token) return;
 
     try {
-      const response = await fetch(API_ENDPOINTS.ALERTS, { 
+      const uid = user.employee_id || user.id || user.EmpID;
+      const response = await fetch(API_ENDPOINTS.NOTIFICATIONS_BY_USER(uid), { 
         headers: { 'Authorization': `Bearer ${user.token}` } 
       });
 

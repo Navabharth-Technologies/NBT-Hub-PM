@@ -112,7 +112,7 @@ export default function JoineeCourseModules() {
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', background: '#ffffff' }}>
       <AppHeader />
       
-      <main className="dashboard-content" style={{paddingBottom: '100px', maxWidth: '1400px', margin: '0 auto', padding: '40px 24px'}}>
+      <main className="dashboard-content" style={{paddingBottom: '100px', maxWidth: '1400px', margin: '0 auto', padding: window.innerWidth < 768 ? '40px 15px' : '40px 26px'}}>
         <header style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px'}}>
           <div>
             <h1 style={{fontSize: '32px', fontWeight: '900', color: '#1e293b', marginBottom: '4px'}}>Course Modules</h1>

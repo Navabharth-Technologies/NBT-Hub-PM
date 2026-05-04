@@ -194,13 +194,13 @@ export default function ThreadScreen() {
     const isTablet = winWidth < 1024;
 
     const styles = {
-        container: { minHeight: '100vh', backgroundColor: 'transparent', display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '20px', padding: isMobile ? '15px' : (isTablet ? '25px' : '40px'), maxWidth: '100%', margin: '0', boxSizing: 'border-box' },
-        card: { backgroundColor: 'white', borderRadius: isMobile ? '25px' : '40px', padding: isMobile ? '20px' : '30px', boxShadow: '0 10px 40px rgba(0,0,0,0.04)', border: '1px solid #eef2f6' },
+        container: { minHeight: '100vh', backgroundColor: 'transparent', display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '20px', padding: isMobile ? '15px' : (isTablet ? '25px 26px' : '40px 26px'), maxWidth: '100%', margin: '0', boxSizing: 'border-box' },
+        card: { backgroundColor: 'white', borderRadius: isMobile ? '25px' : '40px', padding: isMobile ? '20px' : '30px', boxShadow: '0 10px 40px rgba(0,0,0,0.04)', border: '3px solid #cbd5e1' },
         tagInput: { width: '100%', padding: '12px 20px', borderRadius: '15px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontSize: isMobile ? '12px' : '14px', fontWeight: '900', color: '#315A9E', outline: 'none', marginBottom: '12px' },
         mainInput: { width: '100%', padding: isMobile ? '15px' : '20px', borderRadius: '20px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontSize: isMobile ? '14px' : '16px', fontWeight: '600', color: '#0B1E3F', outline: 'none', resize: 'none', minHeight: isMobile ? '80px' : '100px' },
         mediaBtn: { display: 'flex', alignItems: 'center', gap: '8px', padding: isMobile ? '8px 12px' : '10px 18px', borderRadius: '12px', border: '1.5px solid #eef2f6', background: 'white', cursor: 'pointer', fontSize: isMobile ? '10px' : '12px', fontWeight: '800', color: '#64748b' },
         postBtn: { padding: isMobile ? '10px 15px' : '12px 30px', backgroundColor: '#315A9E', color: 'white', border: 'none', borderRadius: '15px', fontWeight: '1000', cursor: 'pointer', fontSize: isMobile ? '11px' : '13px', textTransform: 'uppercase' },
-        threadCard: { backgroundColor: 'white', borderRadius: isMobile ? '25px' : '40px', padding: isMobile ? '20px' : '24px 30px', border: '1px solid #f1f5f9', position: 'relative', boxShadow: '0 10px 40px rgba(0,0,0,0.03)', marginBottom: '20px', transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)' },
+        threadCard: { backgroundColor: 'white', borderRadius: isMobile ? '25px' : '40px', padding: isMobile ? '20px' : '24px 30px', border: '3px solid #cbd5e1', position: 'relative', boxShadow: '0 10px 40px rgba(0,0,0,0.03)', marginBottom: '20px', transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)' },
         taglineBadge: { display: 'inline-block', padding: '4px 10px', borderRadius: '8px', background: '#f0f9ff', color: '#315A9E', fontSize: isMobile ? '8px' : '9px', fontWeight: '900', textTransform: 'uppercase', marginBottom: '12px', border: '1px solid #e0f2fe' },
         postMedia: { marginTop: '20px', borderRadius: '25px', overflow: 'hidden', border: '1.5px solid #f8fafc', maxHeight: isMobile ? '300px' : '380px', maxWidth: '100%', width: 'fit-content', backgroundColor: '#fdfdfd', display: 'flex', justifyContent: 'flex-start', alignItems: 'center' },
         footer: { display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '18px', marginTop: '20px', gap: isMobile ? '5px' : '10px', flexWrap: isMobile ? 'wrap' : 'nowrap' },
@@ -244,7 +244,7 @@ export default function ThreadScreen() {
             borderRadius: '20px',
             fontSize: '13px',
             fontWeight: '800',
-            border: '1.5px solid #f1f5f9',
+            border: '3px solid #cbd5e1',
             cursor: 'pointer',
             boxShadow: '0 2px 5px rgba(0,0,0,0.02)'
         },
@@ -265,6 +265,7 @@ export default function ThreadScreen() {
             maxWidth: '400px',
             padding: '30px',
             boxShadow: '0 20px 60px rgba(0,0,0,0.1)',
+            border: '3px solid #cbd5e1',
             position: 'relative'
         }
     };
@@ -342,7 +343,7 @@ export default function ThreadScreen() {
                         initial={{ opacity: 0, y: -20, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        style={{ ...styles.card, background: '#f0f9ff', border: '1.5px dashed #315A9E', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', marginBottom: '20px' }}
+                        style={{ ...styles.card, background: '#f0f9ff', border: '3px dashed #315A9E', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', marginBottom: '20px' }}
                     >
                         <motion.div
                             animate={{ rotate: 360 }}
@@ -372,7 +373,10 @@ export default function ThreadScreen() {
                 const commentCount = post.commentCount || 0;
 
                 return (
-                    <div key={post.id} style={styles.threadCard}>
+                    <div key={post.id} style={styles.threadCard}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = '#315A9E'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = '#cbd5e1'}
+                    >
                         {post.tagline && <div style={styles.taglineBadge}>{post.tagline}</div>}
                         
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -593,7 +597,7 @@ export default function ThreadScreen() {
                                                         <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#315A9E', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '1000', flexShrink: 0, boxShadow: '0 4px 10px rgba(49, 90, 158, 0.2)' }}>
                                                             {cUser.charAt(0).toUpperCase()}
                                                         </div>
-                                                        <div style={{ flex: 1, padding: '15px', background: 'white', borderRadius: '20px', border: '1.5px solid #f1f5f9', position: 'relative' }}>
+                                                        <div style={{ flex: 1, padding: '15px', background: 'white', borderRadius: '20px', border: '3px solid #cbd5e1', position: 'relative' }}>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                                                                 <span style={{ fontSize: '12px', fontWeight: '1000', color: '#0B1E3F' }}>{cUser}</span>
                                                                 {isMyComment && (

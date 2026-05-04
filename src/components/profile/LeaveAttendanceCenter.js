@@ -18,6 +18,7 @@ export default function LeaveAttendanceCenter() {
   const [activeTab, setActiveTab] = useState(location.state?.tab || 'attendance');
 
   const [winWidth, setWinWidth] = useState(window.innerWidth);
+  const [showAllLedger, setShowAllLedger] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -236,6 +237,85 @@ export default function LeaveAttendanceCenter() {
     }
   }, [user, fromDate, toDate]);
 
+  const handleLedgerExport = (type) => {
+    const summaryData = allEmployees
+      .filter(emp => String(emp.id || emp.EmpID) !== '20250')
+      .map(emp => {
+        const statsEntry = allLeaveStats.find(s => String(s.employee_id || s.user_id) === String(emp.id));
+        let cl, lop, balance, year, halfDays;
+        
+        if (statsEntry) {
+          cl = parseFloat(statsEntry.leaves_taken || 0);
+          lop = parseFloat(statsEntry.LOP || statsEntry.lop || 0);
+          balance = parseFloat(statsEntry.leaves_available || statsEntry.available_leaves || statsEntry.Available_Leaves || 0);
+          year = statsEntry.year || new Date().getFullYear();
+          halfDays = statsEntry.half_day || statsEntry.half_days || 0;
+        } else {
+          cl = 0;
+          lop = 0;
+          balance = 0;
+          year = new Date().getFullYear();
+          halfDays = 0;
+        }
+        
+        return { 
+          id: emp.id, 
+          name: emp.name || emp.user_name, 
+          year: year,
+          cl: cl, 
+          lop: lop, 
+          halfDays: halfDays,
+          taken: cl + lop, 
+          available: balance 
+        };
+      });
+
+    if (type === 'excel') {
+      const wsData = summaryData.map(row => ({
+        'Employee ID': row.id,
+        'Name': row.name,
+        'Year': row.year,
+        'Casual Leaves': row.cl,
+        'LOP Leaves': row.lop,
+        'Half Days': row.halfDays,
+        'Total Taken': row.taken,
+        'Available Leaves': row.available
+      }));
+      const ws = XLSX.utils.json_to_sheet(wsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Leaves Summary");
+      XLSX.writeFile(wb, "PManager_Leaves_Summary.xlsx");
+    } else if (type === 'pdf') {
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text("Employee Leave Ledger", 14, 20);
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 28);
+      
+      autoTable(doc, {
+        startY: 35,
+        head: [['ID', 'Employee Name', 'Year', 'CL', 'LOP', 'Half', 'Taken', 'Balance']],
+        body: summaryData.map(r => [r.id, r.name, r.year, r.cl, r.lop, r.halfDays, r.taken, r.available + ' Days']),
+        theme: 'grid',
+        headStyles: { fillColor: [29, 78, 216], textColor: 255, fontStyle: 'bold' },
+        styles: { fontSize: 8, cellPadding: 3 },
+        columnStyles: {
+          0: { cellWidth: 20 },
+          2: { cellWidth: 15 },
+          3: { cellWidth: 15 },
+          4: { cellWidth: 15 },
+          5: { cellWidth: 15 },
+          6: { cellWidth: 15 },
+          7: { cellWidth: 25, fontStyle: 'bold' }
+        }
+      });
+      doc.save("PManager_Leaves_Summary.pdf");
+    }
+    setShowExportDropdown(false);
+  };
+
   const fetchLeaves = async () => {
     try {
       setLeavesLoading(true);
@@ -282,6 +362,8 @@ export default function LeaveAttendanceCenter() {
 
       setLeaveRequests(uniqueList);
 
+    } catch (err) {
+      console.error("Error fetching leaves:", err);
     } finally {
       setLeavesLoading(false);
     }
@@ -709,7 +791,7 @@ export default function LeaveAttendanceCenter() {
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
 
-      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px 30px' : '30px 20px 30px', width: '100%', boxSizing: 'border-box', marginTop: winWidth < 768 ? '85px' : '110px', marginLeft: 'auto', marginRight: 'auto', maxWidth: '100%' }}>
+      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px 100px' : '30px 26px 30px', width: '100%', boxSizing: 'border-box', marginTop: winWidth < 768 ? '85px' : '110px', marginLeft: 'auto', marginRight: 'auto', maxWidth: '100%' }}>
         <div style={{ maxWidth: '100%', margin: '0 auto', width: '100%' }}>
           <button
             onClick={() => navigate('/dashboard')}
@@ -1100,12 +1182,9 @@ export default function LeaveAttendanceCenter() {
                 </div>
               </div>
 
-              <section style={{ background: 'white', borderRadius: '24px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 20px -5px rgba(0,0,0,0.02)', overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
-                  <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #f1f5f9' }}><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Employee</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Employee ID</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Last Log Date</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Punch In</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Punch Out</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Work Hrs</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Status</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>PunchIn_location</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>PunchOut_location</th></tr>
-                  </thead>
-                  <tbody>
+              <section style={{ background: 'white', borderRadius: '24px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 20px -5px rgba(0,0,0,0.02)', overflowX: winWidth < 768 ? 'hidden' : 'auto' }}>
+                {winWidth < 768 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px' }}>
                     {displayedEmployees.length > 0 ? (
                       displayedEmployees.map((emp, idx) => {
                         const log = (attendanceLogs || [])
@@ -1126,88 +1205,190 @@ export default function LeaveAttendanceCenter() {
                         const pDate = log?.punch_date || log?.date || log?.created_at;
 
                         return (
-                          <tr key={idx} style={{ borderBottom: '1.5px solid #f8fafc', transition: '0.2s' }}><td style={{ padding: '20px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                              <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '950' }}>
+                          <div key={idx} style={{ background: '#f8fafc', borderRadius: '18px', padding: '16px', border: '1.5px solid #eef2ff' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '950' }}>
                                 {String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}
                               </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>{emp.name || emp.user_name || 'Unknown User'}</div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>#{emp.id} • {emp.role || 'Employee'}</div>
+                              </div>
+                              <div onClick={() => navigate(`/attendance/detail/${emp.id}`)} style={{ padding: '8px', borderRadius: '10px', background: 'white', color: '#1d4ed8', cursor: 'pointer' }}><Info size={18} /></div>
+                            </div>
+                            
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                               <div>
-                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b', cursor: 'pointer' }} onClick={() => navigate(`/attendance/detail/${emp.id}`)}> {emp.name || emp.user_name || 'Unknown User'} </div>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', marginTop: '2px' }}>{emp.role || emp.department || 'Employee'}</div>
+                                <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Date</div>
+                                <div style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b' }}>{pDate ? new Date(pDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '----'}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Hours</div>
+                                <div style={{ fontSize: '12px', fontWeight: '900', color: '#1e293b' }}>{workHrs?.replace(/\s:\s/g, ':') || '00:00'} <span style={{ fontSize: '9px', color: '#94a3b8' }}>HRS</span></div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Punch In</div>
+                                <div style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a' }}>{punchIn}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Punch Out</div>
+                                <div style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a' }}>{punchOut}</div>
+                              </div>
+                              <div style={{ gridColumn: 'span 2' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Remark</div>
+                                <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>{log?.remarks || log?.rm_remarks || log?.pm_remarks || '-'}</div>
                               </div>
                             </div>
-                          </td>
-                            <td style={{ padding: '20px', fontSize: '13px', fontWeight: '900', color: '#3863a8' }}>#{emp.id || idx + 101}</td>
-                            <td style={{ padding: '20px', fontSize: '13px', fontWeight: '800', color: '#64748b', whiteSpace: 'nowrap' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Calendar size={14} color="#cbd5e1" />
-                                {pDate ? new Date(pDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '----'}
+                            
+                            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <MapPin size={10} style={{ marginRight: '4px' }} /> {log?.in_location || log?.location || '----'}
                               </div>
-                            </td>
-                            <td style={{ padding: '20px', fontSize: '14px', fontWeight: '900', color: '#0f172a', whiteSpace: 'nowrap' }}>{punchIn}</td>
-                            <td style={{ padding: '20px', fontSize: '14px', fontWeight: '900', color: '#0f172a', whiteSpace: 'nowrap' }}>{punchOut}</td>
-                            <td style={{ padding: '20px', whiteSpace: 'nowrap' }}>
-                              <div style={{ fontSize: '14px', fontWeight: '950', color: '#1e293b' }}>
-                                {workHrs?.replace(/\s:\s/g, ':') || '00:00'} <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>HOURS</span>
-                              </div>
-                            </td>
-                            <td style={{ padding: '20px' }}>
                               {(() => {
                                 const punchDate = log?.punch_date || log?.date || log?.created_at || new Date().toISOString();
                                 const d = new Date(punchDate);
                                 const isSunday = d.getDay() === 0;
-
                                 const month = d.toLocaleDateString('en-US', { month: 'short' });
                                 const dateDay = String(d.getDate()).padStart(2, '0');
                                 const dayMonth = `${month} ${dateDay}`;
                                 const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
                                 const isHoliday = holidays.includes(dayMonth);
-
                                 let rawStatus = String(log?.status || (punchIn !== '----' ? 'PRESENT' : 'ABSENT')).toUpperCase();
                                 if (punchIn === '----' || rawStatus === 'ABSENT') {
                                   if (isSunday) rawStatus = 'WO';
                                   else if (isHoliday) rawStatus = 'NH';
                                   else rawStatus = 'ABSENT';
                                 }
-
                                 const isPresent = rawStatus.includes('PRESENT') || rawStatus === 'P';
                                 const isWO = rawStatus === 'WO';
                                 const isNH = rawStatus === 'NH';
 
                                 return (
-                                  <div style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '6px 14px',
-                                    borderRadius: '100px',
-                                    background: isPresent ? '#f0fdf4' : (isWO || isNH ? '#eff6ff' : '#fef2f2'),
-                                    border: `1.5px solid ${isPresent ? '#bbf7d0' : (isWO || isNH ? '#dbeafe' : '#fee2e2')}`,
-                                    color: isPresent ? '#16a34a' : (isWO || isNH ? '#3b82f6' : '#ef4444'),
-                                    fontSize: '11px',
-                                    fontWeight: '900',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isPresent ? '#22c55e' : (isWO || isNH ? '#3b82f6' : '#ef4444') }}></div>
+                                  <div style={{ padding: '4px 10px', borderRadius: '100px', background: isPresent ? '#f0fdf4' : (isWO || isNH ? '#eff6ff' : '#fef2f2'), border: `1px solid ${isPresent ? '#bbf7d0' : (isWO || isNH ? '#dbeafe' : '#fee2e2')}`, color: isPresent ? '#16a34a' : (isWO || isNH ? '#3b82f6' : '#ef4444'), fontSize: '10px', fontWeight: '900' }}>
                                     {rawStatus}
                                   </div>
                                 );
                               })()}
-                            </td>
-                            <td style={{ padding: '20px', fontSize: '12px', fontWeight: '800', color: '#64748b', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log?.in_location || log?.location || '----'}>
-                              {log?.in_location || log?.location || '----'}
-                            </td>
-                            <td style={{ padding: '20px', fontSize: '12px', fontWeight: '800', color: '#64748b', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log?.out_location || '----'}>
-                              {log?.out_location || '----'}
-                            </td>
-                          </tr>
+                            </div>
+                          </div>
                         );
                       })
                     ) : (
-                      <tr><td colSpan="9" style={{ textAlign: 'center', padding: '100px', color: '#64748b', fontWeight: '900' }}> No matching data found for selected range. </td></tr>
+                      <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', fontWeight: '700' }}>No attendance records found</div>
                     )}
-                  </tbody>
-                </table>
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #f1f5f9' }}><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Employee</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Employee ID</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Last Log Date</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Punch In</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Punch Out</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Work Hrs</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Remark</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Status</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>PunchIn_location</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>PunchOut_location</th></tr>
+                    </thead>
+                    <tbody>
+                      {displayedEmployees.length > 0 ? (
+                        displayedEmployees.map((emp, idx) => {
+                          const log = (attendanceLogs || [])
+                            .filter(l => {
+                              if (!l) return false;
+                              const logUserId = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+                              const empId = String(emp?.id || '').trim();
+                              return empId && logUserId && (logUserId === empId);
+                            })
+                            .sort((a, b) => {
+                              const getD = x => new Date(x?.punch_date || x?.date || x?.created_at || 0).getTime();
+                              return getD(b) - getD(a);
+                            })[0];
+
+                          const punchIn = log?.in_time || log?.INTime || log?.PunchIn || log?.punch_time || '----';
+                          const punchOut = log?.out_time || log?.OUTTime || log?.PunchOut || (log?.in_time || log?.INTime ? '----' : log?.punch_time) || '----';
+                          const workHrs = log?.work_time || log?.work_hrs || log?.WorkTime || '00:00';
+                          const pDate = log?.punch_date || log?.date || log?.created_at;
+
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1.5px solid #f8fafc', transition: '0.2s' }}><td style={{ padding: '20px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                <div style={{ width: '38px', height: '38px', borderRadius: '12px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '950' }}>
+                                  {String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b', cursor: 'pointer' }} onClick={() => navigate(`/attendance/detail/${emp.id}`)}> {emp.name || emp.user_name || 'Unknown User'} </div>
+                                  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', marginTop: '2px' }}>{emp.role || emp.department || 'Employee'}</div>
+                                </div>
+                              </div>
+                            </td>
+                              <td style={{ padding: '20px', fontSize: '13px', fontWeight: '900', color: '#3863a8' }}>#{emp.id || idx + 101}</td>
+                              <td style={{ padding: '20px', fontSize: '13px', fontWeight: '800', color: '#64748b', whiteSpace: 'nowrap' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <Calendar size={14} color="#cbd5e1" />
+                                  {pDate ? new Date(pDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '----'}
+                                </div>
+                              </td>
+                              <td style={{ padding: '20px', fontSize: '14px', fontWeight: '900', color: '#0f172a', whiteSpace: 'nowrap' }}>{punchIn}</td>
+                              <td style={{ padding: '20px', fontSize: '14px', fontWeight: '900', color: '#0f172a', whiteSpace: 'nowrap' }}>{punchOut}</td>
+                              <td style={{ padding: '20px', whiteSpace: 'nowrap' }}>
+                                <div style={{ fontSize: '14px', fontWeight: '950', color: '#1e293b' }}>
+                                  {workHrs?.replace(/\s:\s/g, ':') || '00:00'} <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>HOURS</span>
+                                </div>
+                              </td>
+                              <td style={{ padding: '20px', fontSize: '12px', fontWeight: '800', color: '#64748b', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log?.remarks || log?.rm_remarks || log?.pm_remarks || '-'}>
+                                {log?.remarks || log?.rm_remarks || log?.pm_remarks || '-'}
+                              </td>
+                              <td style={{ padding: '20px' }}>
+                                {(() => {
+                                  const punchDate = log?.punch_date || log?.date || log?.created_at || new Date().toISOString();
+                                  const d = new Date(punchDate);
+                                  const isSunday = d.getDay() === 0;
+
+                                  const month = d.toLocaleDateString('en-US', { month: 'short' });
+                                  const dateDay = String(d.getDate()).padStart(2, '0');
+                                  const dayMonth = `${month} ${dateDay}`;
+                                  const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
+                                  const isHoliday = holidays.includes(dayMonth);
+
+                                  let rawStatus = String(log?.status || (punchIn !== '----' ? 'PRESENT' : 'ABSENT')).toUpperCase();
+                                  if (punchIn === '----' || rawStatus === 'ABSENT') {
+                                    if (isSunday) rawStatus = 'WO';
+                                    else if (isHoliday) rawStatus = 'NH';
+                                    else rawStatus = 'ABSENT';
+                                  }
+
+                                  const isPresent = rawStatus.includes('PRESENT') || rawStatus === 'P';
+                                  const isWO = rawStatus === 'WO';
+                                  const isNH = rawStatus === 'NH';
+
+                                  return (
+                                    <div style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      padding: '6px 14px',
+                                      borderRadius: '100px',
+                                      background: isPresent ? '#f0fdf4' : (isWO || isNH ? '#eff6ff' : '#fef2f2'),
+                                      border: `1.5px solid ${isPresent ? '#bbf7d0' : (isWO || isNH ? '#dbeafe' : '#fee2e2')}`,
+                                      color: isPresent ? '#16a34a' : (isWO || isNH ? '#3b82f6' : '#ef4444'),
+                                      fontSize: '11px',
+                                      fontWeight: '900',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isPresent ? '#22c55e' : (isWO || isNH ? '#3b82f6' : '#ef4444') }}></div>
+                                      {rawStatus}
+                                    </div>
+                                  );
+                                })()}
+                              </td>
+                              <td style={{ padding: '20px', fontSize: '12px', fontWeight: '800', color: '#64748b', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log?.in_location || log?.location || '----'}>
+                                {log?.in_location || log?.location || '----'}
+                              </td>
+                              <td style={{ padding: '20px', fontSize: '12px', fontWeight: '800', color: '#64748b', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log?.out_location || '----'}>
+                                {log?.out_location || '----'}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr><td colSpan="9" style={{ textAlign: 'center', padding: '100px', color: '#64748b', fontWeight: '900' }}> No matching data found for selected range. </td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </section>
             </>
           ) : activeTab === 'summary' ? (
@@ -1217,23 +1398,68 @@ export default function LeaveAttendanceCenter() {
                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '950', color: '#0f172a' }}>Employee Leave Ledger</h3>
                   <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>Comprehensive summary of all employee leave balances.</p>
                 </div>
-                <button 
-                  onClick={() => {
-                    const summaryData = allEmployees.map(emp => {
-                      const empLeaves = leaveRequests.filter(l => String(l.user_id || l.emp_id || l.employee_id) === String(emp.id) && String(l.status || '').toUpperCase().includes('APPROVED'));
-                      const cl = empLeaves.filter(l => String(l.leave_type || '').toUpperCase().includes('CASUAL')).length;
-                      const lop = empLeaves.filter(l => String(l.leave_type || '').toUpperCase().includes('LOP')).length;
-                      return { 'Employee ID': emp.id, 'Name': emp.name || emp.user_name, 'Casual Leaves': cl, 'LOP Leaves': lop, 'Total Taken': cl + lop, 'Available Leaves': 12 - cl };
-                    });
-                    const ws = XLSX.utils.json_to_sheet(summaryData);
-                    const wb = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(wb, ws, "Leaves Summary");
-                    XLSX.writeFile(wb, "PManager_Leaves_Summary.xlsx");
-                  }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', background: '#16a34a', color: 'white', border: 'none', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
-                >
-                  <Download size={16} /> Export XL
-                </button>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <button 
+                    onClick={() => setShowAllLedger(!showAllLedger)}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px', 
+                      padding: '10px 20px', 
+                      borderRadius: '12px', 
+                      background: showAllLedger ? '#f1f5f9' : '#0f172a', 
+                      color: showAllLedger ? '#475569' : 'white', 
+                      border: 'none', 
+                      fontWeight: '800', 
+                      fontSize: '13px', 
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {showAllLedger ? 'View Less' : 'View All'}
+                  </button>
+                  <div style={{ position: 'relative' }} ref={dropdownRef}>
+                    <button 
+                      onClick={() => setShowExportDropdown(!showExportDropdown)}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px', 
+                        padding: '10px 20px', 
+                        borderRadius: '12px', 
+                        background: '#16a34a', 
+                        color: 'white', 
+                        border: 'none', 
+                        fontWeight: '800', 
+                        fontSize: '13px', 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      <Download size={16} /> Export <ChevronDown size={14} style={{ transform: showExportDropdown ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
+                    </button>
+                    
+                    {showExportDropdown && (
+                      <div className="animate-fade-in" style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'white', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', border: '1px solid #f1f5f9', zIndex: 100, minWidth: '160px', overflow: 'hidden' }}>
+                        <button 
+                          onClick={() => handleLedgerExport('excel')}
+                          style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'transparent', border: 'none', color: '#1e293b', fontWeight: '700', fontSize: '13px', cursor: 'pointer', textAlign: 'left', transition: '0.2s' }}
+                          onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
+                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <FileText size={16} color="#16a34a" /> Export as Excel
+                        </button>
+                        <button 
+                          onClick={() => handleLedgerExport('pdf')}
+                          style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px', background: 'transparent', border: 'none', color: '#1e293b', fontWeight: '700', fontSize: '13px', cursor: 'pointer', textAlign: 'left', transition: '0.2s' }}
+                          onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
+                          onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <FileText size={16} color="#dc2626" /> Export as PDF
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div style={{ overflowX: 'auto', border: '1px solid #f1f5f9', borderRadius: '16px' }}>
@@ -1242,15 +1468,17 @@ export default function LeaveAttendanceCenter() {
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
                       <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>EMPLOYEE</th>
                       <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>ID</th>
+                      <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>YEAR</th>
                       <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>CASUAL LEAVES</th>
                       <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>LOP LEAVES</th>
+                      <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>HALF DAYS</th>
                       <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>TAKEN</th>
                       <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>AVAILABLE LEAVES</th>
                       <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>ACTION</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {allEmployees
+                    {(showAllLedger ? allEmployees : allEmployees.slice(0, 7))
                       .filter(emp => String(emp.id || emp.EmpID) !== '20250')
                       .map((emp, idx) => {
                       // Prioritize data from leave_stats table (allLeaveStats)
@@ -1281,8 +1509,10 @@ export default function LeaveAttendanceCenter() {
                             </div>
                           </td>
                           <td style={{ padding: '12px 16px', fontWeight: '700', color: '#000000' }}>#{emp.id}</td>
+                          <td style={{ padding: '12px 16px', fontWeight: '700', color: '#64748b' }}>{statsEntry?.year || new Date().getFullYear()}</td>
                           <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{cl}</td>
                           <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{lop}</td>
+                          <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{statsEntry?.half_day || statsEntry?.half_days || 0}</td>
                           <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{taken}</td>
                           <td style={{ padding: '12px 16px', fontWeight: '950', color: '#16a34a' }}>{balance} Days</td>
                           <td style={{ padding: '12px 16px' }}>

@@ -89,7 +89,7 @@ export default function ResignationUserScreen() {
         <div style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
             <AppHeader />
             
-            <main style={{ flex: 1, padding: '100px 30px 40px', maxWidth: '100%', margin: '0 auto', width: '100%' }}>
+            <main style={{ flex: 1, padding: '100px 26px 40px', maxWidth: '100%', margin: '0 auto', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '30px' }}>
                     <button 
                         onClick={() => navigate(-1)}

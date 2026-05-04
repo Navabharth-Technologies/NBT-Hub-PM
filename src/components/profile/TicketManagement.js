@@ -168,41 +168,50 @@ export default function TicketManagement() {
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
       
-      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px' : '40px', maxWidth: '100%', width: '100%', boxSizing: 'border-box', marginTop: '70px' }}>
-        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px' }}>
+      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px' : '40px 26px', maxWidth: '100%', width: '100%', boxSizing: 'border-box', marginTop: '70px' }}>
+        <header style={{ 
+          marginBottom: '32px', 
+          display: 'flex', 
+          flexDirection: winWidth < 768 ? 'column' : 'row',
+          justifyContent: 'space-between', 
+          alignItems: winWidth < 768 ? 'flex-start' : 'flex-end', 
+          gap: '24px' 
+        }}>
           <div>
-            <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '900', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-1px' }}>Ticket Management</h1>
-            <p style={{ color: '#64748b', margin: 0, fontSize: '15px', fontWeight: '500' }}>Review and resolve support tickets from across the organization</p>
+            <h1 style={{ fontSize: winWidth < 768 ? '26px' : '32px', fontWeight: '950', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-1px' }}>Support Hub</h1>
+            <p style={{ color: '#64748b', margin: 0, fontSize: winWidth < 768 ? '14px' : '15px', fontWeight: '600', lineHeight: '1.5' }}>Manage organization-wide support requests and resolutions</p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
              <button 
                className="btn-primary" 
                onClick={handleExportPDF}
-               style={{ background: 'white', color: '#3863a8', border: '1.5px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', gap: '8px' }}
+               style={{ flex: 1, background: 'white', color: '#3863a8', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
              >
-               <Download size={16} /> Export Report
+               <Download size={16} /> Export
              </button>
-             <button className="btn-primary" onClick={() => fetchTickets()}>Refresh Feed</button>
+             <button className="btn-primary" style={{ flex: 1, padding: '12px' }} onClick={() => fetchTickets()}>Refresh</button>
           </div>
         </header>
 
         {/* Filters */}
         <div className="flex-responsive-stack" style={{ marginBottom: '32px', gap: '16px' }}>
-          <div style={{ flex: 1, position: 'relative' }}>
-             <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} size={18} />
+          <div style={{ flex: 1, position: 'relative', width: '100%' }}>
+             <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} size={18} />
              <input 
                type="text" 
-               placeholder="Search by ID, Subject, or Requester..."
+               placeholder="Search tickets..."
                value={searchTerm}
                onChange={(e) => setSearchTerm(e.target.value)}
-               style={{ width: '100%', padding: '14px 16px 14px 48px', borderRadius: '15px', border: '2.5px solid #eef2f6', background: 'white', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }}
+               style={{ width: '100%', padding: '14px 16px 14px 48px', borderRadius: '15px', border: '2px solid #eef2f6', background: 'white', outline: 'none', fontSize: '14px', boxSizing: 'border-box', transition: '0.2s', fontWeight: '600' }}
+               onFocus={(e) => e.target.style.borderColor = '#3863a8'}
+               onBlur={(e) => e.target.style.borderColor = '#eef2f6'}
              />
           </div>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
             <select 
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ padding: '14px 20px', borderRadius: '15px', border: '2.5px solid #eef2f6', background: 'white', fontWeight: '700', color: '#1e293b', outline: 'none', cursor: 'pointer', minWidth: '150px' }}
+                style={{ flex: 1, padding: '14px 16px', borderRadius: '15px', border: '2px solid #eef2f6', background: 'white', fontWeight: '700', color: '#1e293b', outline: 'none', cursor: 'pointer', fontSize: '13px' }}
             >
                 <option>All Status</option>
                 <option>Open</option>
@@ -213,7 +222,7 @@ export default function TicketManagement() {
             <select 
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                style={{ padding: '14px 20px', borderRadius: '15px', border: '2.5px solid #eef2f6', background: 'white', fontWeight: '700', color: '#1e293b', outline: 'none', cursor: 'pointer', minWidth: '150px' }}
+                style={{ flex: 1, padding: '14px 16px', borderRadius: '15px', border: '2px solid #eef2f6', background: 'white', fontWeight: '700', color: '#1e293b', outline: 'none', cursor: 'pointer', fontSize: '13px' }}
             >
                 <option>All Priority</option>
                 <option>High</option>
@@ -223,114 +232,217 @@ export default function TicketManagement() {
           </div>
         </div>
 
-        <section style={{ background: 'white', borderRadius: '24px', border: '1.5px solid #f1f5f9', boxShadow: '0 10px 25px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #f1f5f9' }}>
-                  <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>ID</th>
-                  <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Subject</th>
-                  <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Requester</th>
-                  <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Priority</th>
-                  <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Created At</th>
-                  <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Status</th>
-                  <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody className="animate-fade-in">
-                {loading ? (
-                  <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>Fetching support tickets...</td></tr>
-                ) : filteredTickets.length > 0 ? (
-                  filteredTickets.map((ticket, index) => {
-                    const status = getStatusStyle(ticket.status);
-                    const priority = getPriorityStyle(ticket.priority);
-                    return (
-                      <tr key={ticket.id || index} style={{ borderBottom: '1.5px solid #f8fafc', transition: '0.2s' }}>
-                        <td style={{ padding: '20px 25px' }}>
-                          <span style={{ fontSize: '12px', fontWeight: '800', color: '#3863a8', backgroundColor: '#f0f4ff', padding: '4px 10px', borderRadius: '8px' }}>
-                            {String(ticket.id || ticket.ticket_id || index + 1)}
-                          </span>
-                        </td>
-                        <td style={{ padding: '20px 25px' }}>
-                          <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '14px', maxWidth: '300px' }}>{ticket.subject || ticket.title || 'No Subject'}</div>
-                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '300px' }}>{ticket.description || 'No description provided.'}</div>
-                        </td>
-                        <td style={{ padding: '20px 25px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            {(() => {
-                              const rName = ticket.requester || ticket.requester_name || ticket.user_name || ticket.member_name || 
-                                           usersList.find(u => String(u.id) === String(ticket.user_id || ticket.userId || ticket.employee_id))?.name || 
-                                           'Anonymous';
-                              return (
-                                <>
-                                  <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: '#e0e7ff', color: '#312e81', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '900' }}>
-                                    {rName.charAt(0)}
-                                  </div>
-                                  <span style={{ fontSize: '14px', fontWeight: '700', color: '#475569' }}>
-                                    {rName}
-                                  </span>
-                                </>
-                              );
-                            })()}
-                          </div>
-                        </td>
-                        <td style={{ padding: '20px 25px' }}>
+        <section style={{ background: winWidth < 768 ? 'transparent' : 'white', borderRadius: '24px', border: winWidth < 768 ? 'none' : '3px solid #cbd5e1', boxShadow: winWidth < 768 ? 'none' : '0 10px 25px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+          {winWidth < 768 ? (
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px', background: 'white', borderRadius: '20px' }}>Fetching support tickets...</div>
+              ) : filteredTickets.length > 0 ? (
+                filteredTickets.map((ticket, index) => {
+                  const status = getStatusStyle(ticket.status);
+                  const priority = getPriorityStyle(ticket.priority);
+                  const requesterName = ticket.requester || ticket.requester_name || ticket.user_name || ticket.member_name || 
+                                       usersList.find(u => String(u.id) === String(ticket.user_id || ticket.userId || ticket.employee_id))?.name || 
+                                       'Anonymous';
+                  
+                  let dateVal = ticket.created_at || ticket.created_date || ticket.timestamp || ticket.time_stamp;
+                  if (typeof dateVal === 'string' && dateVal.includes('Z20')) dateVal = dateVal.split('Z')[0] + 'Z';
+                  const parsedDate = new Date(dateVal);
+                  const formattedDate = (parsedDate && !isNaN(parsedDate.getTime())) 
+                    ? parsedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') 
+                    : (dateVal ? String(dateVal).split('T')[0] : 'N/A');
+
+                  return (
+                    <div 
+                      key={ticket.id || index}
+                      style={{ 
+                        background: 'white', 
+                        padding: '24px', 
+                        borderRadius: '24px', 
+                        border: '3px solid #cbd5e1',
+                        boxShadow: '0 4px 15px rgba(0,0,0,0.02)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '16px',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.borderColor = '#3863a8';
+                        e.currentTarget.style.boxShadow = '0 10px 25px rgba(56, 99, 168, 0.1)';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.borderColor = '#cbd5e1';
+                        e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.02)';
+                      }}>
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#3863a8', backgroundColor: '#f0f4ff', padding: '4px 12px', borderRadius: '8px' }}>
+                          #{String(ticket.id || index + 1)}
+                        </span>
+                        <span style={{ 
+                          fontSize: '10px', fontWeight: '950', padding: '6px 12px', borderRadius: '8px', textTransform: 'uppercase', letterSpacing: '0.5px',
+                          backgroundColor: status.bg, color: status.text, border: `1px solid ${status.border}`, display: 'inline-flex', alignItems: 'center', gap: '6px'
+                        }}>
+                          {status.icon} {ticket.status || 'Open'}
+                        </span>
+                      </div>
+
+                      <div>
+                        <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '16px', marginBottom: '6px', lineHeight: '1.4' }}>{ticket.subject || ticket.title || 'No Subject'}</div>
+                        <div style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.6' }}>{ticket.description || 'No description provided.'}</div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#e0e7ff', color: '#312e81', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '900' }}>
+                          {requesterName.charAt(0)}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>{requesterName}</span>
+                          <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>Requester</span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px dashed #e2e8f0' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
                           <div style={{ fontSize: '11px', fontWeight: '900', color: priority.color, display: 'flex', alignItems: 'center', gap: '6px' }}>
                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: priority.color }}></span>
                              {priority.label}
                           </div>
-                        </td>
-                        <td style={{ padding: '20px 25px', color: '#64748b', fontWeight: '600', fontSize: '12px' }}>
-                          {(() => {
-                            let dateVal = ticket.created_at || ticket.created_date || ticket.timestamp || ticket.time_stamp;
-                            if (!dateVal) return 'Unknown';
-                            
-                            // Handle cases where the date might be doubled/concatenated in the DB
-                            if (typeof dateVal === 'string' && dateVal.includes('Z20')) {
-                              dateVal = dateVal.split('Z')[0] + 'Z';
-                            }
-
-                            const parsedDate = new Date(dateVal);
-                            if (isNaN(parsedDate.getTime())) return String(dateVal).split('T')[0]; // Fallback to YYYY-MM-DD
-                            
-                            return parsedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
-                          })()}
-                        </td>
-                        <td style={{ padding: '20px 25px' }}>
-                          <span style={{ 
-                            fontSize: '10px', fontWeight: '900', padding: '6px 12px', borderRadius: '8px', textTransform: 'uppercase', letterSpacing: '0.5px',
-                            backgroundColor: status.bg, color: status.text, border: `1px solid ${status.border}`, display: 'inline-flex', alignItems: 'center', gap: '6px'
-                          }}>
-                            {status.icon} {ticket.status || 'Open'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '20px 25px' }}>
-                          <button 
-                            className="btn-ghost" 
-                            style={{ color: '#3863a8', fontWeight: '800', fontSize: '12px', padding: '6px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
-                            onClick={() => {
-                              setManageTicket(ticket);
-                              setManageResponse(ticket.response || '');
-                            }}
-                          >
-                             Manage
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '100px', backgroundColor: '#fcfcfd' }}>
-                        <div style={{ fontSize: '40px', marginBottom: '20px' }}>🎫</div>
-                        <h3 style={{ color: '#1e293b', marginBottom: '8px' }}>No Tickets Found</h3>
-                        <p style={{ color: '#64748b' }}>Awaiting new support requests...</p>
-                    </td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontWeight: '700', fontSize: '12px' }}>
+                            <Clock size={12} />
+                            {formattedDate}
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            setManageTicket(ticket);
+                            setManageResponse(ticket.response || '');
+                          }}
+                          style={{ padding: '8px 16px', borderRadius: '10px', background: '#3863a8', color: 'white', border: 'none', fontWeight: '800', fontSize: '12px', cursor: 'pointer', boxShadow: '0 4px 10px rgba(56, 99, 168, 0.2)' }}
+                        >
+                          Manage
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '24px', border: '3px dashed #cbd5e1' }}>
+                    <div style={{ fontSize: '40px', marginBottom: '20px' }}>🎫</div>
+                    <h3 style={{ color: '#1e293b', marginBottom: '8px' }}>No Tickets Found</h3>
+                    <p style={{ color: '#64748b' }}>Awaiting new support requests...</p>
+                </div>
+              )}
+             </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #f1f5f9' }}>
+                    <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>ID</th>
+                    <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Subject</th>
+                    <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Requester</th>
+                    <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Priority</th>
+                    <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Created At</th>
+                    <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Status</th>
+                    <th style={{ padding: '20px 25px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Action</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="animate-fade-in">
+                  {loading ? (
+                    <tr><td colSpan="7" style={{ textAlign: 'center', padding: '40px' }}>Fetching support tickets...</td></tr>
+                  ) : filteredTickets.length > 0 ? (
+                    filteredTickets.map((ticket, index) => {
+                      const status = getStatusStyle(ticket.status);
+                      const priority = getPriorityStyle(ticket.priority);
+                      return (
+                        <tr key={ticket.id || index} style={{ borderBottom: '1.5px solid #f8fafc', transition: '0.2s' }}>
+                          <td style={{ padding: '20px 25px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '800', color: '#3863a8', backgroundColor: '#f0f4ff', padding: '4px 10px', borderRadius: '8px' }}>
+                              {String(ticket.id || ticket.ticket_id || index + 1)}
+                            </span>
+                          </td>
+                          <td style={{ padding: '20px 25px' }}>
+                            <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '14px', maxWidth: '300px' }}>{ticket.subject || ticket.title || 'No Subject'}</div>
+                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '300px' }}>{ticket.description || 'No description provided.'}</div>
+                          </td>
+                          <td style={{ padding: '20px 25px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              {(() => {
+                                const rName = ticket.requester || ticket.requester_name || ticket.user_name || ticket.member_name || 
+                                             usersList.find(u => String(u.id) === String(ticket.user_id || ticket.userId || ticket.employee_id))?.name || 
+                                             'Anonymous';
+                                return (
+                                  <>
+                                    <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: '#e0e7ff', color: '#312e81', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '900' }}>
+                                      {rName.charAt(0)}
+                                    </div>
+                                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#475569' }}>
+                                      {rName}
+                                    </span>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </td>
+                          <td style={{ padding: '20px 25px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '900', color: priority.color, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: priority.color }}></span>
+                               {priority.label}
+                            </div>
+                          </td>
+                          <td style={{ padding: '20px 25px', color: '#64748b', fontWeight: '600', fontSize: '12px' }}>
+                            {(() => {
+                              let dateVal = ticket.created_at || ticket.created_date || ticket.timestamp || ticket.time_stamp;
+                              if (!dateVal) return 'Unknown';
+                              
+                              // Handle cases where the date might be doubled/concatenated in the DB
+                              if (typeof dateVal === 'string' && dateVal.includes('Z20')) {
+                                dateVal = dateVal.split('Z')[0] + 'Z';
+                              }
+  
+                              const parsedDate = new Date(dateVal);
+                              if (isNaN(parsedDate.getTime())) return String(dateVal).split('T')[0]; // Fallback to YYYY-MM-DD
+                              
+                              return parsedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+                            })()}
+                          </td>
+                          <td style={{ padding: '20px 25px' }}>
+                            <span style={{ 
+                              fontSize: '10px', fontWeight: '900', padding: '6px 12px', borderRadius: '8px', textTransform: 'uppercase', letterSpacing: '0.5px',
+                              backgroundColor: status.bg, color: status.text, border: `1px solid ${status.border}`, display: 'inline-flex', alignItems: 'center', gap: '6px'
+                            }}>
+                              {status.icon} {ticket.status || 'Open'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '20px 25px' }}>
+                            <button 
+                              className="btn-ghost" 
+                              style={{ color: '#3863a8', fontWeight: '800', fontSize: '12px', padding: '6px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
+                              onClick={() => {
+                                setManageTicket(ticket);
+                                setManageResponse(ticket.response || '');
+                              }}
+                            >
+                               Manage
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '100px', backgroundColor: '#fcfcfd' }}>
+                          <div style={{ fontSize: '40px', marginBottom: '20px' }}>🎫</div>
+                          <h3 style={{ color: '#1e293b', marginBottom: '8px' }}>No Tickets Found</h3>
+                          <p style={{ color: '#64748b' }}>Awaiting new support requests...</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </main>
 
@@ -339,7 +451,7 @@ export default function TicketManagement() {
       {/* MANAGE TICKET MODAL */}
       {manageTicket && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="animate-zoom-in" style={{ background: 'white', padding: '35px', borderRadius: '30px', width: '100%', maxWidth: '550px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative' }}>
+          <div className="animate-zoom-in" style={{ background: 'white', padding: '35px', borderRadius: '30px', width: '100%', maxWidth: '550px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '3px solid #cbd5e1', position: 'relative' }}>
             
             <button 
               onClick={() => setManageTicket(null)}

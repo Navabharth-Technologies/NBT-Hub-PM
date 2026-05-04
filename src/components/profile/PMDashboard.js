@@ -389,7 +389,7 @@ export default function PMDashboard() {
             </div>
           </div>
 
-          <div className="quick-actions" style={{ position: 'relative', display: 'flex', gap: '8px', width: winWidth < 1024 ? '100%' : 'auto', flexDirection: winWidth < 600 ? 'column' : 'row' }}>
+          <div className="quick-actions" style={{ position: 'relative', display: 'flex', gap: '8px', width: winWidth < 1024 ? '100%' : 'auto', flexDirection: winWidth < 480 ? 'column' : 'row', flexWrap: 'wrap' }}>
             <div style={{ position: 'relative', flex: 1 }}>
               <button
                 className="btn-primary"
@@ -482,7 +482,7 @@ export default function PMDashboard() {
                       padding: '24px',
                       borderRadius: '24px',
                       background: 'white',
-                      border: '1px solid #f1f5f9',
+                      border: '3px solid #cbd5e1',
                       boxShadow: '0 8px 30px rgba(0,0,0,0.04)',
                       display: 'flex',
                       flexDirection: 'column',
@@ -595,6 +595,7 @@ export default function PMDashboard() {
                       style={{
                         flex: '0 0 100%',
                         boxSizing: 'border-box',
+                        border: '3px solid #cbd5e1',
                         borderLeft: `6px solid ${team.risk === 'high' ? '#ef4444' : team.risk === 'medium' ? '#f59e0b' : '#3863a8'}`,
                         cursor: 'pointer',
                         padding: '24px',
@@ -683,7 +684,7 @@ export default function PMDashboard() {
                   ))}
                 </div>
               ) : (
-                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px', background: '#f8fafc', borderRadius: '24px', border: '1.5px dashed #e2e8f0' }}>Unit Sprints Neutralized</div>
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px', background: '#f8fafc', borderRadius: '24px', border: '3px dashed #cbd5e1' }}>Unit Sprints Neutralized</div>
               )}
             </div>
             <button className="animate-fade-in" style={{ width: '100%', padding: '14px', background: '#1e293b', borderRadius: '16px', color: 'white', fontWeight: '900', fontSize: '14px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>Access Ops Hub <span>→</span></button>
@@ -724,7 +725,7 @@ export default function PMDashboard() {
                     </div>
                   ))
                 ) : (
-                  <div style={{ padding: '30px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', border: '1.5px dashed #f1f5f9', borderRadius: '24px' }}>Zero Pending Requests</div>
+                  <div style={{ padding: '30px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', border: '3px dashed #cbd5e1', borderRadius: '24px' }}>Zero Pending Requests</div>
                 )}
               </div>
             </div>

@@ -164,7 +164,7 @@ export default function EngagementModule() {
     };
 
     const styles = {
-        container: { minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '20px', padding: winWidth < 768 ? '80px 10px 120px' : '90px 40px 150px', maxWidth: '1400px', margin: '0 auto', boxSizing: 'border-box' },
+        container: { minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '20px', padding: winWidth < 768 ? '80px 15px 120px' : '90px 26px 150px', maxWidth: '1400px', margin: '0 auto', boxSizing: 'border-box' },
         card: { backgroundColor: 'white', borderRadius: '40px', padding: winWidth < 768 ? '20px' : '30px', boxShadow: '0 10px 40px rgba(0,0,0,0.04)', border: '1px solid #eef2f6' },
         tagInput: { width: '100%', padding: '12px 20px', borderRadius: '15px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontSize: '14px', fontWeight: '900', color: '#315A9E', outline: 'none', marginBottom: '12px' },
         mainInput: { width: '100%', padding: '20px', borderRadius: '20px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontSize: '16px', fontWeight: '600', color: '#0B1E3F', outline: 'none', resize: 'none', minHeight: '100px' },

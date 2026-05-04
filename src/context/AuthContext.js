@@ -36,9 +36,13 @@ export const AuthProvider = ({ children }) => {
         };
 
         setUser(authData);
-        localStorage.setItem('navAuthUser', JSON.stringify(authData));
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('userRole', data.user.role);
+        try {
+          localStorage.setItem('navAuthUser', JSON.stringify(authData));
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('userRole', data.user.role);
+        } catch (e) {
+          console.warn('LocalStorage quota exceeded during login.', e);
+        }
         return { success: true };
       } else {
         return { success: false, error: data.error || 'Authentication Failed' };
@@ -80,7 +84,11 @@ export const AuthProvider = ({ children }) => {
   const updateUserData = (newData) => {
     setUser(prev => {
       const updated = { ...prev, ...newData };
-      localStorage.setItem('navAuthUser', JSON.stringify(updated));
+      try {
+        localStorage.setItem('navAuthUser', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('LocalStorage quota exceeded. Changes will not persist after refresh.', e);
+      }
       return updated;
     });
   };

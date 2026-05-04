@@ -15,6 +15,13 @@ export default function ServiceCertificateUserScreen() {
     const { user } = useAuth();
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [winWidth, setWinWidth] = useState(window.innerWidth);
+
+    useEffect(() => {
+        const handleResize = () => setWinWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
     
     // Form state
     const [formData, setFormData] = useState({
@@ -120,9 +127,9 @@ export default function ServiceCertificateUserScreen() {
         <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
             <AppHeader />
             
-            <main style={{ flex: 1, padding: '100px 30px 40px', maxWidth: '100%', margin: '0 auto', width: '100%' }}>
+            <main style={{ flex: 1, padding: winWidth < 768 ? '100px 15px 120px' : '100px 26px 40px', maxWidth: '100%', margin: '0 auto', width: '100%' }}>
                 {/* Header Section */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '40px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: winWidth < 768 ? '25px' : '40px' }}>
                     <button 
                         onClick={() => navigate(-1)}
                         style={{ background: 'white', border: 'none', width: '38px', height: '38px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
@@ -130,14 +137,14 @@ export default function ServiceCertificateUserScreen() {
                         <ChevronLeft size={22} color="#0f172a" />
                     </button>
                     <div>
-                        <h1 style={{ fontSize: '24px', fontWeight: '950', color: '#0f172a', margin: 0 }}>Experience Letter</h1>
-                        <p style={{ color: '#64748b', fontSize: '14px', margin: '4px 0 0', fontWeight: '500' }}>Request official service certificate</p>
+                        <h1 style={{ fontSize: winWidth < 768 ? '20px' : '24px', fontWeight: '950', color: '#0f172a', margin: 0 }}>Experience Letter</h1>
+                        <p style={{ color: '#64748b', fontSize: winWidth < 768 ? '12px' : '14px', margin: '4px 0 0', fontWeight: '500' }}>Request official service certificate</p>
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: '40px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: winWidth < 1024 ? '1fr' : 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: winWidth < 768 ? '20px' : '40px' }}>
                     {/* Left Column: Form */}
-                    <div className="animate-fade-in" style={{ backgroundColor: 'white', borderRadius: '24px', padding: '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)', border: '1px solid #f1f5f9' }}>
+                    <div className="animate-fade-in" style={{ backgroundColor: 'white', borderRadius: '24px', padding: winWidth < 768 ? '25px 20px' : '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)', border: '1px solid #f1f5f9' }}>
                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '30px' }}>
                             <FileText color="#0f172a" size={20} />
                             <h2 style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', margin: 0 }}>Service Certificate Application</h2>
@@ -187,14 +194,14 @@ export default function ServiceCertificateUserScreen() {
                         </div>
 
                         {/* Professional Asset Declaration Section */}
-                        <div style={{ background: 'white', border: '1px solid #f1f5f9', borderRadius: '30px', padding: '30px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)', marginBottom: '40px' }}>
+                        <div style={{ background: 'white', border: '1px solid #f1f5f9', borderRadius: '30px', padding: winWidth < 768 ? '20px' : '30px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)', marginBottom: '40px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '8px' }}>
                                 <Package size={22} color="#3163aa" />
-                                <h3 style={{ fontSize: '18px', fontWeight: '950', color: '#1e293b', margin: 0 }}>Professional Asset Declaration</h3>
+                                <h3 style={{ fontSize: winWidth < 768 ? '16px' : '18px', fontWeight: '950', color: '#1e293b', margin: 0 }}>Professional Asset Declaration</h3>
                             </div>
-                            <p style={{ fontSize: '12px', color: '#94a3b8', margin: '0 0 25px 37px', fontWeight: '600' }}>Declare your company-provided hardware details for official records.</p>
+                            <p style={{ fontSize: winWidth < 768 ? '11px' : '12px', color: '#94a3b8', margin: winWidth < 768 ? '0 0 20px 0' : '0 0 25px 37px', fontWeight: '600' }}>Declare your company-provided hardware details for official records.</p>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '20px', marginBottom: '30px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : '1.5fr 1fr', gap: '20px', marginBottom: '30px' }}>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>Laptop Brand / Model</label>
                                     <input 
@@ -222,25 +229,25 @@ export default function ServiceCertificateUserScreen() {
                                 <h4 style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Hardware Peripherals Submission</h4>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: winWidth < 480 ? 'repeat(2, 1fr)' : winWidth < 768 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: '12px' }}>
                                 {hardwareItems.map((item, idx) => (
                                     <div key={idx} 
                                         onClick={() => toggleAsset(item.key)}
                                         style={{ 
                                             background: assetData?.[item.key] ? '#f0fdf4' : '#f8fafc', 
                                             border: assetData?.[item.key] ? '1.5px solid #bbf7d0' : '1.5px solid #f1f5f9', 
-                                            borderRadius: '16px', padding: '16px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
+                                            borderRadius: '16px', padding: winWidth < 768 ? '12px 5px' : '16px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
                                             cursor: 'pointer', transition: '0.2s'
                                         }}
                                     >
                                         <div style={{ 
-                                            width: '32px', height: '32px', borderRadius: '50%', 
+                                            width: winWidth < 768 ? '28px' : '32px', height: winWidth < 768 ? '28px' : '32px', borderRadius: '50%', 
                                             background: assetData?.[item.key] ? '#22c55e' : '#f1f5f9',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center'
                                         }}>
                                             {assetData?.[item.key] ? <Check size={16} color="white" /> : <Package size={16} color="#cbd5e1" />}
                                         </div>
-                                        <span style={{ fontSize: '10px', fontWeight: '800', color: assetData?.[item.key] ? '#166534' : '#94a3b8', textAlign: 'center' }}>
+                                        <span style={{ fontSize: winWidth < 768 ? '9px' : '10px', fontWeight: '800', color: assetData?.[item.key] ? '#166534' : '#94a3b8', textAlign: 'center' }}>
                                             {item.label}
                                         </span>
                                     </div>
@@ -341,44 +348,44 @@ export default function ServiceCertificateUserScreen() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '35px' }}>
                                 
                                 {/* Laptop Details Grid */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '25px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : '1.5fr 1fr', gap: '25px' }}>
                                     <div>
                                         <label style={{ display: 'block', fontSize: '12px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Laptop Brand / Model</label>
-                                        <div style={{ background: '#f8fafc', border: '1.5px solid #f1f5f9', borderRadius: '18px', padding: '18px 25px', fontSize: '15px', fontWeight: '800', color: '#334155' }}>
+                                        <div style={{ background: '#f8fafc', border: '1.5px solid #f1f5f9', borderRadius: '18px', padding: '18px 25px', fontSize: winWidth < 768 ? '13px' : '15px', fontWeight: '800', color: '#334155' }}>
                                             {selectedRequest.laptop_details || 'RedmiBook 15 Pro, 8GB/256GB Serial No: NACharger: 08KD'}
                                         </div>
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', fontSize: '12px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Serial Number</label>
-                                        <div style={{ background: '#f8fafc', border: '1.5px solid #f1f5f9', borderRadius: '18px', padding: '18px 25px', fontSize: '15px', fontWeight: '700', color: '#94a3b8' }}>
-                                            e.g. PF5P6L2E
+                                        <div style={{ background: '#f8fafc', border: '1.5px solid #f1f5f9', borderRadius: '18px', padding: '18px 25px', fontSize: winWidth < 768 ? '13px' : '15px', fontWeight: '700', color: '#94a3b8' }}>
+                                            {selectedRequest.serial_number || 'PF5P6L2E'}
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Peripherals Section */}
-                                <div style={{ background: 'white', border: '1px solid #f1f5f9', borderRadius: '30px', padding: '30px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                                <div style={{ background: 'white', border: '1px solid #f1f5f9', borderRadius: '30px', padding: winWidth < 768 ? '20px' : '30px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '25px' }}>
                                         <div style={{ color: '#22c55e' }}><ShieldCheck size={22} /></div>
                                         <h3 style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Hardware Peripherals Verified</h3>
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '15px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: winWidth < 480 ? 'repeat(2, 1fr)' : winWidth < 768 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: '15px' }}>
                                         {hardwareItems.map((item, idx) => (
                                             <div key={idx} style={{ 
                                                 background: selectedRequest?.[item.key] ? '#f0fdf4' : '#f8fafc', 
                                                 border: selectedRequest?.[item.key] ? '1.5px solid #bbf7d0' : '1.5px solid #f1f5f9', 
-                                                borderRadius: '20px', padding: '20px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
+                                                borderRadius: '20px', padding: winWidth < 768 ? '15px 5px' : '20px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
                                                 opacity: selectedRequest?.[item.key] ? 1 : 0.6
                                             }}>
                                                 <div style={{ 
-                                                    width: '36px', height: '36px', borderRadius: '50%', 
+                                                    width: winWidth < 768 ? '30px' : '36px', height: winWidth < 768 ? '30px' : '36px', borderRadius: '50%', 
                                                     background: selectedRequest?.[item.key] ? '#22c55e' : '#f1f5f9',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                                                 }}>
                                                     {selectedRequest?.[item.key] ? <Check size={18} color="white" /> : <Package size={18} color="#cbd5e1" />}
                                                 </div>
-                                                <span style={{ fontSize: '11px', fontWeight: '800', color: selectedRequest?.[item.key] ? '#166534' : '#94a3b8', textAlign: 'center' }}>
+                                                <span style={{ fontSize: winWidth < 768 ? '9px' : '11px', fontWeight: '800', color: selectedRequest?.[item.key] ? '#166534' : '#94a3b8', textAlign: 'center' }}>
                                                     {item.label}
                                                 </span>
                                             </div>

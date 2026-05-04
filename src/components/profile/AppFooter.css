@@ -156,27 +156,37 @@
 
 @media (max-width: 768px) {
   .app-footer-wrapper {
-    bottom: 15px;
+    bottom: 8px;
     min-width: auto;
-    width: 95%;
+    width: 98%;
   }
   
   .app-footer {
-    padding: 8px 10px;
-    gap: 2px;
+    padding: 6px 4px;
+    gap: 0;
+    justify-content: space-around;
   }
 
   .footer-item {
-    min-width: 60px;
-    padding: 4px 2px;
+    min-width: 45px;
+    padding: 4px 0;
+    gap: 2px;
+    flex: 1;
   }
 
   .footer-label {
-    font-size: 7px;
+    font-size: 6.2px;
+    letter-spacing: 0;
   }
 
   .footer-item.active .footer-label,
   .footer-item.action-active .footer-label {
-    font-size: 8px;
+    font-size: 7px;
+    font-weight: 900;
+  }
+
+  .footer-icon svg {
+    width: 16px;
+    height: 16px;
   }
 }

@@ -316,7 +316,7 @@ const QuizModule = ({ onBack }) => {
   return (
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
-      <main className="dashboard-content" style={{ flex: 1, padding: isMobile ? '20px' : '30px', marginTop: '90px', fontFamily: '"Nunito", "Segoe UI", sans-serif' }}>
+      <main className="dashboard-content" style={{ flex: 1, padding: isMobile ? '15px' : '30px 26px', marginTop: '90px', fontFamily: '"Nunito", "Segoe UI", sans-serif' }}>
         <AnimatePresence>
           {submissionFeedback.show && (
             <motion.div

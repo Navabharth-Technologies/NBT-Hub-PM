@@ -33,6 +33,7 @@ export default function PerformanceModule() {
   const [showSecurityModal, setShowSecurityModal] = useState(false);
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [isEditingDob, setIsEditingDob] = useState(false);
+  const [joiningDate, setJoiningDate] = useState(user?.joining_date || '16 January 2026');
   const [tempPhone, setTempPhone] = useState('');
   const [tempDob, setTempDob] = useState('');
   const [toast, setToast] = useState({ show: false, message: '' });
@@ -54,6 +55,7 @@ export default function PerformanceModule() {
           setAboutMe(data.about_me || user.about_me || 'Write a short introduction about yourself');
           setDob(data.date_of_birth || user.date_of_birth || 'Add Date of Birth');
           setRole(data.role || data.designation || user.role || user.designation || 'Lead Software Engineer');
+          setJoiningDate(data.joining_date || data.date_of_joining || user.joining_date || '16 January 2026');
           setReportingManager({ 
             name: data.reporting_manager || data.reportingManagerName || 'Anish V N', 
             id: data.reporting_manager_id || data.reportingManagerId || '' 
@@ -116,10 +118,22 @@ export default function PerformanceModule() {
 
     try {
       const formData = new FormData();
+      // Add file under multiple potential keys
       formData.append('image', file);
-      formData.append('employee_id', user.employee_id || user.id);
+      formData.append('file', file);
+      
+      const empId = parseInt(user.employee_id || user.id || user.userId || user.EmpID || 0);
+      
+      // Provide redundant identifiers to ensure backend compatibility
+      formData.append('managerId', empId);
+      formData.append('employee_id', empId);
+      formData.append('employeeId', empId);
+      formData.append('emp_id', empId);
+      formData.append('userId', empId);
+      formData.append('user_id', empId);
+      formData.append('id', user.id || empId);
 
-      const res = await fetch(API_ENDPOINTS.PROFILE_UPLOAD_IMAGE, {
+      const res = await fetch(API_ENDPOINTS.MANAGER_UPLOAD_IMAGE, {
         method: 'POST',
         headers: { 
           'Authorization': `Bearer ${user.token}` 
@@ -129,10 +143,14 @@ export default function PerformanceModule() {
 
       if (res.ok) {
         const data = await res.json();
-        const url = data.url || data.filePath || data.path || data.record?.path;
+        console.log("Upload Response:", data);
+        
+        // Robust URL extraction from various potential backend response formats
+        const url = data.url || data.filePath || data.path || data.record?.path || data.profile_pic || data.profile_picture || (data.record && (data.record.profile_pic || data.record.path));
+        
         if (url) {
-          // 3. Persist in DB via PROFILE_UPDATE
-          await fetch(API_ENDPOINTS.PROFILE_UPDATE, {
+          // 3. Persist to core user record to prevent fallback on refresh
+          await fetch(API_ENDPOINTS.UPDATE_PROFILE, {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
@@ -140,20 +158,53 @@ export default function PerformanceModule() {
             },
             body: JSON.stringify({ 
               email: user.email,
-              employee_id: user.employee_id,
-              id: user.id || user.employee_id,
+              employee_id: empId,
+              employeeId: empId,
+              emp_id: empId,
+              userId: empId,
+              user_id: empId,
+              id: user.id || empId,
               profile_pic: url,
-              profile_picture: url
+              profile_picture: url,
+              image: url
             })
           });
-          
-          // 4. Update Global State
-          const updatedUser = { profile_pic: url, profile_picture: url };
+
+          // 4. Sync with Employee Metadata table (Metadata Table)
+          await fetch(API_ENDPOINTS.EMPLOYEE_PROFILE_UPDATE, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${user.token}`
+            },
+            body: JSON.stringify({ 
+              profile_pic: url, 
+              profile_picture: url,
+              employee_id: empId,
+              id: empId 
+            })
+          });
+
+          // 5. Sync with Global State
+          const updatedUser = { 
+            ...user,
+            profile_pic: url, 
+            profile_picture: url 
+          };
           updateUserData(updatedUser);
-          setProfileImage(url.startsWith('http') || url.startsWith('data:') ? url : `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`);
-          setToast({ show: true, message: 'profile pic updated successfully ✅', type: 'success' });
+          
+          // Update local display state
+          const fullUrl = url.startsWith('http') || url.startsWith('data:') ? url : `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+          setProfileImage(fullUrl);
+          
+          setToast({ show: true, message: 'Profile pic updated successfully ✅', type: 'success' });
           setTimeout(() => setToast({ show: false, message: '' }), 3000);
+        } else {
+          setToast({ show: true, message: 'Upload succeeded but URL missing', type: 'error' });
         }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setToast({ show: true, message: errData.message || 'Upload failed', type: 'error' });
       }
     } catch (err) {
       console.error('Upload error:', err);
@@ -181,7 +232,7 @@ export default function PerformanceModule() {
             profile_pic: user?.profile_pic || user?.profile_picture || ''
         };
 
-        const res = await fetch(API_ENDPOINTS.PROFILE_UPDATE, {
+        const res = await fetch(API_ENDPOINTS.UPDATE_PROFILE, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -244,9 +295,21 @@ export default function PerformanceModule() {
     if (!dateStr || dateStr.toLowerCase().includes('add')) return dateStr;
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
     try {
-      const d = new Date(dateStr);
+      const cleanDate = String(dateStr).split('T')[0];
+      const d = new Date(cleanDate);
       if (isNaN(d.getTime())) return dateStr;
       return d.toLocaleDateString('en-GB');
+    } catch { return dateStr; }
+  };
+
+  const formatDateLong = (dateStr) => {
+    if (!dateStr || String(dateStr).toLowerCase().includes('16 january')) return dateStr;
+    try {
+      // Handle potential ISO strings with time components
+      const cleanDate = String(dateStr).split('T')[0];
+      const d = new Date(cleanDate);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     } catch { return dateStr; }
   };
 
@@ -268,27 +331,31 @@ export default function PerformanceModule() {
       paddingBottom: '100px',
       fontFamily: "'Outfit', sans-serif"
     },
+    combinedCard: {
+      margin: '0 0 30px 0',
+      borderRadius: winWidth < 768 ? '24px' : '32px',
+      boxShadow: '0 15px 35px rgba(15, 23, 42, 0.12)',
+      background: 'white',
+      overflow: 'hidden',
+      border: '1px solid #f1f5f9'
+    },
     banner: {
-      height: winWidth < 768 ? '120px' : '180px',
+      height: winWidth < 768 ? '100px' : '130px',
       background: '#0f172a',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       color: 'white',
-      fontSize: winWidth < 768 ? '20px' : '32px',
+      fontSize: winWidth < 768 ? '18px' : '26px',
       fontWeight: '900',
       letterSpacing: '-0.5px',
-      textAlign: 'center',
-      padding: '0 20px'
+      textAlign: 'center'
     },
     profileCard: {
       maxWidth: '100%',
-      margin: winWidth < 768 ? '-40px 0 20px' : '-60px 0 30px',
       width: '100%',
       background: 'white',
-      borderRadius: winWidth < 768 ? '24px' : '40px',
       padding: winWidth < 768 ? '25px' : '40px',
-      boxShadow: '0 4px 30px rgba(0,0,0,0.03)',
       position: 'relative',
       zIndex: 10
     },
@@ -345,17 +412,19 @@ export default function PerformanceModule() {
       
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleImageUpload} />
 
-      {/* Banner */}
-      <div style={dashboardStyles.banner}>
-        Smarter Solutions for Better Future
-      </div>
-
-      <main style={{ padding: '0 10px' }}>
+      <main style={{ padding: winWidth < 768 ? '0 15px' : '0 26px' }}>
         
-        {/* Profile Header Card */}
-        <div style={dashboardStyles.profileCard}>
-          <div style={{ display: 'flex', flexDirection: winWidth < 1024 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 1024 ? 'center' : 'flex-start', gap: winWidth < 1024 ? '30px' : '0', textAlign: winWidth < 1024 ? 'center' : 'left' }}>
-            <div style={{ display: 'flex', flexDirection: winWidth < 600 ? 'column' : 'row', gap: '24px', alignItems: 'center' }}>
+        {/* Combined Dual-Color Card */}
+        <div style={dashboardStyles.combinedCard}>
+          {/* Banner Top Half */}
+          <div style={dashboardStyles.banner}>
+            Smarter Solutions for Better Future
+          </div>
+          
+          {/* Profile Bottom Half */}
+          <div style={dashboardStyles.profileCard}>
+            <div style={{ display: 'flex', flexDirection: winWidth < 1024 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 1024 ? 'center' : 'flex-start', gap: winWidth < 1024 ? '30px' : '0', textAlign: winWidth < 1024 ? 'center' : 'left' }}>
+              <div style={{ display: 'flex', flexDirection: winWidth < 600 ? 'column' : 'row', gap: '24px', alignItems: 'center' }}>
               <div style={dashboardStyles.avatar}>
                 {(user?.profile_pic || user?.profile_picture) ? (
                   <img 
@@ -450,16 +519,17 @@ export default function PerformanceModule() {
             </div>
           </div>
         </div>
+      </div>
 
         {/* Basic Stats Row */}
-        <div style={{ width: '100%', maxWidth: '100%', margin: '0 auto 40px', display: 'grid', gridTemplateColumns: winWidth < 1024 ? (winWidth < 600 ? '1fr' : '1fr 1fr') : 'repeat(3, 1fr)', gap: '24px' }}>
-          <div style={dashboardStyles.statBox}>
-             <div style={{ width: '45px', height: '45px', borderRadius: '12px', background: '#f0f9ff', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={20} /></div>
-             <div>
-                <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Current Team</p>
-                <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', color: '#0f172a', fontWeight: '900' }}>Navabharatha Team</p>
-             </div>
-          </div>
+        <div style={{ 
+          width: '100%', 
+          maxWidth: '100%', 
+          margin: '0 auto 40px', 
+          display: 'grid', 
+          gridTemplateColumns: winWidth < 600 ? '1fr' : '1fr 1fr', 
+          gap: '24px' 
+        }}>
           <div style={dashboardStyles.statBox}>
              <div style={{ width: '45px', height: '45px', borderRadius: '12px', background: '#f0f9ff', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Mail size={20} /></div>
              <div>
@@ -467,11 +537,11 @@ export default function PerformanceModule() {
                 <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', color: '#0f172a', fontWeight: '900', wordBreak: 'break-all' }}>{user?.email || 'sahana@navabharathtechnologies.com'}</p>
              </div>
           </div>
-          <div style={{ ...dashboardStyles.statBox, gridColumn: winWidth < 1024 && winWidth >= 600 ? 'span 2' : 'auto' }}>
+          <div style={dashboardStyles.statBox}>
              <div style={{ width: '45px', height: '45px', borderRadius: '12px', background: '#f0f9ff', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Calendar size={20} /></div>
              <div>
                 <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date of Joining</p>
-                <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', color: '#0f172a', fontWeight: '900' }}>16 January 2026</p>
+                <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', color: '#0f172a', fontWeight: '900' }}>{formatDateLong(joiningDate)}</p>
              </div>
           </div>
         </div>
@@ -594,7 +664,7 @@ export default function PerformanceModule() {
         </div>
 
         {/* Logout */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '60px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: winWidth < 768 ? '100px' : '60px' }}>
            <button 
              onClick={handleLogout}
              style={{ background: 'white', color: '#ef4444', border: '2px solid #ef4444', borderRadius: '16px', padding: winWidth < 768 ? '10px 40px' : '12px 60px', fontSize: winWidth < 768 ? '13px' : '15px', fontWeight: '950', cursor: 'pointer', width: winWidth < 480 ? '100%' : 'auto' }}

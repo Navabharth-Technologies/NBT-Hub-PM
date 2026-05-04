@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import logo from '../../assets/logo.png';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, LogIn, Info, Eye, EyeOff } from 'lucide-react';
 
@@ -75,7 +76,7 @@ export default function LoginScreen() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <div style={{ ...styles.logo, background: '#3863a8', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '32px', borderRadius: '20px' }}>NBT</div>
+        <img src={logo} alt="NBT Logo" style={styles.logo} />
         <h1 style={styles.title}>NBT Hub</h1>
         <p style={styles.subtitle}>smarter solutions for better future</p>
 

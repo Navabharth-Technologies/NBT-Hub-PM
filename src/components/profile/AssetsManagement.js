@@ -396,8 +396,8 @@ export default function AssetsManagement() {
 
       <main className="dashboard-content" style={{ 
         paddingTop: winWidth < 768 ? '80px' : '100px',
-        paddingLeft: winWidth < 768 ? '15px' : '30px',
-        paddingRight: winWidth < 768 ? '15px' : '30px',
+        paddingLeft: winWidth < 768 ? '15px' : '26px',
+        paddingRight: winWidth < 768 ? '15px' : '26px',
         paddingBottom: '100px',
         boxSizing: 'border-box'
       }}>
@@ -535,7 +535,7 @@ export default function AssetsManagement() {
             display: 'flex', 
             flexDirection: 'column', 
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-            border: '1px solid rgba(255,255,255,0.3)'
+            border: '3px solid #cbd5e1'
           }}>
             
             {/* Header Redesign for Certificate */}

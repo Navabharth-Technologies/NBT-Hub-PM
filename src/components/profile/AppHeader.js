@@ -45,7 +45,7 @@ export default function AppHeader() {
       display: 'grid',
       gridTemplateColumns: 'auto 1fr auto',
       alignItems: 'center',
-      padding: winWidth < 768 ? '0 15px' : '0 30px',
+      padding: winWidth < 768 ? '0 15px' : '0 26px',
       boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
       position: 'fixed',
       top: 0,

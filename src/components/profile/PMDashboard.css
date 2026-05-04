@@ -21,7 +21,7 @@ body {
   --card-bg: #ffffff;
   --text-main: #1e293b;
   --text-muted: #64748b;
-  --border-color: #e2e8f0;
+  --border-color: #cbd5e1;
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
@@ -42,20 +42,20 @@ body {
 .dashboard-content {
   max-width: 100%;
   margin: 0;
-  padding: 40px 20px;
+  padding: 40px 26px;
   padding-top: 110px;
 }
 
 @media (max-width: 1024px) {
   .dashboard-content {
-    padding: 20px;
+    padding: 26px;
     padding-top: 110px;
   }
 }
 
 @media (max-width: 768px) {
   .dashboard-content {
-    padding: 16px;
+    padding: 15px;
     padding-top: 100px;
   }
 }
@@ -93,7 +93,7 @@ body {
   padding: 24px;
   border-radius: 16px;
   box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-color);
+  border: 3px solid var(--border-color);
   transition: var(--transition);
   display: flex;
   flex-direction: column;
@@ -101,9 +101,9 @@ body {
 }
 
 .metric-card:hover {
+  border-color: var(--primary-color) !important;
   transform: translateY(-8px) scale(1.02);
   box-shadow: var(--shadow-lg);
-  border-color: var(--primary-color);
 }
 
 .metric-card .icon-wrapper {
@@ -182,7 +182,7 @@ body {
   border-radius: 20px;
   padding: 28px;
   box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-color);
+  border: 3px solid var(--border-color);
   margin-bottom: 20px;
   transition: var(--transition);
   display: flex;
@@ -191,6 +191,15 @@ body {
 
 .dashboard-section:hover {
   box-shadow: var(--shadow-md);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.dashboard-section:hover {
+  border-color: var(--primary-color) !important;
 }
 
 .section-header {
@@ -225,7 +234,7 @@ body {
 .attendance-premium-card {
   background: rgba(255, 255, 255, 0.7) !important;
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  border: 2px solid rgba(255, 255, 255, 0.4) !important;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.08), 
               0 0 0 1px rgba(255, 255, 255, 0.5) inset !important;
   position: relative;
@@ -252,7 +261,7 @@ body {
 
 .glass-stat-box {
   background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 1);
+  border: 2px solid rgba(255, 255, 255, 1);
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
   backdrop-filter: blur(4px);
   transition: all 0.3s ease;
@@ -325,19 +334,21 @@ body {
 
 .team-card {
   padding: 12px 16px;
-  border: 1px solid var(--border-color);
+  border: 3px solid var(--border-color);
   border-radius: 12px;
   transition: var(--transition);
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border: 1px solid #edf2f7;
+  transition: all 0.3s ease;
+  padding: 12px 16px;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: white;
 }
 
 .team-card:hover {
-  border-color: var(--primary-color);
-  transform: translateY(-4px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+  border-color: var(--primary-color) !important;
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
 }
 
 .progress-bar-container {
@@ -724,17 +735,6 @@ body {
   }
 }
 
-.team-card {
-  padding: 12px 16px;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  transition: all 0.3s ease;
-  border: 1.5px solid #f1f5f9;
-}
 
 .ghost-onboarding-card {
   width: 220px;

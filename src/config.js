@@ -1,4 +1,4 @@
-export const BASE_URL = 'http://192.168.1.3:5000';
+export const BASE_URL = 'http://192.168.1.17:5000';
 export const TEAM_OFFICE_BASE_URL = '/api/etimeoffice';
 export const TEAM_OFFICE_AUTH_TOKEN = 'c3VwcG9ydDpzdXBwb3J0OnN1cHBvcnRAMTp0cnVl';
 
@@ -7,11 +7,13 @@ export const API_ENDPOINTS = {
   REGISTER: `${BASE_URL}/api/register`,
   PROFILE: `${BASE_URL}/api/profile`,
   PROFILE_UPDATE: `${BASE_URL}/api/profile/update`,
+  UPDATE_PROFILE: `${BASE_URL}/api/profile/update`,
   PROFILE_ABOUT: `${BASE_URL}/api/profile/about`,
   PROFILE_MANAGER: `${BASE_URL}/api/profile/manager`,
   PROFILE_UPLOAD_DOC: `${BASE_URL}/api/profile/upload-doc`,
   PROFILE_UPLOAD_DOCUMENT: `${BASE_URL}/api/profile/upload-document`,
   PROFILE_UPLOAD_DIRECT: `${BASE_URL}/api/profile/upload-direct`,
+  MANAGER_UPLOAD_IMAGE: `${BASE_URL}/api/managers/upload-image`,
   EMPLOYEE_PROFILE_GET: (id) => `${BASE_URL}/api/employee-profile/${id}`,
   EMPLOYEE_PROFILE_UPDATE: `${BASE_URL}/api/employee-profile/update`,
   EMPLOYEE_PROFILE_DELETE: (id) => `${BASE_URL}/api/employee-profile/${id}`,

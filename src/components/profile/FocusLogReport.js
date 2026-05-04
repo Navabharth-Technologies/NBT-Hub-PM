@@ -192,7 +192,7 @@ export default function FocusLogs({ onBack, userId: propUserId, title: propTitle
   };
 
   const s = {
-    container: { backgroundColor: '#F8FAFC', minHeight: '100vh', padding: '40px 20px', fontFamily: "'Inter', sans-serif" },
+    container: { backgroundColor: '#F8FAFC', minHeight: '100vh', padding: '40px 26px', fontFamily: "'Inter', sans-serif" },
     main: { maxWidth: '1100px', margin: '70px auto 0 auto' },
     
     header: { marginBottom: '40px' },

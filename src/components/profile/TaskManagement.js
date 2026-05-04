@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import './PMDashboard.css';
 
 export default function TaskManagement() {
@@ -17,6 +18,7 @@ export default function TaskManagement() {
   const [reviewText, setReviewText] = useState('');
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [selectedAssignee, setSelectedAssignee] = useState(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const [debugInfo, setDebugInfo] = useState('');
   const [users, setUsers] = useState([]);
@@ -45,11 +47,21 @@ export default function TaskManagement() {
           if (!uniqueTasksMap.has(tid)) {
              uniqueTasksMap.set(tid, item);
           } else {
-             // Keep the most informative record
+             // Keep the most informative record by smart merging
              const existing = uniqueTasksMap.get(tid);
-             if (!existing.attachment_data && item.attachment_data) {
-                uniqueTasksMap.set(tid, item);
+             const merged = { ...existing };
+             for (const key in item) {
+                // If the new item has a valid value and existing is missing it or is just 'Pending', override it
+                if (item[key] !== null && item[key] !== undefined && item[key] !== '') {
+                   // Always take the most explicit status over 'Pending'
+                   if (merged[key] === 'Pending' || !merged[key]) {
+                      merged[key] = item[key];
+                   } else if (key !== 'verify_status' && key !== 'verify' && key !== 'status') {
+                      merged[key] = item[key]; // Overwrite other non-empty fields
+                   }
+                }
              }
+             uniqueTasksMap.set(tid, merged);
           }
         });
 
@@ -67,6 +79,22 @@ export default function TaskManagement() {
             if (['completed', '3', 'finish', 'done'].includes(s)) return 'Completed';
             if (['in progress', '2', 'active', 'true'].includes(s)) return 'In Progress';
             return 'Pending';
+          };
+
+          const normalizeVerify = (val) => {
+            const s = String(val || 'Pending').trim().toLowerCase();
+            if (s.includes('approve') || s === 'verified' || s === '1') return 'Approve';
+            if (s.includes('reject') || s === 'rejected' || s === '2') return 'Reject';
+            return 'Pending';
+          };
+
+          const getBestVerify = (t) => {
+             const priorities = [t.verify, t.verify_status, t.verify_code, t.tag];
+             for (const val of priorities) {
+                const normalized = normalizeVerify(val);
+                if (normalized !== 'Pending') return normalized;
+             }
+             return 'Pending';
           };
 
           const cleanField = (val) => {
@@ -100,7 +128,7 @@ export default function TaskManagement() {
             status: normalizeStatus(task.status || task.sprint_status),
             progress_percentage: parseInt(task.progress || task.progress_percentage || 0),
             assignee_name: cleanField(resolvedName),
-            verify_status: String(task.verify_status || task.verify || 'Pending').trim(),
+            verify_status: getBestVerify(task),
             has_review: hasRealReview,
             task_review: hasRealReview ? rawReview : '',
             attachment_name: String(task.attachment_name || '').trim(),
@@ -189,6 +217,8 @@ export default function TaskManagement() {
         return task;
       }));
 
+      const currentTask = tasks.find(t => String(t.task_id || t.id) === targetId) || {};
+
       // 2. STICKY SYNC: Targeting 'master_tasks' via working Review path
       const statusCode = newStatus === 'Approve' ? 1 : newStatus === 'Reject' ? 2 : 0;
       const payload = { 
@@ -197,7 +227,11 @@ export default function TaskManagement() {
         verify: newStatus,             // Target column: verify
         verify_status: newStatus,
         verify_code: statusCode,
-        tag: newStatus
+        tag: newStatus,
+        status: currentTask.status,    // Required to prevent backend from nullifying
+        task_review: currentTask.task_review || '',
+        review: currentTask.task_review || '',
+        date: new Date().toISOString()
       };
 
       // Path A: Working Review Endpoint (Confirmed success on this server)
@@ -332,6 +366,61 @@ export default function TaskManagement() {
     }
   };
 
+  const handleExportModalPDF = (empTasks, empName, stats) => {
+    const doc = new jsPDF();
+    doc.setFontSize(20);
+    doc.text(`${empName} - Task Performance Report`, 14, 22);
+    
+    doc.setFontSize(11);
+    doc.text(`Total Tasks: ${stats.total} | Completed: ${stats.completed} | In Progress: ${stats.inProgress} | Pending: ${stats.pending} | Avg Progress: ${stats.avgProgress}%`, 14, 32);
+
+    const tableColumn = ["ID", "Title", "Type", "Status", "Progress", "Verify Status", "Deadline"];
+    const tableRows = [];
+
+    empTasks.forEach(task => {
+      const taskData = [
+        task.id || '-',
+        task.display_title || task.task_name || 'N/A',
+        task.type || 'TASK',
+        task.status || 'Pending',
+        `${task.progress_percentage || 0}%`,
+        task.verify_status || 'Pending',
+        task.deadline ? new Date(task.deadline).toLocaleDateString() : 'N/A'
+      ];
+      tableRows.push(taskData);
+    });
+
+    autoTable(doc, {
+      startY: 40,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'grid',
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [56, 99, 168] }
+    });
+
+    doc.save(`${empName.replace(/\s+/g, '_')}_Task_Report.pdf`);
+    setShowExportMenu(false);
+  };
+
+  const handleExportModalExcel = (empTasks, empName) => {
+    const exportData = empTasks.map(task => ({
+      ID: task.id || '-',
+      Title: task.display_title || task.task_name || 'N/A',
+      Type: task.type || 'TASK',
+      Status: task.status || 'Pending',
+      Progress: `${task.progress_percentage || 0}%`,
+      'Verify Status': task.verify_status || 'Pending',
+      Deadline: task.deadline ? new Date(task.deadline).toLocaleDateString() : 'N/A'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Tasks");
+    XLSX.writeFile(workbook, `${empName.replace(/\s+/g, '_')}_Task_Report.xlsx`);
+    setShowExportMenu(false);
+  };
+
   const getVerifyStyles = (status) => {
     switch (status?.toLowerCase()) {
       case 'approve': return { bg: '#ecfdf5', text: '#059669', border: '#10b981' };
@@ -345,7 +434,7 @@ export default function TaskManagement() {
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
       
-      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px' : '40px', maxWidth: '100%', margin: '0 auto', width: '100%', boxSizing: 'border-box', marginTop: '70px' }}>
+      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px' : '40px 26px', maxWidth: '100%', margin: '0 auto', width: '100%', boxSizing: 'border-box', marginTop: '70px' }}>
         <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px' }}>
           <div>
             <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '900', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-1px' }}>Task Management Hub</h1>
@@ -390,18 +479,18 @@ export default function TaskManagement() {
 
         <section style={{ background: 'white', borderRadius: '24px', border: '1.5px solid #f1f5f9', boxShadow: '0 10px 25px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #f1f5f9' }}>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ID</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Type</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Task Information</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Assignee</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Progress</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Review</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Verify</th>
+                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '5%' }}>ID</th>
+                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '7%' }}>Type</th>
+                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '24%' }}>Task Information</th>
+                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '14%' }}>Assignee</th>
+                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Status</th>
+                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Progress</th>
+                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Date</th>
+                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Review</th>
+                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Verify</th>
                 </tr>
               </thead>
               <tbody className="animate-fade-in">
@@ -434,10 +523,10 @@ export default function TaskManagement() {
                           onClick={() => setSelectedAssignee(task.assignee_name)}
                           title={`Click to view all tasks for ${task.assignee_name}`}
                         >
-                          <div style={{ width: '24px', height: '24px', borderRadius: '8px', background: '#3863a8', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '900' }}>
+                          <div style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px', flexShrink: 0, borderRadius: '8px', background: '#3863a8', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '900' }}>
                             {(task.assignee_name || 'U').toString().charAt(0).toUpperCase()}
                           </div>
-                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#3863a8', whiteSpace: 'nowrap', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>{task.assignee_name || 'N/A'}</span>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#3863a8', whiteSpace: 'nowrap', textDecoration: 'underline', textDecorationStyle: 'dotted', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.assignee_name || 'N/A'}</span>
                         </div>
                       </td>
                       <td style={{ padding: '16px 12px' }}>
@@ -459,11 +548,12 @@ export default function TaskManagement() {
                        <td style={{ padding: '16px 12px', color: '#64748b', fontWeight: '600', fontSize: '12px' }}>
                          {task.deadline || task.updated_at ? new Date(task.deadline || task.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
                        </td>
-                       <td style={{ padding: '16px 12px' }}>
+                       <td style={{ padding: '16px 12px', width: '100px' }}>
                          {task.has_review ? (
                            <span 
-                             style={{ fontSize: '11px', color: '#3863a8', fontWeight: '700', backgroundColor: '#eef2ff', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer' }}
+                             style={{ fontSize: '11px', color: '#3863a8', fontWeight: '700', backgroundColor: '#eef2ff', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', verticalAlign: 'middle' }}
                              onClick={() => { setReviewTask(task); setReviewText(task.task_review); }}
+                             title={task.task_review}
                            >
                               {task.task_review} 📝
                            </span>
@@ -476,7 +566,7 @@ export default function TaskManagement() {
                            </button>
                          )}
                        </td>
-                       <td style={{ padding: '16px 12px' }}>
+                       <td style={{ padding: '16px 12px', width: '100px' }}>
                         <div style={{ position: 'relative', width: 'fit-content' }}>
                           <select 
                             value={task.verify_status || 'Pending'}
@@ -556,12 +646,18 @@ export default function TaskManagement() {
                 disabled={!reviewText.trim()}
                 onClick={async () => {
                   try {
+                    const vStatus = reviewTask.verify_status || 'Pending';
+                    const statusCode = vStatus === 'Approve' ? 1 : vStatus === 'Reject' ? 2 : 0;
+                    
                     const payload = { 
                       id: reviewTask.id,
                       task_id: reviewTask.id,
                       task_review: reviewText,
                       review: reviewText,
-                      verify_status: reviewTask.verify_status || 'Pending',
+                      verify: vStatus,
+                      verify_status: vStatus,
+                      verify_code: statusCode,
+                      tag: vStatus,
                       status: reviewTask.status,
                       date: new Date().toISOString()
                     };
@@ -626,6 +722,21 @@ export default function TaskManagement() {
               {/* Header */}
               <div style={{ padding: '30px 35px', background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)', color: 'white', position: 'relative' }}>
                 <button onClick={() => setSelectedAssignee(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.15)', border: 'none', width: '32px', height: '32px', borderRadius: '50%', color: 'white', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+                <div style={{ position: 'absolute', top: '15px', right: '55px' }}>
+                  <button onClick={() => setShowExportMenu(!showExportMenu)} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Export <span style={{ fontSize: '10px' }}>▼</span>
+                  </button>
+                  {showExportMenu && (
+                    <div style={{ position: 'absolute', top: '35px', right: '0', background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', zIndex: 100, minWidth: '170px', border: '1px solid #e2e8f0' }}>
+                      <button onClick={() => handleExportModalPDF(empTasks, selectedAssignee, { total: empTasks.length, completed, inProgress, pending, avgProgress })} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px 16px', border: 'none', background: 'white', color: '#1e293b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: '700', borderBottom: '1px solid #f1f5f9' }} onMouseOver={e=>e.currentTarget.style.background='#f8fafc'} onMouseOut={e=>e.currentTarget.style.background='white'}>
+                        <span style={{ fontSize: '16px' }}>📄</span> Export as PDF
+                      </button>
+                      <button onClick={() => handleExportModalExcel(empTasks, selectedAssignee)} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px 16px', border: 'none', background: 'white', color: '#1e293b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }} onMouseOver={e=>e.currentTarget.style.background='#f8fafc'} onMouseOut={e=>e.currentTarget.style.background='white'}>
+                        <span style={{ fontSize: '16px' }}>📊</span> Export as Excel
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
                   <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '900' }}>
                     {selectedAssignee.charAt(0).toUpperCase()}
@@ -637,11 +748,12 @@ export default function TaskManagement() {
                 </div>
 
                 {/* Stats Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginTop: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginTop: '20px' }}>
                   {[
                     { label: 'Total Tasks', value: empTasks.length, color: '#60a5fa' },
                     { label: 'Completed', value: completed, color: '#34d399' },
                     { label: 'In Progress', value: inProgress, color: '#fbbf24' },
+                    { label: 'Pending', value: pending, color: '#f87171' },
                     { label: 'Avg Progress', value: `${avgProgress}%`, color: '#a78bfa' },
                   ].map((stat, i) => (
                     <div key={i} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '14px', padding: '14px', textAlign: 'center' }}>
@@ -697,9 +809,11 @@ export default function TaskManagement() {
                                 💬 {task.task_review}
                               </span>
                             )}
-                            <span style={{ fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px', marginLeft: 'auto', background: getVerifyStyles(task.verify_status).bg, color: getVerifyStyles(task.verify_status).text, border: `1px solid ${getVerifyStyles(task.verify_status).border}` }}>
-                              {task.verify_status || 'Pending'}
-                            </span>
+                            {task.verify_status && (
+                              <span style={{ fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px', marginLeft: 'auto', background: getVerifyStyles(task.verify_status).bg, color: getVerifyStyles(task.verify_status).text, border: `1px solid ${getVerifyStyles(task.verify_status).border}` }}>
+                                {task.verify_status}
+                              </span>
+                            )}
                           </div>
                         </div>
                       );

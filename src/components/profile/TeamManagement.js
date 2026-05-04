@@ -287,7 +287,7 @@ export default function TeamManagement() {
 
       <AppHeader />
       
-      <main className="dashboard-content" style={{paddingBottom: '100px'}}>
+      <main className="dashboard-content" style={{paddingBottom: '100px', paddingLeft: winWidth < 768 ? '15px' : '26px', paddingRight: winWidth < 768 ? '15px' : '26px'}}>
         <header className="section-header">
           <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
 
@@ -346,7 +346,7 @@ export default function TeamManagement() {
                   padding: winWidth < 480 ? '16px' : '24px', 
                   borderRadius: '24px', 
                   boxShadow: 'var(--shadow-md)', 
-                  border: '1px solid #f1f5f9',
+                  border: '3px solid #cbd5e1',
                   display: 'flex',
                   flexDirection: 'column',
                   height: '100%',
@@ -354,6 +354,20 @@ export default function TeamManagement() {
                   justifyContent: 'flex-start',
                   position: 'relative',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+                onMouseEnter={e => {
+                  if (!isEditingAlignment) {
+                    e.currentTarget.style.borderColor = '#3863a8';
+                    e.currentTarget.style.transform = 'translateY(-5px)';
+                    e.currentTarget.style.boxShadow = '0 15px 30px rgba(0,0,0,0.1)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isEditingAlignment) {
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                  }
                 }}
                 onClick={() => !isEditingAlignment && navigate(`/teams/${team.id}`)}
                 onDragOver={(e) => {
@@ -622,7 +636,7 @@ export default function TeamManagement() {
           <div className="animate-slide-up" style={{
             backgroundColor: 'white', width: '100%', maxWidth: '480px',
             borderRadius: '40px', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-            border: '1px solid #f1f5f9', position: 'relative'
+            border: '3px solid #cbd5e1', position: 'relative'
           }}>
             <button 
               onClick={() => setShowCreateModal(false)}

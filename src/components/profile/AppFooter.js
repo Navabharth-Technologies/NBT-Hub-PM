@@ -146,11 +146,15 @@ export default function AppFooter({ onCreateTeam }) {
       }, 6000);
     };
 
-    // Listen to scroll events
+    // Listen to all scrolling behaviors universally
     window.addEventListener('scroll', showFooterOnScroll, { passive: true });
+    window.addEventListener('wheel', showFooterOnScroll, { passive: true });
+    window.addEventListener('touchmove', showFooterOnScroll, { passive: true });
 
     return () => {
       window.removeEventListener('scroll', showFooterOnScroll);
+      window.removeEventListener('wheel', showFooterOnScroll);
+      window.removeEventListener('touchmove', showFooterOnScroll);
       if (timeout) clearTimeout(timeout);
     };
   }, []);

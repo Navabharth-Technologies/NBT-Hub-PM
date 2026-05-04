@@ -59,13 +59,13 @@ export default function EmployeeModule() {
     <div className="pm-dashboard-container">
       <AppHeader />
       
-      <main className="dashboard-content" style={{paddingBottom: '100px', padding: winWidth < 480 ? '12px 14px' : '20px'}}>
+      <main className="dashboard-content" style={{paddingBottom: '100px', padding: winWidth < 768 ? '15px' : '26px'}}>
         <header className="section-header" style={{ marginBottom: winWidth < 480 ? '15px' : '24px' }}>
           <div style={{display: 'flex', alignItems: 'center', gap: winWidth < 480 ? '8px' : '15px', flexWrap: 'wrap'}}>
             <button 
               onClick={() => navigate(-1)} 
               className="btn-outline"
-              style={{ padding: winWidth < 480 ? '6px 10px' : '8px 12px', fontSize: winWidth < 480 ? '12px' : '14px', borderRadius: '12px', border: '1.5px solid #eef2f6', background: 'white', cursor: 'pointer' }}
+              style={{ padding: winWidth < 480 ? '6px 10px' : '8px 12px', fontSize: winWidth < 480 ? '12px' : '14px', borderRadius: '12px', border: '3px solid #cbd5e1', background: 'white', cursor: 'pointer' }}
             >
               ←
             </button>
@@ -75,7 +75,7 @@ export default function EmployeeModule() {
             </div>
           </div>
           <div style={{display: 'flex', gap: '8px', width: winWidth < 600 ? '100%' : 'auto', marginTop: winWidth < 480 ? '12px' : '0'}}>
-             <button className="btn-outline" style={{ flex: winWidth < 600 ? 1 : 'none', justifyContent: 'center', padding: winWidth < 480 ? '8px' : '10px', fontSize: winWidth < 480 ? '12px' : '13px', background: 'white', color: '#312e81', border: '1.5px solid #eef2f6', borderRadius: '12px', fontWeight: '800' }}>Export CSV</button>
+             <button className="btn-outline" style={{ flex: winWidth < 600 ? 1 : 'none', justifyContent: 'center', padding: winWidth < 480 ? '8px' : '10px', fontSize: winWidth < 480 ? '12px' : '13px', background: 'white', color: '#312e81', border: '3px solid #cbd5e1', borderRadius: '12px', fontWeight: '800' }}>Export CSV</button>
           </div>
         </header>
 
@@ -92,7 +92,7 @@ export default function EmployeeModule() {
                   width: '100%', paddingLeft: '44px',
                   paddingTop: winWidth < 480 ? '10px' : '14px',
                   paddingBottom: winWidth < 480 ? '10px' : '14px',
-                  borderRadius: '16px', border: '1px solid #e2e8f0', background: 'white', 
+                  borderRadius: '16px', border: '3px solid #cbd5e1', background: 'white', 
                   outline: 'none', fontSize: winWidth < 480 ? '13px' : '14px', 
                   boxShadow: 'var(--shadow-sm)', boxSizing: 'border-box'
                 }}

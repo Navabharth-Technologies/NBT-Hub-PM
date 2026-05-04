@@ -31,7 +31,7 @@ export default function HolidayListScreen() {
   const isManager = ['hr', 'superadmin', 'teamleader'].includes(user?.role);
 
   const styles = {
-    container: { backgroundColor: '#F5F4C9', minHeight: '100vh', padding: '60px 20px' },
+    container: { backgroundColor: '#F5F4C9', minHeight: '100vh', padding: '60px 26px' },
     card: { maxWidth: '1000px', margin: '0 auto', backgroundColor: 'white', borderRadius: '40px', padding: '60px', boxShadow: '0 30px 60px rgba(245, 158, 11, 0.12)', border: '1px solid #fde68a' },
     header: { textAlign: 'center', marginBottom: '60px' },
     title: { fontSize: '32px', fontWeight: '900', color: '#92400e', letterSpacing: '-1.5px' },

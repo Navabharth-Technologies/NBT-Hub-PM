@@ -30,6 +30,13 @@ export default function AttendanceReportScreen() {
   const [teams, setTeams] = useState([]);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [metrics, setMetrics] = useState({ present: 0, absent: 0, late: 0, halfDay: 0 });
+  const [winWidth, setWinWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWinWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Fetch teams for the dropdown
   useEffect(() => {
@@ -121,7 +128,7 @@ export default function AttendanceReportScreen() {
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
       <AppHeader />
       
-      <main style={{ padding: '120px 40px 60px', maxWidth: '1600px', margin: '0 auto' }}>
+      <main style={{ padding: winWidth < 768 ? '100px 15px 60px' : '120px 26px 60px', maxWidth: '1600px', margin: '0 auto' }}>
         
         {/* Breadcrumb */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', opacity: 0.8 }}>
@@ -151,9 +158,9 @@ export default function AttendanceReportScreen() {
             <div style={{ position: 'relative' }}>
                 <button 
                   onClick={() => setShowExportMenu(!showExportMenu)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 28px', borderRadius: '16px', background: '#0f172a', color: 'white', border: 'none', fontWeight: '900', fontSize: '14px', cursor: 'pointer', boxShadow: '0 10px 20px -5px rgba(15, 23, 42, 0.3)' }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '12px 28px', borderRadius: '16px', background: '#0f172a', color: 'white', border: 'none', fontWeight: '900', fontSize: '14px', cursor: 'pointer', boxShadow: '0 10px 20px -5px rgba(15, 23, 42, 0.3)', flex: winWidth < 768 ? 2 : 'none' }}
                 >
-                  <Download size={18} /> Export Data
+                  <Download size={18} /> {winWidth < 768 ? 'Export' : 'Export Data'}
                 </button>
                 {showExportMenu && (
                     <>
@@ -173,20 +180,20 @@ export default function AttendanceReportScreen() {
         </div>
 
         {/* Metrics Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginBottom: '40px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: winWidth < 768 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: winWidth < 768 ? '16px' : '24px', marginBottom: '40px' }}>
            {[
              { label: 'PRESENT', value: metrics.present, color: '#059669', bg: '#ecfdf5', icon: CheckCircle2 },
              { label: 'ABSENT', value: metrics.absent, color: '#dc2626', bg: '#fef2f2', icon: AlertCircle },
              { label: 'LATE ARRIVALS', value: metrics.late, color: '#d97706', bg: '#fffbeb', icon: Clock },
              { label: 'HALF DAYS', value: metrics.halfDay, color: '#7c3aed', bg: '#f5f3ff', icon: Clock3 }
            ].map((st, i) => (
-             <div key={i} style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: st.bg, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                   <st.icon size={24} />
+             <div key={i} style={{ background: 'white', borderRadius: '24px', padding: winWidth < 768 ? '20px' : '24px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: winWidth < 480 ? 'column' : 'row', alignItems: winWidth < 480 ? 'flex-start' : 'center', gap: winWidth < 768 ? '12px' : '20px' }}>
+                <div style={{ width: winWidth < 768 ? '40px' : '48px', height: winWidth < 768 ? '40px' : '48px', borderRadius: '14px', background: st.bg, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                   <st.icon size={winWidth < 768 ? 20 : 24} />
                 </div>
                 <div>
-                   <div style={{ fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>{st.label}</div>
-                   <div style={{ fontSize: '28px', fontWeight: '950', color: '#0f172a' }}>{loading ? '...' : st.value}</div>
+                   <div style={{ fontSize: '9px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px' }}>{st.label}</div>
+                   <div style={{ fontSize: winWidth < 768 ? '20px' : '28px', fontWeight: '950', color: '#0f172a' }}>{loading ? '...' : st.value}</div>
                 </div>
              </div>
            ))}
@@ -194,7 +201,7 @@ export default function AttendanceReportScreen() {
 
         {/* Filter Bar */}
         <div style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1.5px solid #f1f5f9', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.02)', marginBottom: '32px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr) auto', gap: '20px', alignItems: 'flex-end' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: winWidth < 1024 ? '1fr' : 'repeat(4, 1fr) auto', gap: '20px', alignItems: 'flex-end' }}>
             
             {/* Date Range */}
             <div>

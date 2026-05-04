@@ -15,7 +15,7 @@ export default function BirthdayListScreen() {
   const { user } = useAuth();
 
   const styles = {
-    container: { backgroundColor: '#F5F4C9', minHeight: '100vh', padding: '60px 20px' },
+    container: { backgroundColor: '#F5F4C9', minHeight: '100vh', padding: '60px 26px' },
     card: { maxWidth: '800px', margin: '0 auto', backgroundColor: 'white', borderRadius: '40px', padding: '50px', boxShadow: '0 25px 60px rgba(56, 99, 168, 0.1)', border: '1px solid #e2e8f0' },
     header: { textAlign: 'center', marginBottom: '50px' },
     title: { fontSize: '32px', fontWeight: '900', color: '#1e3a8a', letterSpacing: '-1.5px' },
