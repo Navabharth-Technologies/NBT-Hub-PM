@@ -68,8 +68,8 @@ export default function ReportScreen() {
   }, []);
 
   const styles = {
-    container: { backgroundColor: '#f8fafc', minHeight: '100vh', padding: winWidth < 768 ? '80px 10px 120px' : '100px 40px 150px' },
-    main: { maxWidth: '1200px', margin: '0 auto' },
+    container: { backgroundColor: '#f8fafc', minHeight: '100vh', padding: winWidth < 768 ? '80px 16px 120px' : '100px 26px 150px', width: '100%', boxSizing: 'border-box' },
+    main: { width: '100%', margin: '0' },
     header: { marginBottom: '40px', textAlign: winWidth < 768 ? 'center' : 'left' },
     title: { fontSize: winWidth < 768 ? '28px' : '42px', fontWeight: '900', color: '#1e293b', letterSpacing: '-1.5px' },
     statsGrid: { display: 'grid', gridTemplateColumns: winWidth < 768 ? '1fr' : 'repeat(3, 1fr)', gap: '20px', marginBottom: '40px' },

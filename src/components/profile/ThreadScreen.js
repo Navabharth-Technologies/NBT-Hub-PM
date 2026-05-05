@@ -114,7 +114,7 @@ export default function ThreadScreen() {
     const [commentText, setCommentText] = useState('');
     const handleAddComment = async (id) => {
         if (!commentText.trim()) return;
-        const success = await addComment(id, user?.id, user?.name || 'User', commentText);
+        const success = await addComment(id, commentText);
         if (success) {
             setCommentText('');
             const comments = await fetchComments(id);
@@ -194,7 +194,7 @@ export default function ThreadScreen() {
     const isTablet = winWidth < 1024;
 
     const styles = {
-        container: { minHeight: '100vh', backgroundColor: 'transparent', display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '20px', padding: isMobile ? '15px' : (isTablet ? '25px 26px' : '40px 26px'), maxWidth: '100%', margin: '0', boxSizing: 'border-box' },
+        container: { minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '20px', padding: isMobile ? '100px 15px 40px' : (isTablet ? '125px 26px 50px' : '125px 40px 50px'), marginTop: 0, width: '100%', maxWidth: '100%', margin: '0', boxSizing: 'border-box' },
         card: { backgroundColor: 'white', borderRadius: isMobile ? '25px' : '40px', padding: isMobile ? '20px' : '30px', boxShadow: '0 10px 40px rgba(0,0,0,0.04)', border: '3px solid #cbd5e1' },
         tagInput: { width: '100%', padding: '12px 20px', borderRadius: '15px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontSize: isMobile ? '12px' : '14px', fontWeight: '900', color: '#315A9E', outline: 'none', marginBottom: '12px' },
         mainInput: { width: '100%', padding: isMobile ? '15px' : '20px', borderRadius: '20px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontSize: isMobile ? '14px' : '16px', fontWeight: '600', color: '#0B1E3F', outline: 'none', resize: 'none', minHeight: isMobile ? '80px' : '100px' },
@@ -370,7 +370,7 @@ export default function ThreadScreen() {
                 const pBadged = post.userHasBadged || false;
                 const likeCount = post.likeCount || 0;
                 const badgeCount = post.badgeCount || 0;
-                const commentCount = post.commentCount || 0;
+                const commentCount = Math.max(post.commentCount || 0, (postComments[post.id] || []).length);
 
                 return (
                     <div key={post.id} style={styles.threadCard}
@@ -587,15 +587,23 @@ export default function ThreadScreen() {
                                         <>
                                             <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '-5px' }}>Conversation Thread</div>
                                             {(postComments[post.id] || []).map(c => {
-                                                const cUser = c.userName || c.user_name || c.name || 'User';
-                                                const cText = c.content || c.text || c.comment || c.message || '...';
-                                                const commentAuthorId = c.userId || c.user_id;
-                                                const isMyComment = (authorId && commentAuthorId && String(authorId) === String(commentAuthorId)) || (user?.name === cUser);
+                                                const cUid = c.userId || c.user_id || c.employee_id || c.EmpID;
+                                                const profile = userProfiles[cUid] || Object.values(userProfiles).find(p => p.name === (c.userName || c.user_name || c.name));
+                                                const cUser = profile?.name || c.userName || c.user_name || c.name || 'User';
+                                                const cText = c.content || c.comment_text || c.text_content || c.text || c.comment || c.message || '...';
+                                                const isMyComment = (user?.id && cUid && String(user.id) === String(cUid)) || (user?.employee_id && cUid && String(user.employee_id) === String(cUid)) || (user?.name === cUser);
                                                 
                                                 return (
                                                     <div key={c.id} style={{ display: 'flex', gap: '12px' }}>
-                                                        <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#315A9E', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '1000', flexShrink: 0, boxShadow: '0 4px 10px rgba(49, 90, 158, 0.2)' }}>
-                                                            {cUser.charAt(0).toUpperCase()}
+                                                        <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#315A9E', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '1000', flexShrink: 0, boxShadow: '0 4px 10px rgba(49, 90, 158, 0.2)', overflow: 'hidden' }}>
+                                                            {(() => {
+                                                                const pic = profile?.profileImage || profile?.profilePicture || profile?.profile_image || profile?.profile_picture || profile?.avatar;
+                                                                if (pic) {
+                                                                    const src = pic.startsWith('http') ? pic : `${BASE_URL}${pic.startsWith('/') ? pic : '/' + pic}`;
+                                                                    return <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />;
+                                                                }
+                                                                return cUser.charAt(0).toUpperCase();
+                                                            })()}
                                                         </div>
                                                         <div style={{ flex: 1, padding: '15px', background: 'white', borderRadius: '20px', border: '3px solid #cbd5e1', position: 'relative' }}>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>

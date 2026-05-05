@@ -287,7 +287,7 @@ export default function TeamManagement() {
 
       <AppHeader />
       
-      <main className="dashboard-content" style={{paddingBottom: '100px', paddingLeft: winWidth < 768 ? '15px' : '26px', paddingRight: winWidth < 768 ? '15px' : '26px'}}>
+      <main className="dashboard-content" style={{paddingBottom: '100px', paddingLeft: winWidth < 768 ? '16px' : '26px', paddingRight: winWidth < 768 ? '16px' : '26px', width: '100%', boxSizing: 'border-box', margin: '0'}}>
         <header className="section-header">
           <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
 

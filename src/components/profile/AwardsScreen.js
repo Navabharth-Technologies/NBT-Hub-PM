@@ -228,8 +228,8 @@ export default function AwardsScreen() {
         <div style={{ minHeight: '100vh', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
             <AppHeader />
 
-            <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px' : '40px 26px', marginTop: winWidth < 768 ? '80px' : '100px' }}>
-                <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+            <main style={{ flex: 1, padding: winWidth < 768 ? '20px 16px 40px' : '20px 26px 40px', marginTop: winWidth < 768 ? '85px' : '110px', width: '100%', boxSizing: 'border-box' }}>
+                <div style={{ width: '100%' }}>
                     
                     {/* Header Controls */}
                     <div style={{ display: 'flex', flexDirection: winWidth < 600 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 600 ? 'flex-start' : 'flex-start', marginBottom: '32px', gap: '20px' }}>

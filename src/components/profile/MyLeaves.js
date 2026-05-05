@@ -276,7 +276,7 @@ export default function MyLeaves() {
           ) : leaves.length > 0 ? (
             <div style={{ overflowX: winWidth < 768 ? 'hidden' : 'auto' }}>
               {winWidth < 768 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: '#f1f5f9' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', background: '#f8fafc' }}>
                   {leaves.map((l, i) => {
                     const style = getStatusStyle(l.status);
                     return (
@@ -286,40 +286,45 @@ export default function MyLeaves() {
                           setSelectedLeave(l);
                           setShowDetailModal(true);
                         }}
-                        style={{ background: 'white', padding: '20px', cursor: 'pointer', transition: 'background 0.2s' }}
+                        style={{ background: 'white', padding: '20px', borderRadius: '24px', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', cursor: 'pointer' }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ padding: '8px', background: '#f1f5f9', borderRadius: '10px' }}><Briefcase size={16} color="#64748b" /></div>
-                            <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '15px' }}>{l.leave_type}</span>
+                            <div style={{ width: '40px', height: '40px', background: '#f1f5f9', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Briefcase size={18} color="#64748b" />
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: '900', color: '#0f172a', fontSize: '15px' }}>{l.leave_type}</div>
+                              <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700' }}>#{l.id || 'N/A'}</div>
+                            </div>
                           </div>
                           <div style={{ 
-                            display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', 
-                            borderRadius: '8px', background: style.bg, color: style.color, fontSize: '10px', fontWeight: '900' 
+                            padding: '6px 12px', borderRadius: '100px', 
+                            background: style.bg, color: style.color, 
+                            fontSize: '10px', fontWeight: '950', textTransform: 'uppercase', letterSpacing: '0.5px'
                           }}>
                             {String(l.status).split(',')[0]}
                           </div>
                         </div>
-                        
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '12px', marginBottom: '12px' }}>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                           <div>
-                            <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Duration</div>
-                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>
-                              {formatDate(l.start_date)}
-                            </div>
+                            <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>From</div>
+                            <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b' }}>{formatDate(l.start_date)}</div>
                           </div>
                           <div>
-                            <div style={{ fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Reason</div>
-                            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.reason || '-'}</div>
+                            <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>To</div>
+                            <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b' }}>{l.end_date ? formatDate(l.end_date) : formatDate(l.start_date)}</div>
                           </div>
                         </div>
+
+                        <div style={{ height: '1.5px', background: '#f1f5f9', margin: '0 -20px 16px' }}></div>
                         
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700' }}>
-                            <Calendar size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-                            {formatDate(l.created_at || l.start_date)}
+                          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Clock size={14} color="#94a3b8" /> {l.is_half_day ? 'Half Day' : 'Full Day'}
                           </div>
-                          <span style={{ fontSize: '12px', color: '#cbd5e1' }}>View Details ›</span>
+                          <div style={{ fontSize: '12px', color: '#3863a8', fontWeight: '900' }}>View Details ›</div>
                         </div>
                       </div>
                     );
@@ -377,7 +382,7 @@ export default function MyLeaves() {
                           <td style={{ padding: '16px 20px' }}>
                             <div style={{ 
                               display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', 
-                              borderRadius: '10px', background: style.bg, color: style.color, fontSize: '11px', fontWeight: '900' 
+                              borderRadius: '100px', background: style.bg, color: style.color, fontSize: '11px', fontWeight: '900' 
                             }}>
                               {style.icon}
                               {String(l.status).split(',')[0]}
@@ -386,7 +391,6 @@ export default function MyLeaves() {
                           <td style={{ padding: '16px 20px', color: '#64748b', fontSize: '13px', fontWeight: '500' }}>
                             {formatDate(l.created_at || l.start_date)}
                           </td>
-
                         </tr>
                       );
                     })}

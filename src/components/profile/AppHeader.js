@@ -45,7 +45,7 @@ export default function AppHeader() {
       display: 'grid',
       gridTemplateColumns: 'auto 1fr auto',
       alignItems: 'center',
-      padding: winWidth < 768 ? '0 15px' : '0 26px',
+      padding: winWidth < 768 ? '0 16px' : '0 26px',
       boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
       position: 'fixed',
       top: 0,
@@ -112,14 +112,6 @@ export default function AppHeader() {
           position: 'relative'
         }} className="hide-on-mobile">
           NBT HUB
-          <div style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            background: '#3863a8',
-            boxShadow: '0 0 10px rgba(56, 99, 168, 0.6)',
-            animation: 'pulse-glow 2s infinite ease-in-out'
-          }}></div>
         </div>
         <div className="hide-on-desktop" style={{ fontWeight: '950', fontSize: '18px', color: '#1e293b' }}>NBT</div>
       </div>
@@ -176,12 +168,19 @@ export default function AppHeader() {
 
         <div className="hide-on-mobile" style={{textAlign: 'right', lineHeight: '1.2'}}>
           <div style={styles.userName}>{user?.name || 'NBT User'}</div>
-          <div style={styles.designation}>{fetchedRole || theme.label} • Manager</div>
+          <div style={styles.designation}>{fetchedRole || theme.label} </div>
         </div>
         
         <div 
            onClick={() => navigate('/performance')}
-           style={{width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.2s transform', overflow: 'hidden'}}
+           style={{
+             width: winWidth < 768 ? '38px' : '48px', 
+             height: winWidth < 768 ? '38px' : '48px', 
+             borderRadius: '12px', 
+             background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.1)', 
+             display: 'flex', alignItems: 'center', justifyContent: 'center', 
+             cursor: 'pointer', transition: '0.2s transform', overflow: 'hidden'
+           }}
            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
         >
@@ -192,7 +191,7 @@ export default function AppHeader() {
                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
              />
            ) : (
-             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+             <svg width={winWidth < 768 ? "18" : "22"} height={winWidth < 768 ? "18" : "22"} viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
            )}
         </div>
       </div>

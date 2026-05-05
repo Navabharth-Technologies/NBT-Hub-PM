@@ -201,8 +201,8 @@ export default function TeamDetail() {
     <div className="pm-dashboard-container">
       <AppHeader />
 
-      <main className="dashboard-content" style={{ paddingBottom: '100px' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      <main className="dashboard-content" style={{ paddingBottom: '100px', paddingLeft: winWidth < 768 ? '16px' : '26px', paddingRight: winWidth < 768 ? '16px' : '26px', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%' }}>
           <header className="section-header" style={{
             flexDirection: winWidth < 768 ? 'column' : 'row',
             alignItems: winWidth < 768 ? 'flex-start' : 'center',

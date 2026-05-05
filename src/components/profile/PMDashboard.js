@@ -380,12 +380,12 @@ export default function PMDashboard() {
     <div className="pm-dashboard-container">
       <AppHeader />
 
-      <main className="dashboard-content">
+      <main className="dashboard-content" style={{ flex: 1, padding: winWidth < 768 ? '20px 16px 40px' : '20px 26px 40px', width: '100%', boxSizing: 'border-box', margin: '0', marginTop: winWidth < 768 ? '85px' : '110px' }}>
         <header className="section-header" style={{ marginBottom: winWidth < 768 ? '20px' : '40px', gap: winWidth < 768 ? '15px' : '0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div>
-              <h1 style={{ fontSize: winWidth < 768 ? '22px' : '24px', fontWeight: '800', color: '#1e293b' }}>Titan Dashboard</h1>
-              <p style={{ color: '#64748b', fontSize: winWidth < 768 ? '12px' : '14px' }}>Strength and scale • {teams.length} Active Teams</p>
+              <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '800', color: '#1e293b', marginBottom: '4px', letterSpacing: '-1px' }}>Titan Dashboard</h1>
+              <p style={{ color: '#64748b', fontSize: winWidth < 768 ? '12px' : '14px', fontWeight: '500' }}>Strength and scale • {teams.length} Active Teams</p>
             </div>
           </div>
 
@@ -459,7 +459,7 @@ export default function PMDashboard() {
             gap: winWidth < 768 ? '0' : '20px',
             overflow: winWidth < 768 ? 'hidden' : 'visible',
             width: '100%',
-            padding: winWidth < 768 ? '10px 15px' : '0' // Added horizontal padding
+            padding: winWidth < 768 ? '10px 0' : '0'
           }}>
             {winWidth < 768 ? (
               <div style={{
@@ -576,7 +576,7 @@ export default function PMDashboard() {
             <div style={{
               overflow: winWidth < 768 ? 'hidden' : 'visible',
               width: '100%',
-              padding: winWidth < 768 ? '10px 15px 20px 15px' : '0' // Added 15px horizontal padding
+              padding: winWidth < 768 ? '10px 0 20px 0' : '0'
             }}>
               {winWidth < 768 ? (
                 <div style={{
@@ -660,9 +660,9 @@ export default function PMDashboard() {
           </section>
 
           {/* Column 2: Task Hub */}
-          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.6s', cursor: 'pointer', background: 'white' }} onClick={() => navigate('/tasks')}>
+          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.6s', cursor: 'pointer', background: 'white', padding: winWidth < 768 ? '20px 16px' : '28px' }} onClick={() => navigate('/tasks')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#eff6ff', color: '#3163aa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.1)' }}>📅</div>
+              <div style={{ width: winWidth < 768 ? '42px' : '48px', height: winWidth < 768 ? '42px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3163aa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '18px' : '22px', boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.1)' }}>📅</div>
               <h2 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Task Command</h2>
             </div>
 
@@ -672,14 +672,20 @@ export default function PMDashboard() {
                 <span style={{ fontSize: '10px', fontWeight: '900', color: '#3863a8', backgroundColor: '#eff6ff', padding: '4px 12px', borderRadius: '100px' }}>{recentTasks.length} Active</span>
               </div>
               {recentTasks.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {recentTasks.slice(0, 6).map((task, i) => (
-                    <div key={i} style={{ padding: '12px 18px', background: '#f8fafc', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #f1f5f9', transition: '0.2s' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '13px', fontWeight: '800', color: '#334155', maxWidth: winWidth < 480 ? '120px' : '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.title || task.task_name}</span>
-                        <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700' }}>To: {task.assignee_name || 'Staff'}</span>
+                    <div key={i} style={{ padding: winWidth < 768 ? '14px' : '12px 18px', background: '#f8fafc', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1.5px solid #f1f5f9', transition: '0.2s', boxShadow: winWidth < 768 ? '0 2px 4px rgba(0,0,0,0.02)' : 'none' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+                        <span style={{ fontSize: winWidth < 768 ? '13px' : '13px', fontWeight: '800', color: '#334155', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.title || task.task_name}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#cbd5e1' }}></div>
+                          <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>{task.assignee_name || 'Staff'}</span>
+                        </div>
                       </div>
-                      <span style={{ fontSize: '11px', fontWeight: '900', color: '#3863a8' }}>{task.status === 'COMPLETED' ? 'DONE' : 'LIVE'}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: '950', color: '#3863a8', background: 'rgba(56, 99, 168, 0.08)', padding: '4px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>{task.status === 'COMPLETED' ? 'DONE' : 'LIVE'}</span>
+                        <span style={{ fontSize: '12px', color: '#cbd5e1' }}>›</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -687,41 +693,57 @@ export default function PMDashboard() {
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px', background: '#f8fafc', borderRadius: '24px', border: '3px dashed #cbd5e1' }}>Unit Sprints Neutralized</div>
               )}
             </div>
-            <button className="animate-fade-in" style={{ width: '100%', padding: '14px', background: '#1e293b', borderRadius: '16px', color: 'white', fontWeight: '900', fontSize: '14px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>Access Ops Hub <span>→</span></button>
+            <button className="animate-fade-in" style={{ width: '100%', padding: '14px', background: '#0f172a', borderRadius: '16px', color: 'white', fontWeight: '900', fontSize: '14px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.15)' }}>Access Ops Hub <span>→</span></button>
           </section>
 
           {/* Column 3: Attendance Analytics */}
-          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.7s', background: 'white', cursor: 'pointer' }} onClick={() => navigate('/attendance')}>
+          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.7s', background: 'white', cursor: 'pointer', padding: winWidth < 768 ? '20px 16px' : '28px' }} onClick={() => navigate('/attendance')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.1)' }}>🛡️</div>
+              <div style={{ width: winWidth < 768 ? '42px' : '48px', height: winWidth < 768 ? '42px' : '48px', borderRadius: '14px', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '18px' : '22px', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.1)' }}>🛡️</div>
               <h2 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Attendance Sync</h2>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '25px' }}>
-              <div style={{ flex: 1, padding: '18px', background: '#f0fdf4', borderRadius: '20px', border: '1.5px solid #dcfce7', textAlign: 'center' }}>
-                <div style={{ fontSize: '11px', fontWeight: '900', color: '#059669', marginBottom: '8px', textTransform: 'uppercase' }}>Available</div>
-                <div style={{ fontSize: '28px', fontWeight: '950', color: '#064e3b' }}>{attendanceStats.present || 0}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '25px', width: '100%' }}>
+              <div style={{ 
+                flex: winWidth < 500 ? '1 1 100%' : '1 1 calc(50% - 5px)', 
+                padding: '18px 12px', 
+                background: '#f0fdf4', 
+                borderRadius: '18px', 
+                border: '1.5px solid #dcfce7', 
+                textAlign: 'center',
+                boxSizing: 'border-box'
+              }}>
+                <div style={{ fontSize: '10px', fontWeight: '900', color: '#059669', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Available</div>
+                <div style={{ fontSize: '26px', fontWeight: '950', color: '#064e3b', lineHeight: 1 }}>{attendanceStats.present || 0}</div>
               </div>
-              <div style={{ flex: 1, padding: '18px', background: '#fff7ed', borderRadius: '20px', border: '1.5px solid #ffedd5', textAlign: 'center' }}>
-                <div style={{ fontSize: '11px', fontWeight: '900', color: '#ea580c', marginBottom: '8px', textTransform: 'uppercase' }}>Offsite</div>
-                <div style={{ fontSize: '28px', fontWeight: '950', color: '#7c2d12' }}>{attendanceStats.leave || 0}</div>
+              <div style={{ 
+                flex: winWidth < 500 ? '1 1 100%' : '1 1 calc(50% - 5px)', 
+                padding: '18px 12px', 
+                background: '#fff7ed', 
+                borderRadius: '18px', 
+                border: '1.5px solid #ffedd5', 
+                textAlign: 'center',
+                boxSizing: 'border-box'
+              }}>
+                <div style={{ fontSize: '10px', fontWeight: '900', color: '#ea580c', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Offsite</div>
+                <div style={{ fontSize: '26px', fontWeight: '950', color: '#7c2d12', lineHeight: 1 }}>{attendanceStats.leave || 0}</div>
               </div>
             </div>
 
             <div style={{ marginBottom: '20px', flex: 1 }}>
               <div style={{ fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px' }}>Live Leave Submissions</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {leaveRequests.filter(r => String(r.status || '').toUpperCase().includes('PENDING')).slice(0, 4).length > 0 ? (
                   leaveRequests.filter(r => String(r.status || '').toUpperCase().includes('PENDING')).slice(0, 4).map((req, rid) => (
-                    <div key={rid} onClick={(e) => { e.stopPropagation(); navigate(`/attendance/leave/${req.id}`); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', border: '1px solid #f1f5f9', borderRadius: '18px', background: 'white', transition: '0.2s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>⏳</div>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: '900', color: '#1e293b' }}>{req.employee_name || req.name || 'Unit Member'}</div>
-                          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{req.leave_type || 'Req'} • {req.total_days || 1}d</div>
+                    <div key={rid} onClick={(e) => { e.stopPropagation(); navigate(`/attendance/leave/${req.id}`); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', border: '1.5px solid #f1f5f9', borderRadius: '18px', background: 'white', transition: '0.2s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden', flex: 1 }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>⏳</div>
+                        <div style={{ overflow: 'hidden', flex: 1 }}>
+                          <div style={{ fontSize: '13px', fontWeight: '900', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.employee_name || req.name || 'Unit Member'}</div>
+                          <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>{req.leave_type || 'Req'} • {req.total_days || 1}d</div>
                         </div>
                       </div>
-                      <span style={{ fontSize: '12px', color: '#cbd5e1' }}>›</span>
+                      <span style={{ fontSize: '14px', color: '#cbd5e1', fontWeight: '800', flexShrink: 0, marginLeft: '8px' }}>›</span>
                     </div>
                   ))
                 ) : (
@@ -729,7 +751,7 @@ export default function PMDashboard() {
                 )}
               </div>
             </div>
-            <button style={{ width: '100%', padding: '14px', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', color: '#3863a8', fontWeight: '900', fontSize: '14px', cursor: 'pointer' }}>Manage Workforce</button>
+            <button style={{ width: '100%', padding: '14px', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', color: '#3863a8', fontWeight: '900', fontSize: '14px', cursor: 'pointer', transition: '0.2s' }}>Manage Workforce</button>
           </section>
         </div>
       </main>

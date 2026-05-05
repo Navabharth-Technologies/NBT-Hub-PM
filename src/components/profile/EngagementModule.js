@@ -164,7 +164,7 @@ export default function EngagementModule() {
     };
 
     const styles = {
-        container: { minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '20px', padding: winWidth < 768 ? '80px 15px 120px' : '90px 26px 150px', maxWidth: '1400px', margin: '0 auto', boxSizing: 'border-box' },
+        container: { minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '20px', padding: winWidth < 768 ? '100px 16px 120px' : '125px 26px 150px', marginTop: 0, width: '100%', maxWidth: '100%', margin: '0', boxSizing: 'border-box' },
         card: { backgroundColor: 'white', borderRadius: '40px', padding: winWidth < 768 ? '20px' : '30px', boxShadow: '0 10px 40px rgba(0,0,0,0.04)', border: '1px solid #eef2f6' },
         tagInput: { width: '100%', padding: '12px 20px', borderRadius: '15px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontSize: '14px', fontWeight: '900', color: '#315A9E', outline: 'none', marginBottom: '12px' },
         mainInput: { width: '100%', padding: '20px', borderRadius: '20px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontSize: '16px', fontWeight: '600', color: '#0B1E3F', outline: 'none', resize: 'none', minHeight: '100px' },
@@ -421,7 +421,7 @@ export default function EngagementModule() {
                                 >
                                     <div style={styles.commentBadge} onClick={() => handleOpenComments(post.id)}>
                                         <MessageSquare size={16} /> 
-                                        <span>COMMENT ({post.commentCount || post.comment_count || 0})</span>
+                                        <span>COMMENT ({Math.max(post.commentCount || post.comment_count || 0, (postComments[post.id] || []).length)})</span>
                                     </div>
 
                                     <Smile 
@@ -440,25 +440,32 @@ export default function EngagementModule() {
                                         <button style={{ padding: '0 20px', background: '#315A9E', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '900', cursor: 'pointer' }} onClick={() => handleAddComment(post.id)}>Post</button>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                        {loadingComments[post.id] ? <div style={{ fontSize: '12px', color: '#94a3b8' }}>Loading comments...</div> : (postComments[post.id] || []).map(c => (
-                                            <div key={c.id} style={{ display: 'flex', gap: '12px' }}>
-                                                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '900', color: '#315A9E', overflow: 'hidden' }}>
-                                                    {userProfiles[c.user_id || c.userId]?.profile_pic || userProfiles[c.user_id || c.userId]?.profile_picture ? (
-                                                        <img 
-                                                            src={getFullUrl(userProfiles[c.user_id || c.userId]?.profile_pic || userProfiles[c.user_id || c.userId]?.profile_picture)} 
-                                                            alt="User" 
-                                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                                        />
-                                                    ) : (
-                                                        (userProfiles[c.user_id || c.userId]?.name || c.user_name || 'U').charAt(0)
-                                                    )}
+                                        {loadingComments[post.id] ? (
+                                            <div style={{ fontSize: '12px', color: '#94a3b8' }}>Loading comments...</div>
+                                        ) : (postComments[post.id] || []).map(c => {
+                                            const cUid = c.userId || c.user_id || c.employee_id || c.EmpID;
+                                            const profile = userProfiles[cUid] || Object.values(userProfiles).find(p => p.name === (c.userName || c.user_name || c.name));
+                                            const cUser = profile?.name || c.userName || c.user_name || c.name || 'User';
+                                            const cText = c.content || c.comment_text || c.text_content || c.text || c.comment || c.message || '...';
+                                            
+                                            return (
+                                                <div key={c.id} style={{ display: 'flex', gap: '12px' }}>
+                                                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '900', color: '#315A9E', overflow: 'hidden', flexShrink: 0 }}>
+                                                        {(() => {
+                                                            const pic = profile?.profileImage || profile?.profilePicture || profile?.profile_image || profile?.profile_picture || profile?.avatar;
+                                                            if (pic) {
+                                                                return <img src={getFullUrl(pic)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />;
+                                                            }
+                                                            return cUser.charAt(0).toUpperCase();
+                                                        })()}
+                                                    </div>
+                                                    <div style={{ flex: 1, padding: '12px', background: 'white', borderRadius: '15px', border: '1px solid #f1f5f9' }}>
+                                                        <div style={{ fontSize: '12px', fontWeight: '900', color: '#315A9E', marginBottom: '4px' }}>{cUser}</div>
+                                                        <div style={{ fontSize: '13px', color: '#0B1E3F', fontWeight: '600' }}>{cText}</div>
+                                                    </div>
                                                 </div>
-                                                <div style={{ flex: 1, padding: '12px', background: 'white', borderRadius: '15px', border: '1px solid #f1f5f9' }}>
-                                                    <div style={{ fontSize: '12px', fontWeight: '900', color: '#315A9E', marginBottom: '4px' }}>{userProfiles[c.user_id || c.userId]?.name || c.user_name || 'User'}</div>
-                                                    <div style={{ fontSize: '13px', color: '#0B1E3F', fontWeight: '600' }}>{c.content}</div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}

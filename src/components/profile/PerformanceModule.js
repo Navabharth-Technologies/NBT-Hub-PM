@@ -412,7 +412,7 @@ export default function PerformanceModule() {
       
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleImageUpload} />
 
-      <main style={{ padding: winWidth < 768 ? '0 15px' : '0 26px' }}>
+      <main style={{ padding: winWidth < 768 ? '0 16px' : '0 26px', width: '100%', boxSizing: 'border-box' }}>
         
         {/* Combined Dual-Color Card */}
         <div style={dashboardStyles.combinedCard}>

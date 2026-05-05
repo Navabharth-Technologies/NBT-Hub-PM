@@ -291,7 +291,7 @@ export default function EmployeeAttendanceDetail() {
   return (
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
-      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px' : '40px 20px', maxWidth: '100%', margin: '0 auto', width: '100%', boxSizing: 'border-box', marginTop: winWidth < 768 ? '85px' : '100px' }}>
+      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 16px 40px' : '40px 26px 40px', maxWidth: '100%', margin: '0 auto', width: '100%', boxSizing: 'border-box', marginTop: winWidth < 768 ? '85px' : '100px' }}>
         
         {/* Header Section */}
         <div style={{ display: 'flex', flexDirection: winWidth < 1024 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 1024 ? 'stretch' : 'flex-start', marginBottom: '32px', gap: '20px' }}>
@@ -369,27 +369,35 @@ export default function EmployeeAttendanceDetail() {
         </div>
 
         {/* Data Table */}
-        <div style={{ background: 'white', borderRadius: '32px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+        <div style={{ background: winWidth < 768 ? 'transparent' : 'white', borderRadius: '32px', border: winWidth < 768 ? 'none' : '1.5px solid #f1f5f9', boxShadow: winWidth < 768 ? 'none' : '0 4px 6px -1px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
           {winWidth < 768 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: '#f1f5f9' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {loading ? (
-                <div style={{ padding: '60px', textAlign: 'center', color: '#64748b', background: 'white' }}>Loading records...</div>
+                <div style={{ padding: '60px', textAlign: 'center', background: 'white', borderRadius: '24px' }}>
+                  <div className="animate-spin" style={{ margin: '0 auto', width: '32px', height: '32px', border: '3px solid #f3f3f3', borderTop: '3px solid #3b82f6', borderRadius: '50%' }}></div>
+                  <p style={{ marginTop: '16px', fontWeight: '700', color: '#64748b' }}>Loading records...</p>
+                </div>
               ) : getFilteredLogs().length === 0 ? (
-                <div style={{ padding: '60px', textAlign: 'center', color: '#64748b', background: 'white' }}>No records found.</div>
+                <div style={{ padding: '60px', textAlign: 'center', background: 'white', borderRadius: '24px', border: '1.5px solid #f1f5f9' }}>
+                   <AlertCircle size={40} color="#cbd5e1" style={{ margin: '0 auto' }} />
+                   <p style={{ marginTop: '16px', color: '#64748b', fontWeight: '900' }}>No records found.</p>
+                </div>
               ) : (
                 getFilteredLogs().map((log, idx) => {
-                  const dateObj = new Date(log.punch_date || log.created_at || log.date);
-                  const dateStr = isNaN(dateObj.getTime()) ? 'Invalid Date' : dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-                  
-                  // Status logic repeat for mobile view
+                  const punchIn = log.in_time || '----';
+                  const punchOut = log.out_time || '----';
+                  const workHrs = resolveWorkHrs(log);
                   const logDate = log.punch_date || log.created_at || log.date;
                   const d = new Date(logDate);
+                  const dateStr = isNaN(d.getTime()) ? 'Invalid Date' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  
                   const isSunday = d.getDay() === 0;
                   const month = d.toLocaleDateString('en-US', { month: 'short' });
                   const dateDay = String(d.getDate()).padStart(2, '0');
                   const dayMonth = `${month} ${dateDay}`;
                   const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
                   const isHoliday = holidays.includes(dayMonth);
+
                   let rawStatus = String(log.status || (log.in_time !== '----' ? 'PRESENT' : 'ABSENT')).toUpperCase();
                   if ((!log.in_time || log.in_time === '----') || rawStatus === 'ABSENT') {
                     if (isSunday) rawStatus = 'WO';
@@ -401,37 +409,53 @@ export default function EmployeeAttendanceDetail() {
                   const isNH = rawStatus === 'NH';
 
                   return (
-                    <div key={idx} style={{ background: 'white', padding: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
-                          <Calendar size={16} color="#94a3b8" /> {dateStr}
+                    <div key={idx} style={{ background: 'white', borderRadius: '24px', padding: '20px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                        <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '950' }}>
+                          {String(employee?.name || 'E').charAt(0).toUpperCase()}
                         </div>
-                        <div style={{ 
-                          display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', 
-                          borderRadius: '100px', background: isPresent ? '#f0fdf4' : (isWO || isNH ? '#eff6ff' : '#fef2f2'), 
-                          color: isPresent ? '#16a34a' : (isWO || isNH ? '#3b82f6' : '#ef4444'),
-                          fontSize: '10px', fontWeight: '900'
-                        }}>
-                          {rawStatus}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{employee?.name || 'Employee'}</div>
+                          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>#{id} • {employee?.role || 'Staff'}</div>
                         </div>
                       </div>
-                      
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '12px' }}>
+
+                      <div style={{ height: '1px', background: '#f1f5f9', margin: '0 -20px 16px' }}></div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                         <div>
-                          <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Punch In</div>
-                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#3b82f6' }}>{log.in_time || '----'}</div>
+                          <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Date</div>
+                          <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{dateStr}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Punch Out</div>
-                          <div style={{ fontSize: '13px', fontWeight: '800', color: '#64748b' }}>{log.out_time || '----'}</div>
+                          <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Hours</div>
+                          <div style={{ fontSize: '14px', fontWeight: '950', color: '#1e293b' }}>
+                            {workHrs?.replace(/\s:\s/g, ':') || '00:00'} <span style={{ fontSize: '10px', color: '#94a3b8' }}>HRS</span>
+                          </div>
                         </div>
                         <div>
-                          <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Work Hours</div>
-                          <div style={{ fontSize: '13px', fontWeight: '900', color: '#0f172a' }}>{resolveWorkHrs(log)}</div>
+                          <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Punch In</div>
+                          <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a' }}>{punchIn}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Location</div>
-                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={log.in_location}>{log.in_location || '----'}</div>
+                          <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Punch Out</div>
+                          <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a' }}>{punchOut}</div>
+                        </div>
+                      </div>
+
+                      <div style={{ height: '1px', background: '#f1f5f9', margin: '0 -20px 16px' }}></div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '11px', fontWeight: '700', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <MapPin size={12} /> {log.in_location || log.location || '----'}
+                        </div>
+                        <div style={{ 
+                          display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', 
+                          borderRadius: '100px', background: isPresent ? '#f0fdf4' : (isWO || isNH ? '#eff6ff' : '#fef2f2'), 
+                          color: isPresent ? '#16a34a' : (isWO || isNH ? '#3b82f6' : '#ef4444'),
+                          fontSize: '11px', fontWeight: '950', textTransform: 'uppercase'
+                        }}>
+                          {rawStatus}
                         </div>
                       </div>
                     </div>

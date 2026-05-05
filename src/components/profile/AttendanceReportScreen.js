@@ -4,7 +4,7 @@ import {
   ArrowLeft, Download, Search, Calendar, Filter, 
   Users, CheckCircle2, AlertCircle, Clock, FileText,
   RefreshCw, ChevronDown, User, Briefcase, MapPin,
-  FileSpreadsheet, BarChart3, Clock3
+  FileSpreadsheet, BarChart3, Clock3, LogIn, LogOut, Info
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config';
@@ -128,7 +128,7 @@ export default function AttendanceReportScreen() {
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)' }}>
       <AppHeader />
       
-      <main style={{ padding: winWidth < 768 ? '100px 15px 60px' : '120px 26px 60px', maxWidth: '1600px', margin: '0 auto' }}>
+      <main style={{ padding: winWidth < 768 ? '100px 16px 60px' : '120px 26px 60px', width: '100%', maxWidth: '100%', margin: '0', boxSizing: 'border-box' }}>
         
         {/* Breadcrumb */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', opacity: 0.8 }}>
@@ -147,14 +147,7 @@ export default function AttendanceReportScreen() {
           </div>
           
           <div style={{ display: 'flex', gap: '12px' }}>
-            <button 
-              onClick={fetchLogs}
-              style={{ padding: '12px', borderRadius: '14px', background: 'white', border: '1.5px solid #e2e8f0', cursor: 'pointer', color: '#64748b', transition: '0.2s' }}
-              onMouseOver={e => e.currentTarget.style.borderColor = '#3863a8'}
-              onMouseOut={e => e.currentTarget.style.borderColor = '#e2e8f0'}
-            >
-              <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-            </button>
+
             <div style={{ position: 'relative' }}>
                 <button 
                   onClick={() => setShowExportMenu(!showExportMenu)}
@@ -286,100 +279,173 @@ export default function AttendanceReportScreen() {
           </div>
         </div>
 
-        {/* Data Table */}
-        <div style={{ background: 'white', borderRadius: '28px', border: '1.5px solid #f1f5f9', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
-           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #f1f5f9' }}>
-                   <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Employee Details</th>
-                   <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Log Date</th>
-                   <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Punch Activity</th>
-                   <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Work Session</th>
-                   <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Status / Remarks</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                    <tr>
-                      <td colSpan="5" style={{ padding: '100px', textAlign: 'center' }}>
-                         <div className="animate-spin" style={{ margin: '0 auto', width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid #3b82f6', borderRadius: '50%' }}></div>
-                         <p style={{ marginTop: '20px', fontWeight: '800', color: '#64748b', fontSize: '14px' }}>Aggregating Attendance Intelligence...</p>
-                      </td>
-                    </tr>
-                ) : filteredLogs.length > 0 ? (
-                  filteredLogs.map((log, idx) => {
-                    const badge = getStatusBadge(log.status);
-                    return (
-                      <tr key={idx} style={{ borderBottom: '1.5px solid #f8fafc', transition: '0.2s', cursor: 'pointer' }} onClick={() => navigate(`/attendance/detail/${log.user_id || log.Empcode}`)}>
-                         <td style={{ padding: '20px 30px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                               <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
-                                  <User size={20} />
-                               </div>
-                               <div>
-                                  <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a', marginBottom: '2px' }}>{log.name || log.EmployeeName || 'Employee Name'}</div>
-                                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                     <Briefcase size={12} /> {log.department || 'Department'} • #{log.user_id || log.Empcode}
-                                  </div>
-                               </div>
+        {/* Data Table / Mobile Cards */}
+        <div style={{ background: winWidth < 768 ? 'transparent' : 'white', borderRadius: '28px', border: winWidth < 768 ? 'none' : '1.5px solid #f1f5f9', boxShadow: winWidth < 768 ? 'none' : '0 20px 25px -5px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
+          {winWidth < 768 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {loading ? (
+                <div style={{ padding: '60px', textAlign: 'center', background: 'white', borderRadius: '24px' }}>
+                   <div className="animate-spin" style={{ margin: '0 auto', width: '32px', height: '32px', border: '3px solid #f3f3f3', borderTop: '3px solid #3b82f6', borderRadius: '50%' }}></div>
+                   <p style={{ marginTop: '16px', fontWeight: '800', color: '#64748b', fontSize: '13px' }}>Loading reports...</p>
+                </div>
+              ) : filteredLogs.length > 0 ? (
+                filteredLogs.map((log, idx) => {
+                  const badge = getStatusBadge(log.status);
+                  return (
+                    <div 
+                      key={idx} 
+                      onClick={() => navigate(`/attendance/detail/${log.user_id || log.Empcode}`)}
+                      style={{ background: 'white', borderRadius: '24px', padding: '20px', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', cursor: 'pointer' }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3863a8' }}>
+                            <User size={20} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a' }}>{log.name || log.EmployeeName}</div>
+                            <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>#{log.user_id || log.Empcode} • {log.department}</div>
+                          </div>
+                        </div>
+                        <span style={{ 
+                          fontSize: '10px', fontWeight: '950', color: badge.color, background: badge.bg, 
+                          padding: '6px 12px', borderRadius: '100px', border: `1.5px solid ${badge.border}`, 
+                          textTransform: 'uppercase', letterSpacing: '0.5px'
+                        }}>
+                          {badge.label}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                         <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+                            <div style={{ fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Date</div>
+                            <div style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                               <Calendar size={13} color="#64748b" /> {log.punch_date ? new Date(log.punch_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'N/A'}
                             </div>
-                         </td>
-                         <td style={{ padding: '20px 30px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '800', color: '#475569' }}>
-                               <Calendar size={16} color="#94a3b8" />
-                               {log.punch_date ? new Date(log.punch_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                         </div>
+                         <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+                            <div style={{ fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Work Time</div>
+                            <div style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                               <BarChart3 size={13} color="#3b82f6" /> {log.work_time || '00:00'} HRS
                             </div>
-                         </td>
-                         <td style={{ padding: '20px 30px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '900', color: '#3b82f6' }}>
-                                  <LogIn size={13} /> {log.in_time || '----'}
-                               </div>
-                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '900', color: '#64748b' }}>
-                                  <LogOut size={13} /> {log.out_time || '----'}
-                               </div>
+                         </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
+                         <div style={{ display: 'flex', gap: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '900', color: '#3b82f6' }}>
+                               <LogIn size={13} /> {log.in_time || '----'}
                             </div>
-                         </td>
-                         <td style={{ padding: '20px 30px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                               <BarChart3 size={16} color="#94a3b8" />
-                               <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a' }}>
-                                  {log.work_time || '00:00'} <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '800' }}>HRS</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '900', color: '#64748b' }}>
+                               <LogOut size={13} /> {log.out_time || '----'}
+                            </div>
+                         </div>
+                         <div style={{ fontSize: '12px', color: '#3863a8', fontWeight: '900' }}>Detail ›</div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ padding: '60px', textAlign: 'center', background: 'white', borderRadius: '24px' }}>
+                   <AlertCircle size={40} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+                   <p style={{ fontWeight: '800', color: '#64748b', fontSize: '14px' }}>No logs found</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+               <thead>
+                 <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #f1f5f9' }}>
+                    <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Employee Details</th>
+                    <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Log Date</th>
+                    <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Punch Activity</th>
+                    <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Work Session</th>
+                    <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Status / Remarks</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 {loading ? (
+                     <tr>
+                       <td colSpan="5" style={{ padding: '100px', textAlign: 'center' }}>
+                          <div className="animate-spin" style={{ margin: '0 auto', width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid #3b82f6', borderRadius: '50%' }}></div>
+                          <p style={{ marginTop: '20px', fontWeight: '800', color: '#64748b', fontSize: '14px' }}>Aggregating Attendance Intelligence...</p>
+                       </td>
+                     </tr>
+                 ) : filteredLogs.length > 0 ? (
+                   filteredLogs.map((log, idx) => {
+                     const badge = getStatusBadge(log.status);
+                     return (
+                       <tr key={idx} style={{ borderBottom: '1.5px solid #f8fafc', transition: '0.2s', cursor: 'pointer' }} onClick={() => navigate(`/attendance/detail/${log.user_id || log.Empcode}`)}>
+                          <td style={{ padding: '20px 30px' }}>
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}>
+                                   <User size={20} />
                                 </div>
-                            </div>
-                         </td>
-                         <td style={{ padding: '20px 30px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                               <span style={{ 
-                                 fontSize: '11px', fontWeight: '950', color: badge.color, background: badge.bg, 
-                                 padding: '6px 14px', borderRadius: '12px', border: `1.5px solid ${badge.border}`, 
-                                 textTransform: 'uppercase', letterSpacing: '0.8px', display: 'inline-flex', alignItems: 'center', gap: '6px' 
-                               }}>
-                                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: badge.color }}></div>
-                                 {badge.label}
-                               </span>
-                               {log.remark && (
-                                 <div style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                   <Info size={12} /> {log.remark}
+                                <div>
+                                   <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a', marginBottom: '2px' }}>{log.name || log.EmployeeName || 'Employee Name'}</div>
+                                   <div style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <Briefcase size={12} /> {log.department || 'Department'} • #{log.user_id || log.Empcode}
+                                   </div>
+                                </div>
+                             </div>
+                          </td>
+                          <td style={{ padding: '20px 30px' }}>
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '800', color: '#475569' }}>
+                                <Calendar size={16} color="#94a3b8" />
+                                {log.punch_date ? new Date(log.punch_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                             </div>
+                          </td>
+                          <td style={{ padding: '20px 30px' }}>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '900', color: '#3b82f6' }}>
+                                   <LogIn size={13} /> {log.in_time || '----'}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '900', color: '#64748b' }}>
+                                   <LogOut size={13} /> {log.out_time || '----'}
+                                </div>
+                             </div>
+                          </td>
+                          <td style={{ padding: '20px 30px' }}>
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <BarChart3 size={16} color="#94a3b8" />
+                                <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a' }}>
+                                   {log.work_time || '00:00'} <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '800' }}>HRS</span>
                                  </div>
-                               )}
-                            </div>
-                         </td>
-                      </tr>
-                    )
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan="5" style={{ padding: '100px', textAlign: 'center' }}>
-                       <AlertCircle size={48} color="#cbd5e1" style={{ margin: '0 auto 16px' }} />
-                       <h3 style={{ fontSize: '18px', fontWeight: '950', color: '#1e293b' }}>No reporting data found</h3>
-                       <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '700' }}>Try adjusting your filters or checking a different date range.</p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-           </table>
-        </div>
+                             </div>
+                          </td>
+                          <td style={{ padding: '20px 30px' }}>
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ 
+                                  fontSize: '11px', fontWeight: '950', color: badge.color, background: badge.bg, 
+                                  padding: '6px 14px', borderRadius: '12px', border: `1.5px solid ${badge.border}`, 
+                                  textTransform: 'uppercase', letterSpacing: '0.8px', display: 'inline-flex', alignItems: 'center', gap: '6px' 
+                                }}>
+                                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: badge.color }}></div>
+                                  {badge.label}
+                                </span>
+                                {log.remark && (
+                                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <Info size={12} /> {log.remark}
+                                  </div>
+                                )}
+                             </div>
+                          </td>
+                       </tr>
+                     )
+                   })
+                 ) : (
+                   <tr>
+                     <td colSpan="5" style={{ padding: '100px', textAlign: 'center' }}>
+                        <AlertCircle size={48} color="#cbd5e1" style={{ margin: '0 auto 16px' }} />
+                        <h3 style={{ fontSize: '18px', fontWeight: '950', color: '#1e293b' }}>No reporting data found</h3>
+                        <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '700' }}>Try adjusting your filters or checking a different date range.</p>
+                     </td>
+                   </tr>
+                 )}
+               </tbody>
+            </table>
+          )}
+        </div>v>
 
       </main>
       <AppFooter />

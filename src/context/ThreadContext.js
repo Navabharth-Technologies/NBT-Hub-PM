@@ -334,7 +334,7 @@ export const ThreadProvider = ({ children }) => {
     }
   };
 
-  const addComment = async (threadId, userId, userName, content) => {
+  const addComment = async (threadId, content) => {
     try {
       const res = await fetch(API_ENDPOINTS.THREAD_COMMENT(threadId), {
         method: 'POST',
@@ -343,8 +343,10 @@ export const ThreadProvider = ({ children }) => {
           'Authorization': `Bearer ${user.token}`
         },
         body: JSON.stringify({ 
-          userId: user?.id || user?.employee_id,
-          user_id: user?.id || user?.employee_id,
+          userId: user?.id || user?.employee_id || user?.EmpID || user?.userId,
+          user_id: user?.id || user?.employee_id || user?.EmpID || user?.userId,
+          employee_id: user?.id || user?.employee_id || user?.EmpID || user?.userId,
+          EmpID: user?.id || user?.employee_id || user?.EmpID || user?.userId,
           userName: user?.name,
           content 
         })

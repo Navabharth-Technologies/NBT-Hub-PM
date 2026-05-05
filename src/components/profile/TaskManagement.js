@@ -434,19 +434,19 @@ export default function TaskManagement() {
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
       
-      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px' : '40px 26px', maxWidth: '100%', margin: '0 auto', width: '100%', boxSizing: 'border-box', marginTop: '70px' }}>
-        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px' }}>
+      <main style={{ flex: 1, padding: winWidth < 768 ? '100px 16px 40px' : '125px 26px 40px', width: '100%', boxSizing: 'border-box', margin: '0', maxWidth: '100%', marginTop: 0 }}>
+        <header style={{ marginBottom: winWidth < 768 ? '24px' : '40px', display: 'flex', flexDirection: winWidth < 768 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 768 ? 'flex-start' : 'flex-end', gap: '20px' }}>
           <div>
             <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '900', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-1px' }}>Task Management Hub</h1>
             <p style={{ color: '#64748b', margin: 0, fontSize: '15px', fontWeight: '500' }}>
               Review and verify work progress across all {tasks.length} assigned tasks
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
              <button 
                className="btn-primary" 
                onClick={handleExportPDF}
-               style={{ background: 'white', color: '#3863a8', border: '1.5px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+               style={{ background: 'white', color: '#3863a8', border: '1.5px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', width: winWidth < 768 ? '100%' : 'auto' }}
              >
                Export Report
              </button>
@@ -454,7 +454,7 @@ export default function TaskManagement() {
         </header>
 
         {/* Filters */}
-        <div className="flex-responsive-stack" style={{ marginBottom: '32px' }}>
+        <div style={{ display: 'flex', flexDirection: winWidth < 768 ? 'column' : 'row', gap: '16px', marginBottom: '32px' }}>
           <div style={{ flex: 1, position: 'relative' }}>
              <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '18px', opacity: 0.5 }}>🔍</span>
              <input 
@@ -477,134 +477,233 @@ export default function TaskManagement() {
           </select>
         </div>
 
-        <section style={{ background: 'white', borderRadius: '24px', border: '1.5px solid #f1f5f9', boxShadow: '0 10px 25px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #f1f5f9' }}>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '5%' }}>ID</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '7%' }}>Type</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '24%' }}>Task Information</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '14%' }}>Assignee</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Status</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Progress</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Date</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Review</th>
-                  <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Verify</th>
-                </tr>
-              </thead>
-              <tbody className="animate-fade-in">
-                {loading ? (
-                  <tr><td colSpan="10" style={{ textAlign: 'center', padding: '40px' }}>Loading tasks...</td></tr>
-                ) : filteredTasks.length > 0 ? (
-                  filteredTasks.map((task, index) => (
-                    <tr key={task.id || index} style={{ borderBottom: '1.5px solid #f8fafc', transition: 'all 0.2s ease' }}>
-                      <td style={{ padding: '16px 12px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#3863a8', backgroundColor: '#f0f4ff', padding: '4px 8px', borderRadius: '6px' }}>
-                          {String(task.id || 'N/A')}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px 12px' }}>
-                        <span style={{ fontSize: '10px', fontWeight: '900', color: '#3b82f6', backgroundColor: '#eff6ff', padding: '4px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
-                           {task.type || 'TASK'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px 12px' }}>
-                        <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '14px', marginBottom: '2px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.display_title || 'Untitled'}</div>
-                        {task.description && (
-                          <div style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.7 }}>
-                            {task.description}
-                          </div>
-                        )}
-                      </td>
-                      <td style={{ padding: '16px 12px' }}>
-                        <div 
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                          onClick={() => setSelectedAssignee(task.assignee_name)}
-                          title={`Click to view all tasks for ${task.assignee_name}`}
-                        >
-                          <div style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px', flexShrink: 0, borderRadius: '8px', background: '#3863a8', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '900' }}>
-                            {(task.assignee_name || 'U').toString().charAt(0).toUpperCase()}
-                          </div>
-                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#3863a8', whiteSpace: 'nowrap', textDecoration: 'underline', textDecorationStyle: 'dotted', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.assignee_name || 'N/A'}</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '16px 12px' }}>
-                        <span style={{ 
-                          fontSize: '10px', fontWeight: '900', padding: '4px 10px', borderRadius: '8px', textTransform: 'uppercase',
-                          backgroundColor: getStatusColor(task.sprint_status || task.status).bg, color: getStatusColor(task.sprint_status || task.status).text, border: `1px solid ${getStatusColor(task.sprint_status || task.status).border}`
-                        }}>
-                          {task.sprint_status || task.status || 'Pending'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '16px 12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '90px' }}>
-                          <div style={{ flex: 1, height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{ width: `${task.progress_percentage || 0}%`, height: '100%', background: 'linear-gradient(90deg, #3863a8, #60a5fa)', borderRadius: '3px' }}></div>
-                          </div>
-                          <span style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b' }}>{task.progress_percentage || 0}%</span>
-                        </div>
-                      </td>
-                       <td style={{ padding: '16px 12px', color: '#64748b', fontWeight: '600', fontSize: '12px' }}>
-                         {task.deadline || task.updated_at ? new Date(task.deadline || task.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
-                       </td>
-                       <td style={{ padding: '16px 12px', width: '100px' }}>
-                         {task.has_review ? (
-                           <span 
-                             style={{ fontSize: '11px', color: '#3863a8', fontWeight: '700', backgroundColor: '#eef2ff', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', verticalAlign: 'middle' }}
-                             onClick={() => { setReviewTask(task); setReviewText(task.task_review); }}
-                             title={task.task_review}
-                           >
-                              {task.task_review} 📝
-                           </span>
-                         ) : (
-                           <button 
-                             onClick={() => { setReviewTask(task); setReviewText(''); }}
-                             style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#3863a8', fontWeight: '800', fontSize: '11px', cursor: 'pointer' }}
-                           >
-                              Review
-                           </button>
-                         )}
-                       </td>
-                       <td style={{ padding: '16px 12px', width: '100px' }}>
-                        <div style={{ position: 'relative', width: 'fit-content' }}>
-                          <select 
-                            value={task.verify_status || 'Pending'}
-                            onChange={(e) => handleVerifyChange(task.task_id || task.id, e.target.value)}
-                            style={{ 
-                              padding: '6px 24px 6px 8px', 
-                              borderRadius: '8px', 
-                              border: `1px solid ${getVerifyStyles(task.verify_status).border}`,
-                              background: getVerifyStyles(task.verify_status).bg,
-                              color: getVerifyStyles(task.verify_status).text,
-                              fontSize: '11px',
-                              fontWeight: '800',
-                              cursor: 'pointer',
-                              outline: 'none',
-                              appearance: 'none'
-                            }}
+        <section style={{ 
+          background: winWidth < 768 ? 'transparent' : 'white', 
+          borderRadius: '24px', 
+          border: winWidth < 768 ? 'none' : '1.5px solid #f1f5f9', 
+          boxShadow: winWidth < 768 ? 'none' : '0 10px 25px rgba(0,0,0,0.02)', 
+          overflow: 'hidden' 
+        }}>
+          {winWidth < 768 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px', background: 'white', borderRadius: '20px' }}>Loading tasks...</div>
+              ) : filteredTasks.length > 0 ? (
+                filteredTasks.map((task, index) => (
+                  <div key={task.id || index} style={{ background: 'white', borderRadius: '20px', padding: '20px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 15px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <span style={{ fontSize: '10px', fontWeight: '800', color: '#3863a8', backgroundColor: '#f0f4ff', padding: '4px 8px', borderRadius: '6px' }}>#{task.id}</span>
+                        <span style={{ fontSize: '10px', fontWeight: '900', color: '#3b82f6', backgroundColor: '#eff6ff', padding: '4px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>{task.type || 'TASK'}</span>
+                      </div>
+                      <span style={{ 
+                        fontSize: '9px', fontWeight: '900', padding: '4px 10px', borderRadius: '8px', textTransform: 'uppercase',
+                        backgroundColor: getStatusColor(task.sprint_status || task.status).bg, color: getStatusColor(task.sprint_status || task.status).text, border: `1px solid ${getStatusColor(task.sprint_status || task.status).border}`
+                      }}>
+                        {task.sprint_status || task.status || 'Pending'}
+                      </span>
+                    </div>
+
+                    <div style={{ marginBottom: '15px' }}>
+                      <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '16px', marginBottom: '4px' }}>{task.display_title || 'Untitled'}</div>
+                      {task.description && <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', opacity: 0.8 }}>{task.description}</div>}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px', padding: '10px', background: '#f8fafc', borderRadius: '12px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#3863a8', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '900' }}>
+                        {(task.assignee_name || 'U').toString().charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b' }}>{task.assignee_name || 'N/A'}</span>
+                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>Assignee</span>
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '15px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b' }}>Progress</span>
+                        <span style={{ fontSize: '11px', fontWeight: '900', color: '#1e293b' }}>{task.progress_percentage || 0}%</span>
+                      </div>
+                      <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div style={{ width: `${task.progress_percentage || 0}%`, height: '100%', background: 'linear-gradient(90deg, #3863a8, #60a5fa)', borderRadius: '4px' }}></div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1.5px solid #f8fafc', paddingTop: '15px' }}>
+                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>
+                         📅 {task.deadline || task.updated_at ? new Date(task.deadline || task.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        {task.has_review ? (
+                          <button 
+                            onClick={() => { setReviewTask(task); setReviewText(task.task_review); }}
+                            style={{ padding: '6px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', background: '#f8fafc', color: '#3863a8', fontWeight: '800', fontSize: '11px' }}
                           >
-                            <option value="Pending">⌛ Pend</option>
-                            <option value="Reject">❌ Rej</option>
-                            <option value="Approve">✅ App</option>
-                          </select>
-                          <div style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: '8px', opacity: 0.5 }}>▼</div>
-                        </div>
+                             Review 📝
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => { setReviewTask(task); setReviewText(''); }}
+                            style={{ padding: '6px 12px', borderRadius: '8px', border: '1.5px solid #3863a8', background: 'white', color: '#3863a8', fontWeight: '800', fontSize: '11px' }}
+                          >
+                             Review
+                          </button>
+                        )}
+                        <select 
+                          value={task.verify_status || 'Pending'}
+                          onChange={(e) => handleVerifyChange(task.task_id || task.id, e.target.value)}
+                          style={{ 
+                            padding: '6px 12px', 
+                            borderRadius: '8px', 
+                            border: `1.5px solid ${getVerifyStyles(task.verify_status).border}`,
+                            background: getVerifyStyles(task.verify_status).bg,
+                            color: getVerifyStyles(task.verify_status).text,
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            outline: 'none'
+                          }}
+                        >
+                          <option value="Pending">Pend</option>
+                          <option value="Reject">Rej</option>
+                          <option value="Approve">App</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '20px' }}>No Tasks Found</div>
+              )}
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #f1f5f9' }}>
+                    <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '5%' }}>ID</th>
+                    <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '7%' }}>Type</th>
+                    <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '24%' }}>Task Information</th>
+                    <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '14%' }}>Assignee</th>
+                    <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Status</th>
+                    <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Progress</th>
+                    <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Date</th>
+                    <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Review</th>
+                    <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Verify</th>
+                  </tr>
+                </thead>
+                <tbody className="animate-fade-in">
+                  {loading ? (
+                    <tr><td colSpan="10" style={{ textAlign: 'center', padding: '40px' }}>Loading tasks...</td></tr>
+                  ) : filteredTasks.length > 0 ? (
+                    filteredTasks.map((task, index) => (
+                      <tr key={task.id || index} style={{ borderBottom: '1.5px solid #f8fafc', transition: 'all 0.2s ease' }}>
+                        <td style={{ padding: '16px 12px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: '800', color: '#3863a8', backgroundColor: '#f0f4ff', padding: '4px 8px', borderRadius: '6px' }}>
+                            {String(task.id || 'N/A')}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 12px' }}>
+                          <span style={{ fontSize: '10px', fontWeight: '900', color: '#3b82f6', backgroundColor: '#eff6ff', padding: '4px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
+                             {task.type || 'TASK'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 12px' }}>
+                          <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '14px', marginBottom: '2px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.display_title || 'Untitled'}</div>
+                          {task.description && (
+                            <div style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.7 }}>
+                              {task.description}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '16px 12px' }}>
+                          <div 
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                            onClick={() => setSelectedAssignee(task.assignee_name)}
+                            title={`Click to view all tasks for ${task.assignee_name}`}
+                          >
+                            <div style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px', flexShrink: 0, borderRadius: '8px', background: '#3863a8', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '900' }}>
+                              {(task.assignee_name || 'U').toString().charAt(0).toUpperCase()}
+                            </div>
+                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#3863a8', whiteSpace: 'nowrap', textDecoration: 'underline', textDecorationStyle: 'dotted', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.assignee_name || 'N/A'}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '16px 12px' }}>
+                          <span style={{ 
+                            fontSize: '10px', fontWeight: '900', padding: '4px 10px', borderRadius: '8px', textTransform: 'uppercase',
+                            backgroundColor: getStatusColor(task.sprint_status || task.status).bg, color: getStatusColor(task.sprint_status || task.status).text, border: `1px solid ${getStatusColor(task.sprint_status || task.status).border}`
+                          }}>
+                            {task.sprint_status || task.status || 'Pending'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '90px' }}>
+                            <div style={{ flex: 1, height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ width: `${task.progress_percentage || 0}%`, height: '100%', background: 'linear-gradient(90deg, #3863a8, #60a5fa)', borderRadius: '3px' }}></div>
+                            </div>
+                            <span style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b' }}>{task.progress_percentage || 0}%</span>
+                          </div>
+                        </td>
+                         <td style={{ padding: '16px 12px', color: '#64748b', fontWeight: '600', fontSize: '12px' }}>
+                           {task.deadline || task.updated_at ? new Date(task.deadline || task.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+                         </td>
+                         <td style={{ padding: '16px 12px', width: '100px' }}>
+                           {task.has_review ? (
+                             <span 
+                               style={{ fontSize: '11px', color: '#3863a8', fontWeight: '700', backgroundColor: '#eef2ff', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', verticalAlign: 'middle' }}
+                               onClick={() => { setReviewTask(task); setReviewText(task.task_review); }}
+                               title={task.task_review}
+                             >
+                                {task.task_review} 📝
+                             </span>
+                           ) : (
+                             <button 
+                               onClick={() => { setReviewTask(task); setReviewText(''); }}
+                               style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#3863a8', fontWeight: '800', fontSize: '11px', cursor: 'pointer' }}
+                             >
+                                Review
+                             </button>
+                           )}
+                         </td>
+                         <td style={{ padding: '16px 12px', width: '100px' }}>
+                          <div style={{ position: 'relative', width: 'fit-content' }}>
+                            <select 
+                              value={task.verify_status || 'Pending'}
+                              onChange={(e) => handleVerifyChange(task.task_id || task.id, e.target.value)}
+                              style={{ 
+                                padding: '6px 24px 6px 8px', 
+                                borderRadius: '8px', 
+                                border: `1px solid ${getVerifyStyles(task.verify_status).border}`,
+                                background: getVerifyStyles(task.verify_status).bg,
+                                color: getVerifyStyles(task.verify_status).text,
+                                fontSize: '11px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                outline: 'none',
+                                appearance: 'none'
+                              }}
+                            >
+                              <option value="Pending">⌛ Pend</option>
+                              <option value="Reject">❌ Rej</option>
+                              <option value="Approve">✅ App</option>
+                            </select>
+                            <div style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: '8px', opacity: 0.5 }}>▼</div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="10" style={{ textAlign: 'center', padding: '100px', backgroundColor: '#fcfcfd' }}>
+                        <div style={{ fontSize: '40px', marginBottom: '20px' }}>📂</div>
+                        <h3 style={{ color: '#1e293b', marginBottom: '8px' }}>No Tasks Found</h3>
+                        <p style={{ color: '#64748b' }}>Try adjusting your search or filters to find what you're looking for.</p>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="10" style={{ textAlign: 'center', padding: '100px', backgroundColor: '#fcfcfd' }}>
-                      <div style={{ fontSize: '40px', marginBottom: '20px' }}>📂</div>
-                      <h3 style={{ color: '#1e293b', marginBottom: '8px' }}>No Tasks Found</h3>
-                      <p style={{ color: '#64748b' }}>Try adjusting your search or filters to find what you're looking for.</p>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </main>
 

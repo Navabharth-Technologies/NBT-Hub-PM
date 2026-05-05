@@ -791,8 +791,8 @@ export default function LeaveAttendanceCenter() {
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
 
-      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px 100px' : '30px 26px 30px', width: '100%', boxSizing: 'border-box', marginTop: winWidth < 768 ? '85px' : '110px', marginLeft: 'auto', marginRight: 'auto', maxWidth: '100%' }}>
-        <div style={{ maxWidth: '100%', margin: '0 auto', width: '100%' }}>
+      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 16px 40px' : '20px 26px 40px', width: '100%', boxSizing: 'border-box', margin: '0', marginTop: winWidth < 768 ? '85px' : '110px' }}>
+        <div style={{ width: '100%' }}>
           <button
             onClick={() => navigate('/dashboard')}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: '#1d4ed8', fontWeight: '800', fontSize: '13px', cursor: 'pointer', marginBottom: '20px', padding: 0 }}
@@ -853,12 +853,6 @@ export default function LeaveAttendanceCenter() {
                       style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '800', color: '#1e293b', width: '105px' }}
                     />
 
-                    <button
-                      onClick={() => { fetchAttendance(); fetchLeaves(); }}
-                      style={{ background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', cursor: 'pointer', color: '#64748b', transition: '0.2s', padding: '4px' }}
-                    >
-                      <RefreshCw size={16} className={attendanceLoading ? 'animate-spin' : ''} />
-                    </button>
                   </div>
                 </div>
 
@@ -1182,9 +1176,9 @@ export default function LeaveAttendanceCenter() {
                 </div>
               </div>
 
-              <section style={{ background: 'white', borderRadius: '24px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 20px -5px rgba(0,0,0,0.02)', overflowX: winWidth < 768 ? 'hidden' : 'auto' }}>
+              <section style={{ background: winWidth < 768 ? 'transparent' : 'white', borderRadius: '24px', border: winWidth < 768 ? 'none' : '1.5px solid #f1f5f9', boxShadow: winWidth < 768 ? 'none' : '0 4px 20px -5px rgba(0,0,0,0.02)', overflowX: winWidth < 768 ? 'hidden' : 'auto' }}>
                 {winWidth < 768 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {displayedEmployees.length > 0 ? (
                       displayedEmployees.map((emp, idx) => {
                         const log = (attendanceLogs || [])
@@ -1205,44 +1199,58 @@ export default function LeaveAttendanceCenter() {
                         const pDate = log?.punch_date || log?.date || log?.created_at;
 
                         return (
-                          <div key={idx} style={{ background: '#f8fafc', borderRadius: '18px', padding: '16px', border: '1.5px solid #eef2ff' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #e2e8f0' }}>
-                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '950' }}>
+                          <div key={idx} style={{ background: 'white', borderRadius: '24px', padding: '20px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '950' }}>
                                 {String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}
                               </div>
                               <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>{emp.name || emp.user_name || 'Unknown User'}</div>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>#{emp.id} • {emp.role || 'Employee'}</div>
+                                <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{emp.name || emp.user_name || 'Unknown User'}</div>
+                                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>#{emp.id} • {emp.role || 'Employee'}</div>
                               </div>
-                              <div onClick={() => navigate(`/attendance/detail/${emp.id}`)} style={{ padding: '8px', borderRadius: '10px', background: 'white', color: '#1d4ed8', cursor: 'pointer' }}><Info size={18} /></div>
+                              <button 
+                                onClick={() => navigate(`/attendance/detail/${emp.id}`)}
+                                style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#3b82f6' }}
+                              >
+                                <Info size={18} />
+                              </button>
                             </div>
-                            
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+
+                            <div style={{ height: '1px', background: '#f1f5f9', margin: '0 -20px 16px' }}></div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                               <div>
-                                <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Date</div>
-                                <div style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b' }}>{pDate ? new Date(pDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '----'}</div>
+                                <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Date</div>
+                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{pDate ? new Date(pDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '----'}</div>
                               </div>
                               <div>
-                                <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Hours</div>
-                                <div style={{ fontSize: '12px', fontWeight: '900', color: '#1e293b' }}>{workHrs?.replace(/\s:\s/g, ':') || '00:00'} <span style={{ fontSize: '9px', color: '#94a3b8' }}>HRS</span></div>
+                                <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Hours</div>
+                                <div style={{ fontSize: '14px', fontWeight: '950', color: '#1e293b' }}>
+                                  {workHrs?.replace(/\s:\s/g, ':') || '00:00'} <span style={{ fontSize: '10px', color: '#94a3b8' }}>HRS</span>
+                                </div>
                               </div>
                               <div>
-                                <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Punch In</div>
-                                <div style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a' }}>{punchIn}</div>
+                                <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Punch In</div>
+                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a' }}>{punchIn}</div>
                               </div>
                               <div>
-                                <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Punch Out</div>
-                                <div style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a' }}>{punchOut}</div>
-                              </div>
-                              <div style={{ gridColumn: 'span 2' }}>
-                                <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Remark</div>
-                                <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>{log?.remarks || log?.rm_remarks || log?.pm_remarks || '-'}</div>
+                                <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Punch Out</div>
+                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a' }}>{punchOut}</div>
                               </div>
                             </div>
-                            
-                            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                <MapPin size={10} style={{ marginRight: '4px' }} /> {log?.in_location || log?.location || '----'}
+
+                            <div style={{ marginBottom: '20px' }}>
+                              <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Remark</div>
+                              <div style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                                {log?.remarks || log?.rm_remarks || log?.pm_remarks || '-'}
+                              </div>
+                            </div>
+
+                            <div style={{ height: '1px', background: '#f1f5f9', margin: '0 -20px 16px' }}></div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '11px', fontWeight: '700', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <MapPin size={12} /> {log?.in_location || log?.location || '----'}
                               </div>
                               {(() => {
                                 const punchDate = log?.punch_date || log?.date || log?.created_at || new Date().toISOString();
@@ -1253,18 +1261,32 @@ export default function LeaveAttendanceCenter() {
                                 const dayMonth = `${month} ${dateDay}`;
                                 const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
                                 const isHoliday = holidays.includes(dayMonth);
+
                                 let rawStatus = String(log?.status || (punchIn !== '----' ? 'PRESENT' : 'ABSENT')).toUpperCase();
                                 if (punchIn === '----' || rawStatus === 'ABSENT') {
                                   if (isSunday) rawStatus = 'WO';
                                   else if (isHoliday) rawStatus = 'NH';
                                   else rawStatus = 'ABSENT';
                                 }
+
                                 const isPresent = rawStatus.includes('PRESENT') || rawStatus === 'P';
                                 const isWO = rawStatus === 'WO';
                                 const isNH = rawStatus === 'NH';
 
                                 return (
-                                  <div style={{ padding: '4px 10px', borderRadius: '100px', background: isPresent ? '#f0fdf4' : (isWO || isNH ? '#eff6ff' : '#fef2f2'), border: `1px solid ${isPresent ? '#bbf7d0' : (isWO || isNH ? '#dbeafe' : '#fee2e2')}`, color: isPresent ? '#16a34a' : (isWO || isNH ? '#3b82f6' : '#ef4444'), fontSize: '10px', fontWeight: '900' }}>
+                                  <div style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '6px 14px',
+                                    borderRadius: '100px',
+                                    background: isPresent ? '#f0fdf4' : (isWO || isNH ? '#eff6ff' : '#fef2f2'),
+                                    border: `1.5px solid ${isPresent ? '#bbf7d0' : (isWO || isNH ? '#dbeafe' : '#fee2e2')}`,
+                                    color: isPresent ? '#16a34a' : (isWO || isNH ? '#3b82f6' : '#ef4444'),
+                                    fontSize: '11px',
+                                    fontWeight: '950',
+                                    textTransform: 'uppercase'
+                                  }}>
                                     {rawStatus}
                                   </div>
                                 );
@@ -1274,7 +1296,9 @@ export default function LeaveAttendanceCenter() {
                         );
                       })
                     ) : (
-                      <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', fontWeight: '700' }}>No attendance records found</div>
+                      <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '24px', border: '1.5px solid #f1f5f9' }}>
+                        <p style={{ color: '#64748b', fontWeight: '900' }}>No matching records found.</p>
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -1463,85 +1487,150 @@ export default function LeaveAttendanceCenter() {
               </div>
 
               <div style={{ overflowX: 'auto', border: '1px solid #f1f5f9', borderRadius: '16px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-                  <thead>
-                    <tr style={{ background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
-                      <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>EMPLOYEE</th>
-                      <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>ID</th>
-                      <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>YEAR</th>
-                      <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>CASUAL LEAVES</th>
-                      <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>LOP LEAVES</th>
-                      <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>HALF DAYS</th>
-                      <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>TAKEN</th>
-                      <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>AVAILABLE LEAVES</th>
-                      <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>ACTION</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(showAllLedger ? allEmployees : allEmployees.slice(0, 7))
-                      .filter(emp => String(emp.id || emp.EmpID) !== '20250')
-                      .map((emp, idx) => {
-                      // Prioritize data from leave_stats table (allLeaveStats)
-                      const statsEntry = allLeaveStats.find(s => String(s.employee_id || s.user_id) === String(emp.id));
-                      
-                      let cl, lop, balance;
-                      
-                      if (statsEntry) {
-                        cl = parseFloat(statsEntry.leaves_taken || 0);
-                        lop = parseFloat(statsEntry.LOP || statsEntry.lop || 0);
-                        balance = parseFloat(statsEntry.leaves_available || statsEntry.available_leaves || statsEntry.Available_Leaves || 0);
-                      } else {
-                        cl = 0;
-                        lop = 0;
-                        balance = 0;
-                      }
-                      
-                      const taken = cl + lop;
-
-                      return (
-                        <tr key={idx} style={{ borderBottom: '1px solid #f8fafc', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
-                          <td style={{ padding: '12px 16px', fontWeight: '800', color: '#1e293b' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '950' }}>
-                                {String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}
+                  {winWidth < 768 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {(showAllLedger ? allEmployees : allEmployees.slice(0, 7))
+                        .filter(emp => String(emp.id || emp.EmpID) !== '20250')
+                        .map((emp, idx) => {
+                          const statsEntry = allLeaveStats.find(s => String(s.employee_id || s.user_id) === String(emp.id));
+                          let cl = parseFloat(statsEntry?.leaves_taken || 0);
+                          let lop = parseFloat(statsEntry?.LOP || statsEntry?.lop || 0);
+                          let balance = parseFloat(statsEntry?.leaves_available || statsEntry?.available_leaves || statsEntry?.Available_Leaves || 0);
+                          
+                          return (
+                            <div key={idx} style={{ background: 'white', borderRadius: '24px', padding: '20px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '950' }}>
+                                  {String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{emp.name || emp.user_name}</div>
+                                  <div style={{ fontSize: '12px', color: '#3863a8', fontWeight: '800' }}>#{emp.id} • {statsEntry?.year || new Date().getFullYear()}</div>
+                                </div>
+                                <button 
+                                  onClick={() => {
+                                    setLeaveEditData({ 
+                                      empId: emp.id, 
+                                      empName: emp.name || emp.user_name, 
+                                      cl, lop, 
+                                      month: 4,
+                                      year: 2026,
+                                      available: balance,
+                                      halfDays: statsEntry?.half_day || statsEntry?.halfDays || 0,
+                                      oldCl: cl,
+                                      oldBalance: balance
+                                    });
+                                    setShowLeaveEditModal(true);
+                                  }}
+                                  style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}
+                                >
+                                  <Edit3 size={16} />
+                                </button>
                               </div>
-                              {emp.name || emp.user_name}
+
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: '#f8fafc', padding: '16px', borderRadius: '16px' }}>
+                                <div>
+                                  <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Casual Leaves</div>
+                                  <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>{cl} <span style={{ fontSize: '10px', color: '#94a3b8' }}>DAYS</span></div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>LOP Leaves</div>
+                                  <div style={{ fontSize: '15px', fontWeight: '900', color: '#ef4444' }}>{lop} <span style={{ fontSize: '10px', color: '#94a3b8' }}>DAYS</span></div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Half Days</div>
+                                  <div style={{ fontSize: '15px', fontWeight: '900', color: '#f59e0b' }}>{statsEntry?.half_day || 0}</div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Balance</div>
+                                  <div style={{ fontSize: '15px', fontWeight: '950', color: '#16a34a' }}>{balance} <span style={{ fontSize: '10px', color: '#94a3b8' }}>DAYS</span></div>
+                                </div>
+                              </div>
                             </div>
-                          </td>
-                          <td style={{ padding: '12px 16px', fontWeight: '700', color: '#000000' }}>#{emp.id}</td>
-                          <td style={{ padding: '12px 16px', fontWeight: '700', color: '#64748b' }}>{statsEntry?.year || new Date().getFullYear()}</td>
-                          <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{cl}</td>
-                          <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{lop}</td>
-                          <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{statsEntry?.half_day || statsEntry?.half_days || 0}</td>
-                          <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{taken}</td>
-                          <td style={{ padding: '12px 16px', fontWeight: '950', color: '#16a34a' }}>{balance} Days</td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <button 
-                              onClick={() => {
-                                  setLeaveEditData({ 
-                                    empId: emp.id, 
-                                    empName: emp.name || emp.user_name, 
-                                    cl, 
-                                    lop, 
-                                    month: 4,
-                                    year: 2026,
-                                    available: balance,
-                                    halfDays: statsEntry?.half_day || statsEntry?.halfDays || 0,
-                                    oldCl: cl,
-                                    oldBalance: balance
-                                  });
-                                setShowLeaveEditModal(true);
-                              }}
-                              style={{ background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '900', color: '#475569', cursor: 'pointer' }}
-                            >
-                              Edit
-                            </button>
-                          </td>
+                          );
+                        })}
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+                          <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>EMPLOYEE</th>
+                          <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>ID</th>
+                          <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>YEAR</th>
+                          <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>CASUAL LEAVES</th>
+                          <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>LOP LEAVES</th>
+                          <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>HALF DAYS</th>
+                          <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>TAKEN</th>
+                          <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>AVAILABLE LEAVES</th>
+                          <th style={{ padding: '16px', fontWeight: '900', color: '#64748b' }}>ACTION</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody>
+                        {(showAllLedger ? allEmployees : allEmployees.slice(0, 7))
+                          .filter(emp => String(emp.id || emp.EmpID) !== '20250')
+                          .map((emp, idx) => {
+                          // Prioritize data from leave_stats table (allLeaveStats)
+                          const statsEntry = allLeaveStats.find(s => String(s.employee_id || s.user_id) === String(emp.id));
+                          
+                          let cl, lop, balance;
+                          
+                          if (statsEntry) {
+                            cl = parseFloat(statsEntry.leaves_taken || 0);
+                            lop = parseFloat(statsEntry.LOP || statsEntry.lop || 0);
+                            balance = parseFloat(statsEntry.leaves_available || statsEntry.available_leaves || statsEntry.Available_Leaves || 0);
+                          } else {
+                            cl = 0;
+                            lop = 0;
+                            balance = 0;
+                          }
+                          
+                          const taken = cl + lop;
+
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid #f8fafc', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                              <td style={{ padding: '12px 16px', fontWeight: '800', color: '#1e293b' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '950' }}>
+                                    {String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}
+                                  </div>
+                                  {emp.name || emp.user_name}
+                                </div>
+                              </td>
+                              <td style={{ padding: '12px 16px', fontWeight: '700', color: '#000000' }}>#{emp.id}</td>
+                              <td style={{ padding: '12px 16px', fontWeight: '700', color: '#64748b' }}>{statsEntry?.year || new Date().getFullYear()}</td>
+                              <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{cl}</td>
+                              <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{lop}</td>
+                              <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{statsEntry?.half_day || statsEntry?.half_days || 0}</td>
+                              <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{taken}</td>
+                              <td style={{ padding: '12px 16px', fontWeight: '950', color: '#16a34a' }}>{balance} Days</td>
+                              <td style={{ padding: '12px 16px' }}>
+                                <button 
+                                  onClick={() => {
+                                      setLeaveEditData({ 
+                                        empId: emp.id, 
+                                        empName: emp.name || emp.user_name, 
+                                        cl, 
+                                        lop, 
+                                        month: 4,
+                                        year: 2026,
+                                        available: balance,
+                                        halfDays: statsEntry?.half_day || statsEntry?.halfDays || 0,
+                                        oldCl: cl,
+                                        oldBalance: balance
+                                      });
+                                    setShowLeaveEditModal(true);
+                                  }}
+                                  style={{ background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '900', color: '#475569', cursor: 'pointer' }}
+                                >
+                                  Edit
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
               </div>
             </div>
           ) : (

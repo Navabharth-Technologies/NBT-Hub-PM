@@ -259,8 +259,8 @@ export default function TicketManagement() {
                         background: 'white', 
                         padding: '24px', 
                         borderRadius: '24px', 
-                        border: '3px solid #cbd5e1',
-                        boxShadow: '0 4px 15px rgba(0,0,0,0.02)',
+                        border: '1.5px solid #f1f5f9',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '16px',
@@ -268,19 +268,18 @@ export default function TicketManagement() {
                       }}
                       onMouseEnter={e => {
                         e.currentTarget.style.borderColor = '#3863a8';
-                        e.currentTarget.style.boxShadow = '0 10px 25px rgba(56, 99, 168, 0.1)';
+                        e.currentTarget.style.boxShadow = '0 10px 25px rgba(56, 99, 168, 0.08)';
                       }}
                       onMouseLeave={e => {
-                        e.currentTarget.style.borderColor = '#cbd5e1';
-                        e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.02)';
+                        e.currentTarget.style.borderColor = '#f1f5f9';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.03)';
                       }}>
-                    >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: '12px', fontWeight: '800', color: '#3863a8', backgroundColor: '#f0f4ff', padding: '4px 12px', borderRadius: '8px' }}>
                           #{String(ticket.id || index + 1)}
                         </span>
                         <span style={{ 
-                          fontSize: '10px', fontWeight: '950', padding: '6px 12px', borderRadius: '8px', textTransform: 'uppercase', letterSpacing: '0.5px',
+                          fontSize: '10px', fontWeight: '950', padding: '6px 12px', borderRadius: '100px', textTransform: 'uppercase', letterSpacing: '0.5px',
                           backgroundColor: status.bg, color: status.text, border: `1px solid ${status.border}`, display: 'inline-flex', alignItems: 'center', gap: '6px'
                         }}>
                           {status.icon} {ticket.status || 'Open'}
