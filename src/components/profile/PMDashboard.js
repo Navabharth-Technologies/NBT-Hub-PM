@@ -538,7 +538,7 @@ export default function PMDashboard() {
 
         <div className="main-dashboard-grid" style={{ gap: winWidth < 768 ? '20px' : '30px' }}>
           {/* Column 1: Team Overview (Spans 2 columns on Desktop) */}
-          <section className="dashboard-section team-overview-section animate-fade-in" style={{ animationDelay: '0.4s', marginBottom: '0', position: 'relative' }}>
+          <section className="dashboard-section team-overview-section animate-fade-in" style={{ animationDelay: '0.4s', marginBottom: '0', position: 'relative', padding: winWidth < 1024 ? (winWidth < 768 ? '20px 16px' : '24px 20px') : '30px', boxSizing: 'border-box', overflow: 'hidden' }}>
             <div className="section-header" style={{ marginBottom: winWidth < 768 ? '15px' : '20px' }}>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <h2 className="section-title" style={{ fontSize: winWidth < 768 ? '18px' : '22px', margin: 0 }}>Team Overview</h2>
@@ -660,7 +660,7 @@ export default function PMDashboard() {
           </section>
 
           {/* Column 2: Task Hub */}
-          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.6s', cursor: 'pointer', background: 'white', padding: winWidth < 768 ? '20px 16px' : '28px' }} onClick={() => navigate('/tasks')}>
+          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.6s', cursor: 'pointer', background: 'white', padding: winWidth < 1024 ? (winWidth < 768 ? '20px 16px' : '24px 20px') : '28px', boxSizing: 'border-box', overflow: 'hidden' }} onClick={() => navigate('/tasks')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px' }}>
               <div style={{ width: winWidth < 768 ? '42px' : '48px', height: winWidth < 768 ? '42px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3163aa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '18px' : '22px', boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.1)' }}>📅</div>
               <h2 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Task Command</h2>
@@ -697,7 +697,7 @@ export default function PMDashboard() {
           </section>
 
           {/* Column 3: Attendance Analytics */}
-          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.7s', background: 'white', cursor: 'pointer', padding: winWidth < 768 ? '20px 16px' : '28px' }} onClick={() => navigate('/attendance')}>
+          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.7s', background: 'white', cursor: 'pointer', padding: winWidth < 1024 ? (winWidth < 768 ? '20px 16px' : '24px 20px') : '28px', boxSizing: 'border-box', overflow: 'hidden' }} onClick={() => navigate('/attendance')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px' }}>
               <div style={{ width: winWidth < 768 ? '42px' : '48px', height: winWidth < 768 ? '42px' : '48px', borderRadius: '14px', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '18px' : '22px', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.1)' }}>🛡️</div>
               <h2 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Attendance Sync</h2>
