@@ -25,9 +25,10 @@ export default function AppHeader() {
         if (res.ok) {
           const data = await res.json();
           const users = Array.isArray(data) ? data : (data.value || []);
-          const target = users.find(u => String(u.employee_id || u.id || u.empId) === '20251');
+          const currentId = user?.employee_id || user?.id || user?.empId || '20251';
+          const target = users.find(u => String(u.employee_id || u.id || u.empId) === String(currentId));
           if (target) {
-            setFetchedRole(target.role || target.Role);
+            setFetchedRole(target.Role || target.role);
           }
         }
       } catch (err) {
@@ -35,7 +36,7 @@ export default function AppHeader() {
       }
     };
     getRole();
-  }, []);
+  }, [user]);
 
   const styles = {
     header: {

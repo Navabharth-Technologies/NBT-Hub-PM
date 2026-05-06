@@ -783,7 +783,7 @@ export default function LeaveAttendanceCenter() {
 
   const metrics = calculateMetrics();
 
-  const displayedEmployees = (viewAll ? allEmployees : allEmployees.slice(0, 10)).filter(emp => {
+  const displayedEmployees = allEmployees.filter(emp => {
     const term = searchTerm.toLowerCase();
     return !term || (emp.name || emp.user_name || '').toLowerCase().includes(term);
   });
@@ -1072,108 +1072,7 @@ export default function LeaveAttendanceCenter() {
                   <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} size={16} />
                   <input type="text" placeholder="Filter employee, role or department..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', borderRadius: '16px', border: '1.5px solid #e2e8f0', background: 'white', outline: 'none', fontSize: '13px', fontWeight: '600', boxSizing: 'border-box' }} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: winWidth < 480 ? 'column' : 'row', gap: '12px', alignItems: 'stretch' }}>
-                  <div ref={filterDropdownRef} style={{ position: 'relative', flex: 1 }}>
-                    <button
-                      onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                      style={{
-                        padding: '12px 20px',
-                        borderRadius: '14px',
-                        background: 'white',
-                        color: '#64748b',
-                        border: '1.5px solid #e2e8f0',
-                        fontWeight: '900',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px',
-                        transition: 'all 0.3s',
-                        width: '100%'
-                      }}
-                    >
-                      <Filter size={16} /> Filter <ChevronDown size={14} className={showFilterDropdown ? 'rotate-180' : ''} style={{ transition: '0.3s' }} />
-                    </button>
 
-                    {showFilterDropdown && (
-                      <div className="animate-fade-in" style={{ position: 'absolute', top: '55px', right: winWidth < 1024 ? 'auto' : 0, left: winWidth < 1024 ? 0 : 'auto', width: winWidth < 480 ? 'calc(100vw - 40px)' : '280px', background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 15px 30px -10px rgba(0,0,0,0.15)', zIndex: 100, overflow: 'hidden', padding: '12px' }}>
-                        {!filterSubMode ? (
-                          <>
-                            <button
-                              onClick={() => setFilterSubMode('date')}
-                              style={{ width: '100%', padding: '12px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', color: '#1e293b', fontWeight: '800', fontSize: '14px', cursor: 'pointer', textAlign: 'left', borderRadius: '12px', transition: '0.2s' }}
-                              onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
-                              onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                            >
-                              <Calendar size={18} color="#6366f1" /> Date Range
-                            </button>
-                            <button
-                              onClick={() => setFilterSubMode('name')}
-                              style={{ width: '100%', padding: '12px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', color: '#1e293b', fontWeight: '800', fontSize: '14px', cursor: 'pointer', textAlign: 'left', borderRadius: '12px', transition: '0.2s' }}
-                              onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
-                              onMouseOut={e => e.currentTarget.style.background = 'transparent'}
-                            >
-                              <User size={18} color="#06b6d4" /> Name
-                            </button>
-                          </>
-                        ) : filterSubMode === 'name' ? (
-                          <div style={{ padding: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                              <span style={{ fontSize: '12px', fontWeight: '900', color: '#64748b' }}>FILTER BY NAME</span>
-                              <button onClick={() => setFilterSubMode(null)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>✕</button>
-                            </div>
-                            <input
-                              type="text"
-                              autoFocus
-                              placeholder="Enter name..."
-                              value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
-                              style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontSize: '14px', fontWeight: '700', outline: 'none', background: '#f8fafc' }}
-                            />
-                            <button onClick={() => setShowFilterDropdown(false)} style={{ width: '100%', marginTop: '12px', padding: '10px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>Apply Filter</button>
-                          </div>
-                        ) : (
-                          <div style={{ padding: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                              <span style={{ fontSize: '12px', fontWeight: '900', color: '#64748b' }}>DATE RANGE</span>
-                              <button onClick={() => setFilterSubMode(null)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>✕</button>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                              <div>
-                                <label style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>FROM DATE</label>
-                                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '13px', fontWeight: '700' }} />
-                              </div>
-                              <div>
-                                <label style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>TO DATE</label>
-                                <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '13px', fontWeight: '700' }} />
-                              </div>
-                            </div>
-                            <button onClick={fetchAttendance} style={{ width: '100%', marginTop: '12px', padding: '10px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '10px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>Refresh Logs</button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => setViewAll(!viewAll)}
-                    style={{
-                      padding: '12px 28px',
-                      borderRadius: '14px',
-                      background: viewAll ? '#f1f5f9' : '#0f172a',
-                      color: viewAll ? '#64748b' : 'white',
-                      border: 'none',
-                      fontWeight: '950',
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s',
-                      flex: 1
-                    }}
-                  >
-                    {viewAll ? 'View Leaders Only' : 'View All Workforce'}
-                  </button>
-                </div>
               </div>
 
               <section style={{ background: winWidth < 768 ? 'transparent' : 'white', borderRadius: '24px', border: winWidth < 768 ? 'none' : '1.5px solid #f1f5f9', boxShadow: winWidth < 768 ? 'none' : '0 4px 20px -5px rgba(0,0,0,0.02)', overflowX: winWidth < 768 ? 'hidden' : 'auto' }}>
