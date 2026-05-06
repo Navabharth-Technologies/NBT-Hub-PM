@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
@@ -201,7 +202,7 @@ export default function TeamDetail() {
     <div className="pm-dashboard-container">
       <AppHeader />
 
-      <main className="dashboard-content" style={{ paddingBottom: '100px', paddingLeft: winWidth < 768 ? '16px' : '26px', paddingRight: winWidth < 768 ? '16px' : '26px', width: '100%', boxSizing: 'border-box' }}>
+      <main className="dashboard-content" style={{ paddingBottom: '100px', paddingTop: winWidth < 768 ? '100px' : '120px', paddingLeft: winWidth < 768 ? '16px' : '26px', paddingRight: winWidth < 768 ? '16px' : '26px', width: '100%', boxSizing: 'border-box' }}>
         <div style={{ width: '100%' }}>
           <header className="section-header" style={{
             flexDirection: winWidth < 768 ? 'column' : 'row',
@@ -210,6 +211,12 @@ export default function TeamDetail() {
             marginBottom: '40px'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <button 
+                onClick={() => navigate(-1)} 
+                style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+              >
+                <ArrowLeft size={18} color="#64748b" />
+              </button>
               <div>
                 <h1 style={{ fontSize: winWidth < 768 ? '28px' : '24px', fontWeight: '800', color: '#1e293b' }}>{team.name}</h1>
                 <p style={{ color: '#64748b', fontSize: winWidth < 768 ? '14px' : '15px' }}>Detailed performance and member analytics</p>
@@ -371,7 +378,6 @@ export default function TeamDetail() {
                       const leader = team.members.find(m => /lead|manager|head/i.test(m.role));
                       return (
                         <div
-                          onClick={() => navigate(`/focus-logs?id=${leader.id || leader.EmpID}`)}
                           className="member-report-card"
                           style={{
                             padding: winWidth < 480 ? '20px' : '24px',
@@ -380,7 +386,7 @@ export default function TeamDetail() {
                             display: 'flex',
                             flexDirection: winWidth < 480 ? 'column' : 'row',
                             alignItems: winWidth < 480 ? 'flex-start' : 'center',
-                            gap: '20px', cursor: 'pointer', transition: 'all 0.3s',
+                            gap: '20px', transition: 'all 0.3s',
                             boxShadow: '0 10px 25px -5px rgba(56,99,168,0.1)'
                           }}
                         >
@@ -447,7 +453,6 @@ export default function TeamDetail() {
                       .map((member, i) => (
                         <div
                           key={i}
-                          onClick={() => navigate(`/focus-logs?id=${member.id || member.EmpID}`)}
                           className="member-report-card"
                           style={{
                             padding: winWidth < 480 ? '12px' : '16px',
@@ -457,7 +462,6 @@ export default function TeamDetail() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: winWidth < 480 ? '10px' : '12px',
-                            cursor: 'pointer',
                             transition: 'all 0.2s',
                             boxShadow: 'var(--shadow-sm)'
                           }}

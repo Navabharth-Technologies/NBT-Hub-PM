@@ -132,7 +132,7 @@ export default function AttendanceReportScreen() {
         
         {/* Breadcrumb */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', opacity: 0.8 }}>
-          <button onClick={() => navigate('/attendance')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', fontWeight: '800', color: '#3863a8' }}>
+          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', fontWeight: '800', color: '#3863a8' }}>
             <ArrowLeft size={16} /> Attendance Center
           </button>
           <span style={{ color: '#94a3b8', fontWeight: '900' }}>/</span>

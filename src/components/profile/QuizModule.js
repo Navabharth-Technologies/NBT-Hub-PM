@@ -316,7 +316,7 @@ const QuizModule = ({ onBack }) => {
   return (
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
-      <main className="dashboard-content" style={{ flex: 1, padding: isMobile ? '20px 16px 40px' : '20px 26px 40px', marginTop: '90px', width: '100%', boxSizing: 'border-box', margin: '0', fontFamily: '"Nunito", "Segoe UI", sans-serif' }}>
+      <main className="dashboard-content" style={{ flex: 1, padding: isMobile ? '100px 16px 40px' : '120px 26px 40px', width: '100%', boxSizing: 'border-box', margin: '0', fontFamily: '"Nunito", "Segoe UI", sans-serif' }}>
         <AnimatePresence>
           {submissionFeedback.show && (
             <motion.div
@@ -346,6 +346,20 @@ const QuizModule = ({ onBack }) => {
           <div style={s.layout}>
             {/* LEFT COLUMN: HERO + PAST QUIZZES */}
             <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              
+              {/* Back Navigation Bar */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '5px' }}>
+                <button 
+                  onClick={() => window.history.back()} 
+                  style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <ArrowLeft size={18} color="#64748b" />
+                </button>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: '#0B1E3F' }}>Quiz Center</h3>
+                </div>
+              </div>
+
               {/* HERO SECTION */}
               <div style={{ ...s.hero, flex: 'none' }}>
                 <div style={{ position: 'relative', zIndex: 10 }}>

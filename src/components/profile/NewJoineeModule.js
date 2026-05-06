@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Briefcase, Trash2 } from 'lucide-react';
+import { Sparkles, Briefcase, Trash2, ArrowLeft } from 'lucide-react';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
@@ -9,6 +9,7 @@ import { API_ENDPOINTS } from '../../config';
 import './PMDashboard.css';
 
 export default function NewJoineeModule() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -390,12 +391,18 @@ export default function NewJoineeModule() {
     <div className="pm-dashboard-container">
       <AppHeader />
 
-      <main className="dashboard-content" style={{ paddingBottom: '120px' }}>
-        <header className="section-header">
+      <main className="dashboard-content" style={{ flex: 1, paddingTop: isMobile ? '100px' : '120px', paddingLeft: isMobile ? '16px' : '26px', paddingRight: isMobile ? '16px' : '26px', paddingBottom: '120px', width: '100%', boxSizing: 'border-box', margin: '0' }}>
+        <header className="section-header" style={{ marginBottom: isMobile ? '20px' : '30px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <button 
+              onClick={() => navigate(-1)} 
+              style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '3px solid #cbd5e1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <ArrowLeft size={18} color="#64748b" />
+            </button>
             <div>
-              <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#1e293b' }}>New Joinee Onboarding</h1>
-              <p style={{ color: '#64748b' }}>Monitor and welcome our newest team members</p>
+              <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#1e293b', margin: 0 }}>New Joinee Onboarding</h1>
+              <p style={{ color: '#64748b', margin: '2px 0 0 0' }}>Monitor and welcome our newest team members</p>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>

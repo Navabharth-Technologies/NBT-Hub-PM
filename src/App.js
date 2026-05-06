@@ -17,7 +17,7 @@ import LoginScreen from './components/profile/LoginScreen';
 import AlertScreen from './components/profile/AlertScreen';
 import TicketManagement from './components/profile/TicketManagement';
 import ReportScreen from './components/profile/ReportScreen';
-import FocusLogReport from './components/profile/FocusLogReport';
+
 import LeaveAttendanceCenter from './components/profile/LeaveAttendanceCenter';
 import QuizModule from './components/profile/QuizModule';
 import EmployeeAttendanceDetail from './components/profile/EmployeeAttendanceDetail';
@@ -63,7 +63,7 @@ function AppRoutes() {
       <Route path="/new-joinees/:id/courses" element={<JoineeCourseModules />} />
       <Route path="/alerts" element={<AlertScreen />} />
       <Route path="/reports" element={<ReportScreen />} />
-      <Route path="/focus-logs" element={<FocusLogReport />} />
+
       <Route path="/attendance" element={<LeaveAttendanceCenter />} />
       <Route path="/attendance/detail/:id" element={<EmployeeAttendanceDetail />} />
       <Route path="/attendance/leave/:id" element={<LeaveRequestDetail />} />

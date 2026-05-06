@@ -791,18 +791,18 @@ export default function LeaveAttendanceCenter() {
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
 
-      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 16px 40px' : '20px 26px 40px', width: '100%', boxSizing: 'border-box', margin: '0', marginTop: winWidth < 768 ? '85px' : '110px' }}>
+      <main style={{ flex: 1, padding: winWidth < 768 ? '100px 16px 40px' : '120px 26px 40px', width: '100%', boxSizing: 'border-box', margin: '0' }}>
         <div style={{ width: '100%' }}>
-          <button
-            onClick={() => navigate('/dashboard')}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: '#1d4ed8', fontWeight: '800', fontSize: '13px', cursor: 'pointer', marginBottom: '20px', padding: 0 }}
+          <button 
+            onClick={() => navigate(-1)} 
+            style={{ background: 'white', padding: '10px', borderRadius: '128px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', marginBottom: '20px' }}
           >
-            <ArrowLeft size={16} /> Back to Dashboard
+            <ArrowLeft size={18} color="#64748b" />
           </button>
 
           <div style={{ display: 'flex', flexDirection: winWidth < 1024 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 1024 ? 'stretch' : 'flex-start', marginBottom: '32px', gap: '20px' }}>
             <div>
-              <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '950', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-0.8px' }}>Attendance Dashboard</h1>
+              <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '950', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-0.8px' }}>Leave / Attendance Management</h1>
               <p style={{ color: '#64748b', margin: 0, fontSize: winWidth < 768 ? '13px' : '15px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 10px #22c55e' }}></span>
                 Biometric Syncing: Operational
@@ -1080,6 +1080,7 @@ export default function LeaveAttendanceCenter() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {displayedEmployees.length > 0 ? (
                       displayedEmployees.map((emp, idx) => {
+                        const todayStr = new Date().toISOString().split('T')[0];
                         const log = (attendanceLogs || [])
                           .filter(l => {
                             if (!l) return false;
@@ -1091,6 +1092,15 @@ export default function LeaveAttendanceCenter() {
                             const getD = x => new Date(x?.punch_date || x?.date || x?.created_at || 0).getTime();
                             return getD(b) - getD(a);
                           })[0];
+
+                        // Today's log specifically — used for status badge
+                        const todayLog = (attendanceLogs || []).find(l => {
+                          if (!l) return false;
+                          const logUserId = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+                          const empId = String(emp?.id || '').trim();
+                          const logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0];
+                          return empId && logUserId && logUserId === empId && logDate === todayStr;
+                        });
 
                         const punchIn = log?.in_time || log?.INTime || log?.PunchIn || log?.punch_time || '----';
                         const punchOut = log?.out_time || log?.OUTTime || log?.PunchOut || (log?.in_time || log?.INTime ? '----' : log?.punch_time) || '----';
@@ -1152,17 +1162,17 @@ export default function LeaveAttendanceCenter() {
                                 <MapPin size={12} /> {log?.in_location || log?.location || '----'}
                               </div>
                               {(() => {
-                                const punchDate = log?.punch_date || log?.date || log?.created_at || new Date().toISOString();
-                                const d = new Date(punchDate);
-                                const isSunday = d.getDay() === 0;
-                                const month = d.toLocaleDateString('en-US', { month: 'short' });
-                                const dateDay = String(d.getDate()).padStart(2, '0');
+                                const todayPunchIn = todayLog?.in_time || todayLog?.INTime || todayLog?.PunchIn || todayLog?.punch_time;
+                                const today = new Date();
+                                const isSunday = today.getDay() === 0;
+                                const month = today.toLocaleDateString('en-US', { month: 'short' });
+                                const dateDay = String(today.getDate()).padStart(2, '0');
                                 const dayMonth = `${month} ${dateDay}`;
                                 const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
                                 const isHoliday = holidays.includes(dayMonth);
 
-                                let rawStatus = String(log?.status || (punchIn !== '----' ? 'PRESENT' : 'ABSENT')).toUpperCase();
-                                if (punchIn === '----' || rawStatus === 'ABSENT') {
+                                let rawStatus = todayPunchIn ? 'PRESENT' : 'ABSENT';
+                                if (!todayPunchIn) {
                                   if (isSunday) rawStatus = 'WO';
                                   else if (isHoliday) rawStatus = 'NH';
                                   else rawStatus = 'ABSENT';
@@ -1208,6 +1218,7 @@ export default function LeaveAttendanceCenter() {
                     <tbody>
                       {displayedEmployees.length > 0 ? (
                         displayedEmployees.map((emp, idx) => {
+                          const todayStr = new Date().toISOString().split('T')[0];
                           const log = (attendanceLogs || [])
                             .filter(l => {
                               if (!l) return false;
@@ -1219,6 +1230,15 @@ export default function LeaveAttendanceCenter() {
                               const getD = x => new Date(x?.punch_date || x?.date || x?.created_at || 0).getTime();
                               return getD(b) - getD(a);
                             })[0];
+
+                          // Today's log specifically — used for status badge
+                          const todayLog = (attendanceLogs || []).find(l => {
+                            if (!l) return false;
+                            const logUserId = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+                            const empId = String(emp?.id || '').trim();
+                            const logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0];
+                            return empId && logUserId && logUserId === empId && logDate === todayStr;
+                          });
 
                           const punchIn = log?.in_time || log?.INTime || log?.PunchIn || log?.punch_time || '----';
                           const punchOut = log?.out_time || log?.OUTTime || log?.PunchOut || (log?.in_time || log?.INTime ? '----' : log?.punch_time) || '----';
@@ -1256,18 +1276,17 @@ export default function LeaveAttendanceCenter() {
                               </td>
                               <td style={{ padding: '20px' }}>
                                 {(() => {
-                                  const punchDate = log?.punch_date || log?.date || log?.created_at || new Date().toISOString();
-                                  const d = new Date(punchDate);
-                                  const isSunday = d.getDay() === 0;
-
-                                  const month = d.toLocaleDateString('en-US', { month: 'short' });
-                                  const dateDay = String(d.getDate()).padStart(2, '0');
+                                  const todayPunchIn = todayLog?.in_time || todayLog?.INTime || todayLog?.PunchIn || todayLog?.punch_time;
+                                  const today = new Date();
+                                  const isSunday = today.getDay() === 0;
+                                  const month = today.toLocaleDateString('en-US', { month: 'short' });
+                                  const dateDay = String(today.getDate()).padStart(2, '0');
                                   const dayMonth = `${month} ${dateDay}`;
                                   const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
                                   const isHoliday = holidays.includes(dayMonth);
 
-                                  let rawStatus = String(log?.status || (punchIn !== '----' ? 'PRESENT' : 'ABSENT')).toUpperCase();
-                                  if (punchIn === '----' || rawStatus === 'ABSENT') {
+                                  let rawStatus = todayPunchIn ? 'PRESENT' : 'ABSENT';
+                                  if (!todayPunchIn) {
                                     if (isSunday) rawStatus = 'WO';
                                     else if (isHoliday) rawStatus = 'NH';
                                     else rawStatus = 'ABSENT';

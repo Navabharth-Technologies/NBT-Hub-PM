@@ -217,6 +217,13 @@ export default function LeaveRequestDetail() {
       <main style={{ flex: 1, padding: winWidth < 768 ? '100px 15px 180px' : '100px 20px 60px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', background: '#f8fafc' }}>
         <div style={{ width: '100%', maxWidth: '900px', background: 'white', borderRadius: '32px', padding: winWidth < 768 ? '24px' : '48px', boxShadow: '0 4px 30px rgba(0,0,0,0.06)', border: '1.5px solid #f1f5f9' }}>
           
+          <button 
+            onClick={() => navigate(-1)} 
+            style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', marginBottom: '24px', width: 'fit-content' }}
+          >
+            <ArrowLeft size={18} color="#64748b" />
+          </button>
+          
           {/* Header Row */}
           <div style={{ display: 'flex', flexDirection: winWidth < 600 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 600 ? 'center' : 'flex-start', marginBottom: '40px', gap: '20px' }}>
             <div style={{ display: 'flex', flexDirection: winWidth < 480 ? 'column' : 'row', gap: '20px', alignItems: 'center', textAlign: winWidth < 480 ? 'center' : 'left' }}>

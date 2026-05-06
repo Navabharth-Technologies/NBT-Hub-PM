@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
@@ -6,10 +7,16 @@ import { API_ENDPOINTS } from '../../config';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import {
+  Trash2, Edit, Save, Plus, Search, Filter, ArrowLeft,
+  ChevronRight, Download, FileText, CheckCircle, XCircle,
+  Clock, Calendar, User, Info, MoreVertical
+} from 'lucide-react';
 import './PMDashboard.css';
 
 export default function TaskManagement() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -436,11 +443,19 @@ export default function TaskManagement() {
       
       <main style={{ flex: 1, padding: winWidth < 768 ? '100px 16px 40px' : '125px 26px 40px', width: '100%', boxSizing: 'border-box', margin: '0', maxWidth: '100%', marginTop: 0 }}>
         <header style={{ marginBottom: winWidth < 768 ? '24px' : '40px', display: 'flex', flexDirection: winWidth < 768 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 768 ? 'flex-start' : 'flex-end', gap: '20px' }}>
-          <div>
-            <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '900', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-1px' }}>Task Management Hub</h1>
-            <p style={{ color: '#64748b', margin: 0, fontSize: '15px', fontWeight: '500' }}>
-              Review and verify work progress across all {tasks.length} assigned tasks
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <button 
+              onClick={() => navigate(-1)} 
+              style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <ArrowLeft size={18} color="#64748b" />
+            </button>
+            <div>
+              <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '900', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-1px' }}>Task Management Hub</h1>
+              <p style={{ color: '#64748b', margin: 0, fontSize: '15px', fontWeight: '500' }}>
+                Review and verify work progress across all {tasks.length} assigned tasks
+              </p>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
              <button 

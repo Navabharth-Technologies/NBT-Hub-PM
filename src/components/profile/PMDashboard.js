@@ -380,8 +380,14 @@ export default function PMDashboard() {
     <div className="pm-dashboard-container">
       <AppHeader />
 
-      <main className="dashboard-content" style={{ flex: 1, padding: winWidth < 768 ? '20px 16px 40px' : '20px 26px 40px', width: '100%', boxSizing: 'border-box', margin: '0', marginTop: winWidth < 768 ? '85px' : '110px' }}>
-        <header className="section-header" style={{ marginBottom: winWidth < 768 ? '20px' : '40px', gap: winWidth < 768 ? '15px' : '0' }}>
+      <main className="dashboard-content">
+        <header className="section-header" style={{ 
+          marginBottom: winWidth < 768 ? '12px' : '15px', 
+          gap: winWidth < 768 ? '15px' : '0',
+          width: winWidth < 768 ? '88%' : '100%',
+          margin: winWidth < 768 ? '0 auto 10px' : '0 0 15px',
+          boxSizing: 'border-box'
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div>
               <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '800', color: '#1e293b', marginBottom: '4px', letterSpacing: '-1px' }}>Titan Dashboard</h1>
@@ -417,7 +423,7 @@ export default function PMDashboard() {
                 </div>
               )}
             </div>
-            <button className="btn-primary" onClick={() => setShowCreateTeam(true)} style={{ flex: 1, backgroundColor: '#e0e7ff', color: '#312e81', border: '1px solid #c7d2fe', padding: '8px 16px', whiteSpace: 'nowrap' }}>Create Team</button>
+
             <button className="btn-primary" onClick={() => navigate('/reports')} style={{ flex: 1, backgroundColor: 'white', color: '#3863a8', border: '1.5px solid #3863a8', padding: '8px 16px', whiteSpace: 'nowrap' }}>Reports</button>
           </div>
         </header>
@@ -458,18 +464,19 @@ export default function PMDashboard() {
             gridTemplateColumns: winWidth < 768 ? 'none' : 'repeat(auto-fit, minmax(240px, 1fr))',
             gap: winWidth < 768 ? '0' : '20px',
             overflow: winWidth < 768 ? 'hidden' : 'visible',
-            width: '100%',
-            padding: winWidth < 768 ? '10px 0' : '0'
+            width: winWidth < 768 ? '92%' : '100%',
+            margin: winWidth < 768 ? '0 auto' : '0',
+            boxSizing: 'border-box'
           }}>
             {winWidth < 768 ? (
-              <div style={{
-                display: 'flex',
-                gap: '15px',
-                transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                transform: `translateX(calc(-${currentMetricIndex} * (100% + 15px)))`,
-                width: '100%',
-                touchAction: 'pan-y'
-              }}>
+            <div style={{ 
+              display: 'flex', 
+              gap: '15px', 
+              transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)', 
+              transform: `translateX(calc(-${currentMetricIndex} * (100% + 15px)))`, 
+              width: '100%', 
+              touchAction: 'pan-y' 
+            }}>
                 {dynamicMetrics.map((m, i) => (
                   <div
                     key={i}
@@ -479,10 +486,10 @@ export default function PMDashboard() {
                       boxSizing: 'border-box',
                       cursor: m.path ? 'pointer' : 'default',
                       margin: '0',
-                      padding: '24px',
+                      padding: winWidth < 768 ? '16px' : '24px',
                       borderRadius: '24px',
                       background: 'white',
-                      border: '3px solid #cbd5e1',
+                      border: winWidth < 768 ? '1px solid #cbd5e1' : '3px solid #cbd5e1',
                       boxShadow: '0 8px 30px rgba(0,0,0,0.04)',
                       display: 'flex',
                       flexDirection: 'column',
@@ -504,12 +511,15 @@ export default function PMDashboard() {
                       }}>{m.trend}</span>
                     </div>
                     <div>
-                      <div className="label" style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>{m.label}</div>
+                      <div className="label" style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.label}</div>
                       <div className="value" style={{
                         fontSize: (typeof m.value === 'string' && isNaN(m.value)) ? '24px' : '32px',
                         fontWeight: '950',
                         color: '#1e293b',
-                        lineHeight: 1
+                        lineHeight: 1,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
                       }}>{m.value}</div>
                       {m.subText && (
                         <div style={{ fontSize: '11px', fontWeight: '800', color: '#ec4899', marginTop: '4px' }}>{m.subText}</div>
@@ -536,24 +546,35 @@ export default function PMDashboard() {
           </div>
         </section>
 
-        <div className="main-dashboard-grid" style={{ gap: winWidth < 768 ? '20px' : '30px' }}>
+        <div className="main-dashboard-grid">
           {/* Column 1: Team Overview (Spans 2 columns on Desktop) */}
-          <section className="dashboard-section team-overview-section animate-fade-in" style={{ animationDelay: '0.4s', marginBottom: '0', position: 'relative', padding: winWidth < 1024 ? (winWidth < 768 ? '20px 16px' : '24px 20px') : '30px', boxSizing: 'border-box', overflow: 'hidden' }}>
-            <div className="section-header" style={{ marginBottom: winWidth < 768 ? '15px' : '20px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <h2 className="section-title" style={{ fontSize: winWidth < 768 ? '18px' : '22px', margin: 0 }}>Team Overview</h2>
-                <button style={{ background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer', fontSize: '13px', textAlign: 'left', padding: '4px 0' }} onClick={() => navigate('/teams')}>Manage</button>
+          <section className="dashboard-section team-overview-section animate-fade-in" style={{ 
+            animationDelay: '0.4s', 
+            position: 'relative', 
+            borderRadius: '32px',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
+            <div className="section-header" style={{ 
+              marginBottom: '20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <h2 className="section-title" style={{ margin: 0, fontSize: '22px' }}>Team Overview</h2>
+                <button style={{ background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer', fontSize: '13px', textAlign: 'left', padding: '4px 0' }} onClick={() => navigate('/teams')}>Manage Hub</button>
               </div>
 
               {winWidth < 768 && (
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
                   <button
                     onClick={() => setCurrentTeamIndex(prev => Math.max(0, prev - 1))}
                     disabled={currentTeamIndex === 0}
                     style={{
-                      width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #e2e8f0',
+                      width: '28px', height: '28px', borderRadius: '50%', border: '1px solid #e2e8f0',
                       background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', opacity: currentTeamIndex === 0 ? 0.3 : 1
+                      cursor: 'pointer', opacity: currentTeamIndex === 0 ? 0.3 : 1, fontSize: '14px'
                     }}
                   >
                     ←
@@ -562,9 +583,9 @@ export default function PMDashboard() {
                     onClick={() => setCurrentTeamIndex(prev => Math.min(teams.length - 1, prev + 1))}
                     disabled={currentTeamIndex === teams.length - 1}
                     style={{
-                      width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #e2e8f0',
+                      width: '28px', height: '28px', borderRadius: '50%', border: '1px solid #e2e8f0',
                       background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', opacity: currentTeamIndex === teams.length - 1 ? 0.3 : 1
+                      cursor: 'pointer', opacity: currentTeamIndex === teams.length - 1 ? 0.3 : 1, fontSize: '14px'
                     }}
                   >
                     →
@@ -575,8 +596,7 @@ export default function PMDashboard() {
 
             <div style={{
               overflow: winWidth < 768 ? 'hidden' : 'visible',
-              width: '100%',
-              padding: winWidth < 768 ? '10px 0 20px 0' : '0'
+              width: '100%'
             }}>
               {winWidth < 768 ? (
                 <div style={{
@@ -585,7 +605,7 @@ export default function PMDashboard() {
                   transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                   transform: `translateX(calc(-${currentTeamIndex} * (100% + 20px)))`,
                   width: '100%',
-                  touchAction: 'pan-y' // Prevent horizontal scroll of the whole page
+                  touchAction: 'pan-y'
                 }}>
                   {teams.map(team => (
                     <div
@@ -594,11 +614,10 @@ export default function PMDashboard() {
                       onClick={() => navigate(`/teams/${team.id}`)}
                       style={{
                         flex: '0 0 100%',
+                        width: '100%',
                         boxSizing: 'border-box',
-                        border: '3px solid #cbd5e1',
-                        borderLeft: `6px solid ${team.risk === 'high' ? '#ef4444' : team.risk === 'medium' ? '#f59e0b' : '#3863a8'}`,
+                        padding: '0 5px',
                         cursor: 'pointer',
-                        padding: '24px',
                         background: 'white',
                         borderRadius: '24px',
                         margin: '0',
@@ -611,9 +630,6 @@ export default function PMDashboard() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
                         <h3 style={{ fontWeight: '900', fontSize: '18px', margin: 0, color: '#1e293b' }}>{team.name}</h3>
-                        <div style={{ background: '#f1f5f9', padding: '4px 10px', borderRadius: '10px' }}>
-                          <span style={{ fontSize: '13px', color: '#3863a8', fontWeight: '900' }}>{team.progress}%</span>
-                        </div>
                       </div>
                       <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '15px' }}>Lead: <span style={{ color: '#1e293b', fontWeight: '700' }}>{team.lead}</span></div>
 
@@ -621,10 +637,6 @@ export default function PMDashboard() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3863a8' }}></span>
                           <div style={{ fontSize: '12px', color: '#64748b' }}><span style={{ fontWeight: '900', color: '#3863a8' }}>{team.members}</span> Members</div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }}></span>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}><span style={{ fontWeight: '900', color: '#ef4444' }}>{team.pending}</span> Pending</div>
                         </div>
                       </div>
 
@@ -635,24 +647,43 @@ export default function PMDashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="team-grid">
+                <div className="team-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                   {teams.map(team => (
-                    <div key={team.id} className="team-card" onClick={() => navigate(`/teams/${team.id}`)} style={{ borderLeft: `6px solid ${team.risk === 'high' ? '#ef4444' : team.risk === 'medium' ? '#f59e0b' : '#3863a8'}`, cursor: 'pointer' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <h3 style={{ fontWeight: '900', fontSize: '14px', margin: 0 }}>{team.name}</h3>
-                        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '900' }}>{team.progress}%</span>
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>Lead: <span style={{ color: '#1e293b', fontWeight: '700' }}>{team.lead}</span></div>
-
-                      <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
-                        <div style={{ fontSize: '10px', color: '#94a3b8' }}><span style={{ fontWeight: '900', color: '#3863a8' }}>{team.members}</span> Mbrs</div>
-                        <div style={{ fontSize: '10px', color: '#94a3b8' }}><span style={{ fontWeight: '900', color: '#ef4444' }}>{team.pending}</span> Pend</div>
-                      </div>
-
-                      <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden' }}>
-                        <div style={{ width: `${team.progress}%`, height: '100%', background: 'linear-gradient(90deg, #3863a8, #1e40af)', borderRadius: '10px' }} />
-                      </div>
-                    </div>
+                        <div key={team.id}
+                        style={{ 
+                          padding: '20px', 
+                          borderRadius: '24px', 
+                          background: '#ffffff', 
+                          border: '3px solid #cbd5e1',
+                          boxShadow: '0 10px 30px rgba(0,0,0,0.04)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '15px',
+                          cursor: 'pointer',
+                          transition: '0.3s transform'
+                        }}
+                        onClick={() => navigate(`/teams/${team.id}`)}
+                        onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+                        onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', border: '1.5px solid #e2e8f0' }}>🛡️</div>
+                              <div>
+                                <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>{team.name}</div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{team.members || 0} Operatives</div>
+                              </div>
+                            </div>
+                            <div style={{ padding: '4px 10px', borderRadius: '8px', background: '#eff6ff', color: '#3863a8', fontSize: '10px', fontWeight: '900' }}>UNIT {team.id}</div>
+                          </div>
+                          {/* Removed Sprints/Progress stats row as per user request */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                             <div style={{ flex: 1, height: '8px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                                <div style={{ width: `${team.progress || 0}%`, height: '100%', background: 'linear-gradient(90deg, #3863a8, #1e40af)', borderRadius: '10px' }} />
+                             </div>
+                             <span style={{ fontSize: '12px', color: '#cbd5e1' }}>›</span>
+                          </div>
+                        </div>
                   ))}
                 </div>
               )}
@@ -660,10 +691,17 @@ export default function PMDashboard() {
           </section>
 
           {/* Column 2: Task Hub */}
-          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.6s', cursor: 'pointer', background: 'white', padding: winWidth < 1024 ? (winWidth < 768 ? '20px 16px' : '24px 20px') : '28px', boxSizing: 'border-box', overflow: 'hidden' }} onClick={() => navigate('/tasks')}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px' }}>
-              <div style={{ width: winWidth < 768 ? '42px' : '48px', height: winWidth < 768 ? '42px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3163aa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '18px' : '22px', boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.1)' }}>📅</div>
-              <h2 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Task Command</h2>
+          <section className="dashboard-section animate-fade-in" style={{ 
+            animationDelay: '0.6s', 
+            cursor: 'pointer',
+            marginBottom: winWidth < 768 ? '15px' : '0',
+            padding: winWidth < 768 ? '12px' : '32px',
+            width: '100%',
+            boxSizing: 'border-box'
+          }} onClick={() => navigate('/tasks')}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '10px' : '15px', marginBottom: winWidth < 768 ? '16px' : '25px' }}>
+              <div style={{ width: winWidth < 768 ? '38px' : '48px', height: winWidth < 768 ? '38px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3163aa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '16px' : '22px', boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.1)', flexShrink: 0 }}>📅</div>
+              <h2 style={{ fontSize: winWidth < 768 ? '16px' : winWidth < 1024 ? '18px' : '22px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Task Command</h2>
             </div>
 
             <div style={{ marginBottom: '20px', flex: 1 }}>
@@ -673,19 +711,20 @@ export default function PMDashboard() {
               </div>
               {recentTasks.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {recentTasks.slice(0, 6).map((task, i) => (
-                    <div key={i} style={{ padding: winWidth < 768 ? '14px' : '12px 18px', background: '#f8fafc', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1.5px solid #f1f5f9', transition: '0.2s', boxShadow: winWidth < 768 ? '0 2px 4px rgba(0,0,0,0.02)' : 'none' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
-                        <span style={{ fontSize: winWidth < 768 ? '13px' : '13px', fontWeight: '800', color: '#334155', maxWidth: '100%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.title || task.task_name}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#cbd5e1' }}></div>
-                          <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>{task.assignee_name || 'Staff'}</span>
+                  {recentTasks.slice(0, 4).map((task, i) => (
+                    <div key={i} onClick={(e) => { e.stopPropagation(); navigate('/tasks'); }} style={{ 
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px', 
+                      borderRadius: '16px', background: '#ffffff', border: '3px solid #cbd5e1',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer', transition: '0.2s', width: '100%', boxSizing: 'border-box'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden', flex: 1 }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#eff6ff', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>✅</div>
+                        <div style={{ overflow: 'hidden', flex: 1 }}>
+                          <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.title || task.task_name || 'Active Task'}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{task.assignee_name || 'Staff'} • {task.status || 'Active'}</div>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: '950', color: '#3863a8', background: 'rgba(56, 99, 168, 0.08)', padding: '4px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>{task.status === 'COMPLETED' ? 'DONE' : 'LIVE'}</span>
-                        <span style={{ fontSize: '12px', color: '#cbd5e1' }}>›</span>
-                      </div>
+                      <span style={{ fontSize: '14px', color: '#94a3b8', fontWeight: '800', flexShrink: 0, marginLeft: '8px' }}>›</span>
                     </div>
                   ))}
                 </div>
@@ -693,65 +732,118 @@ export default function PMDashboard() {
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px', background: '#f8fafc', borderRadius: '24px', border: '3px dashed #cbd5e1' }}>Unit Sprints Neutralized</div>
               )}
             </div>
-            <button className="animate-fade-in" style={{ width: '100%', padding: '14px', background: '#0f172a', borderRadius: '16px', color: 'white', fontWeight: '900', fontSize: '14px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.15)' }}>Access Ops Hub <span>→</span></button>
+            <button className="animate-fade-in" style={{ 
+              width: '100%', 
+              padding: winWidth < 768 ? '14px 10px' : '14px', 
+              background: '#0f172a', 
+              borderRadius: '16px', 
+              color: 'white', 
+              fontWeight: '900', 
+              fontSize: winWidth < 768 ? '13px' : '14px', 
+              border: 'none', 
+              cursor: 'pointer', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '8px', 
+              boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.15)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              boxSizing: 'border-box'
+            }}>Access Ops Hub <span>→</span></button>
           </section>
 
           {/* Column 3: Attendance Analytics */}
-          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.7s', background: 'white', cursor: 'pointer', padding: winWidth < 1024 ? (winWidth < 768 ? '20px 16px' : '24px 20px') : '28px', boxSizing: 'border-box', overflow: 'hidden' }} onClick={() => navigate('/attendance')}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px' }}>
-              <div style={{ width: winWidth < 768 ? '42px' : '48px', height: winWidth < 768 ? '42px' : '48px', borderRadius: '14px', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '18px' : '22px', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.1)' }}>🛡️</div>
-              <h2 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Attendance Sync</h2>
+          <section className="dashboard-section animate-fade-in" style={{ 
+            animationDelay: '0.7s', 
+            cursor: 'pointer', 
+            borderRadius: winWidth < 768 ? '35px' : '32px', 
+            padding: winWidth < 768 ? '12px' : '32px',
+            width: '100%',
+            boxSizing: 'border-box',
+            overflow: 'hidden'
+          }} onClick={() => navigate('/attendance')}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'flex-start', 
+              marginBottom: winWidth < 768 ? '20px' : '25px',
+              width: '100%'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: winWidth < 768 ? '10px' : '15px' }}>
+                <div style={{ width: winWidth < 768 ? '38px' : '48px', height: winWidth < 768 ? '38px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '16px' : '22px', flexShrink: 0 }}>📅</div>
+                <h2 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '950', color: '#1e293b', margin: 0, lineHeight: 1.2 }}>Leave/Attendance<br /> Management</h2>
+              </div>
+              <button 
+                style={{ background: 'none', border: 'none', color: '#64748b', fontWeight: '800', cursor: 'pointer', fontSize: winWidth < 768 ? '12px' : '13px', paddingTop: '4px' }}
+                onClick={(e) => { e.stopPropagation(); navigate('/attendance'); }}
+              >
+                View All
+              </button>
             </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '25px', width: '100%' }}>
-              <div style={{ 
-                flex: winWidth < 500 ? '1 1 100%' : '1 1 calc(50% - 5px)', 
-                padding: '18px 12px', 
-                background: '#f0fdf4', 
-                borderRadius: '18px', 
-                border: '1.5px solid #dcfce7', 
-                textAlign: 'center',
-                boxSizing: 'border-box'
-              }}>
-                <div style={{ fontSize: '10px', fontWeight: '900', color: '#059669', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Available</div>
-                <div style={{ fontSize: '26px', fontWeight: '950', color: '#064e3b', lineHeight: 1 }}>{attendanceStats.present || 0}</div>
-              </div>
-              <div style={{ 
-                flex: winWidth < 500 ? '1 1 100%' : '1 1 calc(50% - 5px)', 
-                padding: '18px 12px', 
-                background: '#fff7ed', 
-                borderRadius: '18px', 
-                border: '1.5px solid #ffedd5', 
-                textAlign: 'center',
-                boxSizing: 'border-box'
-              }}>
-                <div style={{ fontSize: '10px', fontWeight: '900', color: '#ea580c', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Offsite</div>
-                <div style={{ fontSize: '26px', fontWeight: '950', color: '#7c2d12', lineHeight: 1 }}>{attendanceStats.leave || 0}</div>
-              </div>
+            <div style={{ 
+              display: 'flex', 
+              gap: winWidth < 768 ? '6px' : '20px', 
+              marginBottom: '32px',
+              width: '100%',
+              boxSizing: 'border-box',
+              justifyContent: 'space-between'
+            }}>
+              {[
+                { label: 'Present', count: attendanceStats.present, bg: '#f0fdf4', border: '#dcfce7', color: '#15803d', countColor: '#166534' },
+                { label: 'On Leave', count: attendanceStats.leave, bg: '#fffbeb', border: '#fef3c7', color: '#b45309', countColor: '#92400e' },
+                { label: 'Late', count: attendanceStats.late, bg: '#fef2f2', border: '#fee2e2', color: '#b91c1c', countColor: '#991b1b' }
+              ].map((stat, idx) => (
+                <div key={idx} style={{ 
+                  padding: winWidth < 768 ? '10px 4px' : '24px',
+                  flex: 1,
+                  background: stat.bg,
+                  borderRadius: winWidth < 768 ? '12px' : '24px',
+                  border: `1px solid ${stat.border}`,
+                  textAlign: 'center',
+                  boxSizing: 'border-box',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)',
+                  minWidth: 0 // Allows shrinking in flex
+                }}>
+                  <div style={{ fontSize: winWidth < 768 ? '8px' : '11px', fontWeight: '900', color: stat.color, marginBottom: '2px', textTransform: 'uppercase', letterSpacing: winWidth < 768 ? '0px' : '1px' }}>{stat.label}</div>
+                  <div style={{ fontSize: winWidth < 768 ? '18px' : '36px', fontWeight: '950', color: stat.countColor, lineHeight: 1 }}>{stat.count || 0}</div>
+                </div>
+              ))}
             </div>
 
             <div style={{ marginBottom: '20px', flex: 1 }}>
-              <div style={{ fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px' }}>Live Leave Submissions</div>
+              <div style={{ fontSize: '12px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px' }}>Pending Requests</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {leaveRequests.filter(r => String(r.status || '').toUpperCase().includes('PENDING')).slice(0, 4).length > 0 ? (
-                  leaveRequests.filter(r => String(r.status || '').toUpperCase().includes('PENDING')).slice(0, 4).map((req, rid) => (
-                    <div key={rid} onClick={(e) => { e.stopPropagation(); navigate(`/attendance/leave/${req.id}`); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', border: '1.5px solid #f1f5f9', borderRadius: '18px', background: 'white', transition: '0.2s', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)', overflow: 'hidden', width: '100%', boxSizing: 'border-box' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden', flex: 1 }}>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>⏳</div>
-                        <div style={{ overflow: 'hidden', flex: 1 }}>
-                          <div style={{ fontSize: '13px', fontWeight: '900', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.employee_name || req.name || 'Unit Member'}</div>
-                          <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>{req.leave_type || 'Req'} • {req.total_days || 1}d</div>
+                {leaveRequests.filter(r => String(r.status || '').toUpperCase().includes('PENDING')).slice(0, 3).length > 0 ? (
+                  leaveRequests.filter(r => String(r.status || '').toUpperCase().includes('PENDING')).slice(0, 3).map((req, rid) => (
+                    <div key={rid} onClick={(e) => { e.stopPropagation(); navigate(`/attendance/leave/${req.id}`); }} style={{ 
+                      display: 'flex', alignItems: 'center', padding: winWidth < 768 ? '10px' : '16px', 
+                      borderRadius: winWidth < 768 ? '18px' : '24px', background: '#ffffff', border: '1px solid #cbd5e1',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)', cursor: 'pointer', transition: '0.2s', width: '100%', boxSizing: 'border-box',
+                      gap: winWidth < 768 ? '8px' : '12px'
+                    }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>🕒</div>
+                      <div style={{ flex: 1, overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                          <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.employee_name || req.name || 'Member'}</div>
+                          <div style={{ padding: '3px 10px', background: '#eff6ff', color: '#2563eb', borderRadius: '50px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Pending</div>
                         </div>
+                        <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.leave_type || 'Leave'} • {req.date || req.start_date || '2026-05-07T00:00:00.000Z'}</div>
                       </div>
-                      <span style={{ fontSize: '14px', color: '#cbd5e1', fontWeight: '800', flexShrink: 0, marginLeft: '8px' }}>›</span>
+                      <div style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300' }}>›</div>
                     </div>
                   ))
                 ) : (
-                  <div style={{ padding: '30px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', border: '3px dashed #cbd5e1', borderRadius: '24px' }}>Zero Pending Requests</div>
+                  <div style={{ padding: '30px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px', border: '2px dashed #cbd5e1', borderRadius: '24px' }}>Zero Pending Requests</div>
                 )}
               </div>
             </div>
-            <button style={{ width: '100%', padding: '14px', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', color: '#3863a8', fontWeight: '900', fontSize: '14px', cursor: 'pointer', transition: '0.2s' }}>Manage Workforce</button>
+            <button style={{ width: '100%', padding: '14px', background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '16px', color: '#3863a8', fontWeight: '900', fontSize: '14px', cursor: 'pointer', transition: '0.2s' }}>Manage Workforce</button>
           </section>
         </div>
       </main>

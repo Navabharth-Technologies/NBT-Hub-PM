@@ -327,7 +327,7 @@ export default function PerformanceModule() {
     container: { 
       minHeight: '100vh', 
       backgroundColor: '#f8fafc', 
-      paddingTop: winWidth < 768 ? '80px' : '100px',
+      paddingTop: winWidth < 768 ? '100px' : '120px',
       paddingBottom: '100px',
       fontFamily: "'Outfit', sans-serif"
     },

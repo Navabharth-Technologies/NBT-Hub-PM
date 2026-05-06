@@ -4,13 +4,13 @@ import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
-import FocusLogReport from './FocusLogReport';
+
 
 import { 
   BarChart3, TrendingUp, PieChart, Activity, Download, 
   FileText, ChevronRight, Calendar, Filter, CheckCircle2, 
   Clock, Search, ShieldCheck, Target, Users, LayoutDashboard,
-  AlertCircle, ArrowUpRight, Briefcase
+  AlertCircle, ArrowUpRight, Briefcase, ArrowLeft
 } from 'lucide-react';
 import './PMDashboard.css';
 
@@ -89,9 +89,17 @@ export default function ReportScreen() {
 
   const renderOverview = () => (
     <div className="animate-fade-in">
-      <header style={styles.header}>
-        <h1 style={styles.title}>Project Pulse</h1>
-        <p style={{ color: '#64748b', fontWeight: '500', marginTop: '5px' }}>The heartbeat of your operations</p>
+      <header style={{ ...styles.header, display: 'flex', alignItems: 'center', gap: '20px' }}>
+        <button 
+          onClick={() => navigate(-1)} 
+          style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+        >
+          <ArrowLeft size={18} color="#64748b" />
+        </button>
+        <div>
+          <h1 style={styles.title}>Project Pulse</h1>
+          <p style={{ color: '#64748b', fontWeight: '500', marginTop: '5px' }}>The heartbeat of your operations</p>
+        </div>
       </header>
 
       <div style={styles.statsGrid}>
@@ -177,11 +185,10 @@ export default function ReportScreen() {
   );
 
   const renderIndividual = () => (
-    <FocusLogReport 
-      userId={targetUserId} 
-      onBack={() => navigate(-1)}
-    />
-
+    <div style={{ textAlign: 'center', padding: '50px' }}>
+      <h2 style={{ color: '#1e293b', fontWeight: '900' }}>Report No Longer Available</h2>
+      <button onClick={() => navigate(-1)} style={{ marginTop: '20px', padding: '10px 20px', borderRadius: '12px', background: '#3863a8', color: 'white', border: 'none', fontWeight: '800', cursor: 'pointer' }}>Go Back</button>
+    </div>
   );
 
 

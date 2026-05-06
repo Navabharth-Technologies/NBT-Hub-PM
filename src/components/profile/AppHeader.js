@@ -114,58 +114,60 @@ export default function AppHeader() {
         }} className="hide-on-mobile">
           NBT HUB
         </div>
-        <div className="hide-on-desktop" style={{ fontWeight: '950', fontSize: '18px', color: '#1e293b' }}>NBT</div>
+        <div className="hide-on-desktop" style={{ fontWeight: '950', fontSize: '18px', color: '#1e293b', letterSpacing: '1px' }}>NBT HUB</div>
       </div>
 
       <div style={styles.navActions}>
 
-        {/* Reward/Award Icon */}
-        <div 
-           onClick={() => navigate('/awards')}
-           style={{
-             width: '44px', 
-             height: '44px', 
-             borderRadius: '14px', 
-             background: 'rgba(255, 255, 255, 0.25)', 
-             border: '1.5px solid rgba(255, 255, 255, 0.4)',
-             display: 'flex', 
-             alignItems: 'center', 
-             justifyContent: 'center', 
-             cursor: 'pointer',
-             position: 'relative',
-             transition: 'all 0.2s ease',
-             backdropFilter: 'blur(4px)'
-           }}
-           onMouseOver={(e) => {
-             e.currentTarget.style.transform = 'scale(1.05)';
-             e.currentTarget.style.backgroundColor = 'white';
-           }}
-           onMouseOut={(e) => {
-             e.currentTarget.style.transform = 'scale(1)';
-             e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
-           }}
-        >
-           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-             <path d="M8 21h8"></path>
-             <path d="M12 17v4"></path>
-             <path d="M7 4h10"></path>
-             <path d="M17 4v8a5 5 0 0 1-10 0V4"></path>
-             <path d="M15 9h4a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"></path>
-             <path d="M9 9H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-           </svg>
-           {/* Red Notification Dot on Trophy */}
-           <div style={{
-             position: 'absolute',
-             top: '12px',
-             right: '12px',
-             width: '8px',
-             height: '8px',
-             borderRadius: '50%',
-             backgroundColor: '#ef4444',
-             border: '2px solid #e0f2f1', // Matches light teal background
-             boxShadow: '0 0 4px rgba(0,0,0,0.1)'
-           }} />
-        </div>
+        {/* Reward/Award Icon - Hidden on mobile for parity with HR */}
+        {winWidth >= 768 && (
+          <div 
+             onClick={() => navigate('/awards')}
+             style={{
+               width: '44px', 
+               height: '44px', 
+               borderRadius: '14px', 
+               background: 'rgba(255, 255, 255, 0.25)', 
+               border: '1.5px solid rgba(255, 255, 255, 0.4)',
+               display: 'flex', 
+               alignItems: 'center', 
+               justifyContent: 'center', 
+               cursor: 'pointer',
+               position: 'relative',
+               transition: 'all 0.2s ease',
+               backdropFilter: 'blur(4px)'
+             }}
+             onMouseOver={(e) => {
+               e.currentTarget.style.transform = 'scale(1.05)';
+               e.currentTarget.style.backgroundColor = 'white';
+             }}
+             onMouseOut={(e) => {
+               e.currentTarget.style.transform = 'scale(1)';
+               e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
+             }}
+          >
+             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+               <path d="M8 21h8"></path>
+               <path d="M12 17v4"></path>
+               <path d="M7 4h10"></path>
+               <path d="M17 4v8a5 5 0 0 1-10 0V4"></path>
+               <path d="M15 9h4a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"></path>
+               <path d="M9 9H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+             </svg>
+             {/* Red Notification Dot on Trophy */}
+             <div style={{
+               position: 'absolute',
+               top: '12px',
+               right: '12px',
+               width: '8px',
+               height: '8px',
+               borderRadius: '50%',
+               backgroundColor: '#ef4444',
+               border: '2px solid #e0f2f1', // Matches light teal background
+               boxShadow: '0 0 4px rgba(0,0,0,0.1)'
+             }} />
+          </div>
+        )}
 
         <div className="hide-on-mobile" style={{textAlign: 'right', lineHeight: '1.2'}}>
           <div style={styles.userName}>{user?.name || 'NBT User'}</div>

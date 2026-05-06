@@ -190,3 +190,9 @@
     height: 16px;
   }
 }
+
+@media (max-width: 350px) {
+  .footer-label {
+    font-size: 5.8px;
+  }
+}

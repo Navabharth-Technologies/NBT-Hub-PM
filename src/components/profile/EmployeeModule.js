@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { API_ENDPOINTS } from '../../config';
 import './PMDashboard.css';
 
@@ -55,19 +58,56 @@ export default function EmployeeModule() {
     return matchesSearch && matchesDept;
   });
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Add Title
+    doc.setFontSize(22);
+    doc.setTextColor(30, 41, 59);
+    doc.text('Workforce Directory', 14, 22);
+    
+    // Add Subtitle
+    doc.setFontSize(11);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Total Staff Count: ${filteredEmployees.length}`, 14, 30);
+    doc.text(`Report Type: Management Overview`, 14, 36);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 42);
+
+    const tableColumn = ["ID", "Name", "Role", "Team", "Email", "Status"];
+    const tableRows = filteredEmployees.map(emp => [
+      emp.id || 'N/A',
+      emp.name || 'N/A',
+      emp.role || 'N/A',
+      emp.team || 'N/A',
+      emp.email || 'N/A',
+      (emp.status || 'Active').toUpperCase()
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 50,
+      styles: { fontSize: 9, cellPadding: 4, font: 'helvetica' },
+      headStyles: { fillColor: [49, 99, 170], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [241, 245, 249] },
+      margin: { top: 50 }
+    });
+
+    doc.save('Workforce_Directory_PManager.pdf');
+  };
+
   return (
     <div className="pm-dashboard-container">
       <AppHeader />
       
-      <main className="dashboard-content" style={{paddingBottom: '100px', padding: winWidth < 768 ? '15px' : '26px'}}>
+      <main className="dashboard-content" style={{ padding: winWidth < 768 ? '100px 16px 120px' : '120px 26px 120px', width: '100%', boxSizing: 'border-box', margin: '0' }}>
         <header className="section-header" style={{ marginBottom: winWidth < 480 ? '15px' : '24px' }}>
           <div style={{display: 'flex', alignItems: 'center', gap: winWidth < 480 ? '8px' : '15px', flexWrap: 'wrap'}}>
             <button 
               onClick={() => navigate(-1)} 
-              className="btn-outline"
-              style={{ padding: winWidth < 480 ? '6px 10px' : '8px 12px', fontSize: winWidth < 480 ? '12px' : '14px', borderRadius: '12px', border: '3px solid #cbd5e1', background: 'white', cursor: 'pointer' }}
+              style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
             >
-              ←
+              <ArrowLeft size={18} color="#64748b" />
             </button>
             <div>
               <h1 style={{fontSize: winWidth < 480 ? '20px' : (winWidth < 600 ? '22px' : '26px'), fontWeight: '800', color: '#1e293b', margin: 0}}>Workforce Directory</h1>
@@ -75,7 +115,13 @@ export default function EmployeeModule() {
             </div>
           </div>
           <div style={{display: 'flex', gap: '8px', width: winWidth < 600 ? '100%' : 'auto', marginTop: winWidth < 480 ? '12px' : '0'}}>
-             <button className="btn-outline" style={{ flex: winWidth < 600 ? 1 : 'none', justifyContent: 'center', padding: winWidth < 480 ? '8px' : '10px', fontSize: winWidth < 480 ? '12px' : '13px', background: 'white', color: '#312e81', border: '3px solid #cbd5e1', borderRadius: '12px', fontWeight: '800' }}>Export CSV</button>
+             <button 
+               onClick={exportToPDF}
+               className="btn-outline" 
+               style={{ flex: winWidth < 600 ? 1 : 'none', justifyContent: 'center', padding: winWidth < 480 ? '8px' : '10px', fontSize: winWidth < 480 ? '12px' : '13px', background: 'white', color: '#312e81', border: '3px solid #cbd5e1', borderRadius: '12px', fontWeight: '800' }}
+             >
+               Export PDF
+             </button>
           </div>
         </header>
 
@@ -92,7 +138,7 @@ export default function EmployeeModule() {
                   width: '100%', paddingLeft: '44px',
                   paddingTop: winWidth < 480 ? '10px' : '14px',
                   paddingBottom: winWidth < 480 ? '10px' : '14px',
-                  borderRadius: '16px', border: '3px solid #cbd5e1', background: 'white', 
+                  borderRadius: '16px', border: '1px solid #e2e8f0', background: 'white', 
                   outline: 'none', fontSize: winWidth < 480 ? '13px' : '14px', 
                   boxShadow: 'var(--shadow-sm)', boxSizing: 'border-box'
                 }}
@@ -171,25 +217,7 @@ export default function EmployeeModule() {
 
 
 
-                   <button 
-                     onClick={() => navigate(`/focus-logs?id=${emp.id || emp.EmpID}`)}
-                     style={{
-                      marginTop: winWidth < 480 ? '8px' : '10px', 
-                      width: '100%', 
-                      padding: winWidth < 480 ? '8px' : '10px', 
-                      borderRadius: '10px', 
-                      border: '1.5px solid #eef2f6', 
-                      background: '#f8fafc', 
-                      color: '#312e81',
-                      fontWeight: '800', 
-                      fontSize: winWidth < 480 ? '9px' : '10px', 
-                      cursor: 'pointer', 
-                      transition: 'all 0.2s',
-                      textTransform: 'uppercase', 
-                      letterSpacing: '0.5px'
-                    }}>
-                      View Focus Report
-                    </button>
+
 
                 </div>
               ))}

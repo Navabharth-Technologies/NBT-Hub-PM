@@ -125,13 +125,13 @@ const TaskNotification = ({ onOpenTask }) => {
   return (
     <div style={{ 
       position: 'fixed', 
-      bottom: isMobile ? '145px' : '175px', 
-      right: isMobile ? '10px' : '30px', 
-      zIndex: 1000, 
+      bottom: isMobile ? '120px' : '175px', 
+      right: isMobile ? '15px' : '30px', 
+      zIndex: 4000, 
       display: 'flex', 
       flexDirection: 'column', 
       alignItems: 'flex-end', 
-      gap: '15px' 
+      gap: '12px' 
     }}>
       
       <AnimatePresence>
@@ -301,10 +301,10 @@ const TaskNotification = ({ onOpenTask }) => {
         style={{
           background: '#3B5998',
           color: 'white',
-          width: isMobile ? '50px' : '60px',
-          height: isMobile ? '50px' : '60px',
+          width: isMobile ? '34px' : '60px',
+          height: isMobile ? '34px' : '60px',
           borderRadius: '50%',
-          boxShadow: '0 20px 40px rgba(59, 89, 152, 0.4)',
+          boxShadow: '0 10px 25px rgba(59, 89, 152, 0.3)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',

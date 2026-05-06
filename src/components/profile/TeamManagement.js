@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
@@ -287,13 +288,18 @@ export default function TeamManagement() {
 
       <AppHeader />
       
-      <main className="dashboard-content" style={{paddingBottom: '100px', paddingLeft: winWidth < 768 ? '16px' : '26px', paddingRight: winWidth < 768 ? '16px' : '26px', width: '100%', boxSizing: 'border-box', margin: '0'}}>
-        <header className="section-header">
+      <main className="dashboard-content" style={{paddingBottom: '100px', paddingLeft: winWidth < 768 ? '16px' : '26px', paddingRight: winWidth < 768 ? '16px' : '26px', paddingTop: winWidth < 768 ? '100px' : '120px', width: '100%', boxSizing: 'border-box', margin: '0' }}>
+        <header className="section-header" style={{ marginBottom: '10px' }}>
           <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
-
+            <button 
+              onClick={() => navigate(-1)} 
+              style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+            >
+              <ArrowLeft size={18} color="#64748b" />
+            </button>
             <div>
-              <h1 style={{fontSize: '24px', fontWeight: '800', color: '#1e293b'}}>Total Teams</h1>
-              <p style={{color: '#64748b'}}>Centralized control for all {teamsData.length} active project teams</p>
+              <h1 style={{fontSize: '24px', fontWeight: '800', color: '#1e293b', margin: 0}}>Total Teams</h1>
+              <p style={{color: '#64748b', margin: '2px 0 0 0'}}>Centralized control for all {teamsData.length} active project teams</p>
             </div>
           </div>
           <div className="team-header-actions">
@@ -346,7 +352,7 @@ export default function TeamManagement() {
                   padding: winWidth < 480 ? '16px' : '24px', 
                   borderRadius: '24px', 
                   boxShadow: 'var(--shadow-md)', 
-                  border: '3px solid #cbd5e1',
+                  border: 'none',
                   display: 'flex',
                   flexDirection: 'column',
                   height: '100%',
@@ -357,14 +363,12 @@ export default function TeamManagement() {
                 }}
                 onMouseEnter={e => {
                   if (!isEditingAlignment) {
-                    e.currentTarget.style.borderColor = '#3863a8';
                     e.currentTarget.style.transform = 'translateY(-5px)';
                     e.currentTarget.style.boxShadow = '0 15px 30px rgba(0,0,0,0.1)';
                   }
                 }}
                 onMouseLeave={e => {
                   if (!isEditingAlignment) {
-                    e.currentTarget.style.borderColor = '#cbd5e1';
                     e.currentTarget.style.transform = 'translateY(0)';
                     e.currentTarget.style.boxShadow = 'var(--shadow-md)';
                   }

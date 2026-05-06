@@ -296,7 +296,7 @@ export default function EmployeeAttendanceDetail() {
         {/* Header Section */}
         <div style={{ display: 'flex', flexDirection: winWidth < 1024 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 1024 ? 'stretch' : 'flex-start', marginBottom: '32px', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 480 ? '12px' : '20px' }}>
-            <button onClick={() => navigate('/attendance')} style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'white', border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#0f172a', transition: '0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', flexShrink: 0 }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'white'}><ArrowLeft size={20} /></button>
+            <button onClick={() => navigate(-1)} style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'white', border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#0f172a', transition: '0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', flexShrink: 0 }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'white'}><ArrowLeft size={20} /></button>
             <div>
               <h1 style={{ fontSize: winWidth < 768 ? '22px' : '32px', fontWeight: '950', color: '#0f172a', margin: '0', letterSpacing: '-0.5px' }}>
                 {employee?.name || 'Employee'}
