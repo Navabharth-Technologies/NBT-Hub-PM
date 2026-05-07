@@ -445,7 +445,7 @@ export default function AttendanceReportScreen() {
                </tbody>
             </table>
           )}
-        </div>v>
+        </div>
 
       </main>
       <AppFooter />
