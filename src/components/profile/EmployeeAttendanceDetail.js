@@ -550,15 +550,15 @@ export default function EmployeeAttendanceDetail() {
                             const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
                             const isHoliday = holidays.includes(dayMonth);
 
-                            let rawStatus = String(log.status || (log.in_time !== '----' ? 'PRESENT' : 'ABSENT')).toUpperCase();
+                            let rawStatus = String(log.status || (log.in_time !== '----' ? 'P' : 'A')).toUpperCase();
                             
-                            if ((!log.in_time || log.in_time === '----') || rawStatus === 'ABSENT') {
+                            if ((!log.in_time || log.in_time === '----') || rawStatus === 'A' || rawStatus === 'ABSENT') {
                               if (isSunday) rawStatus = 'WO';
                               else if (isHoliday) rawStatus = 'NH';
-                              else rawStatus = 'ABSENT';
+                              else rawStatus = 'A';
                             }
 
-                            const isPresent = rawStatus.includes('PRESENT') || rawStatus === 'P';
+                            const isPresent = rawStatus === 'P' || rawStatus.includes('PRESENT');
                             const isWO = rawStatus === 'WO';
                             const isNH = rawStatus === 'NH';
 

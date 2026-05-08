@@ -328,7 +328,7 @@ export default function PerformanceModule() {
       minHeight: '100vh', 
       backgroundColor: '#f8fafc', 
       paddingTop: winWidth < 768 ? '100px' : '120px',
-      paddingBottom: '100px',
+      paddingBottom: '20px',
       fontFamily: "'Outfit', sans-serif"
     },
     combinedCard: {
@@ -621,8 +621,8 @@ export default function PerformanceModule() {
         </div>
 
         {/* About Section */}
-        <div style={{ width: '100%', maxWidth: '100%', margin: '0 auto 40px', background: 'white', borderRadius: winWidth < 768 ? '24px' : '32px', padding: winWidth < 768 ? '25px' : '40px', border: '1px solid #f1f5f9' }}>
-           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: winWidth < 768 ? '20px' : '40px' }}>
+        <div style={{ width: '100%', maxWidth: '100%', margin: '0 auto 40px', background: 'white', borderRadius: winWidth < 768 ? '24px' : '32px', padding: winWidth < 768 ? '20px' : '25px', border: '1px solid #f1f5f9' }}>
+           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: winWidth < 768 ? '15px' : '20px' }}>
               <h3 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '950', color: '#0f172a', margin: 0 }}>About Me</h3>
               {!isEditingAbout && (
                 <div 
@@ -633,7 +633,7 @@ export default function PerformanceModule() {
                 </div>
               )}
            </div>
-           <div style={{ textAlign: isEditingAbout ? 'left' : 'center', padding: isEditingAbout ? '0' : (winWidth < 768 ? '20px 0' : '40px 0') }}>
+           <div style={{ textAlign: isEditingAbout ? 'left' : 'center', padding: isEditingAbout ? '0' : (winWidth < 768 ? '10px 0' : '15px 0') }}>
              {isEditingAbout ? (
                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                  <textarea 
@@ -664,7 +664,7 @@ export default function PerformanceModule() {
         </div>
 
         {/* Logout */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: winWidth < 768 ? '100px' : '60px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '5px' }}>
            <button 
              onClick={handleLogout}
              style={{ background: 'white', color: '#ef4444', border: '2px solid #ef4444', borderRadius: '16px', padding: winWidth < 768 ? '10px 40px' : '12px 60px', fontSize: winWidth < 768 ? '13px' : '15px', fontWeight: '950', cursor: 'pointer', width: winWidth < 480 ? '100%' : 'auto' }}

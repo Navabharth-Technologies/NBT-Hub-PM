@@ -94,7 +94,7 @@ export default function AppFooter({ onCreateTeam }) {
       let changed = false;
 
       // Aggressive Sync: If on the page, the "seen" count must match the "live" count exactly.
-      if (currentPath.startsWith('/attendance')) {
+      if (currentPath.startsWith('/leaves')) {
         if (next.leaves !== unreadCounts.leaves) {
           next.leaves = unreadCounts.leaves;
           changed = true;
@@ -163,7 +163,7 @@ export default function AppFooter({ onCreateTeam }) {
     { name: 'Dashboard', path: '/dashboard', icon: <FooterIcons.Dashboard /> },
     { name: 'View tickets', path: '/tickets', icon: <FooterIcons.Tickets /> },
     { name: 'Create', path: '/dashboard', icon: <FooterIcons.Add />, isAction: true },
-    { name: 'Leaves', path: '/attendance', icon: <FooterIcons.Leaves />, state: { tab: 'leaves' } },
+    { name: 'Leaves', path: '/leaves', icon: <FooterIcons.Leaves /> },
     { name: 'Thread', path: '/engagement', icon: <FooterIcons.Thread /> },
     { name: 'Attendance', path: '/attendance', icon: <FooterIcons.Attendance /> },
   ];
@@ -209,7 +209,7 @@ export default function AppFooter({ onCreateTeam }) {
             >
               <div className="footer-icon">
                 {item.icon}
-                {item.name === 'Leaves' && (unreadCounts.leaves - seenCounts.leaves) > 0 && !location.pathname.includes('/attendance') && <span className="footer-dot">{unreadCounts.leaves - seenCounts.leaves}</span>}
+                {item.name === 'Leaves' && (unreadCounts.leaves - seenCounts.leaves) > 0 && !location.pathname.includes('/leaves') && <span className="footer-dot">{unreadCounts.leaves - seenCounts.leaves}</span>}
                 {item.name === 'View tickets' && (unreadCounts.tickets - seenCounts.tickets) > 0 && !location.pathname.includes('/tickets') && <span className="footer-dot">{unreadCounts.tickets - seenCounts.tickets}</span>}
                 {item.name === 'Thread' && (unreadCounts.threads - seenCounts.threads) > 0 && !location.pathname.includes('/engagement') && <span className="footer-dot">{unreadCounts.threads - seenCounts.threads}</span>}
               </div>

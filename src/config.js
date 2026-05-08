@@ -44,6 +44,7 @@ export const API_ENDPOINTS = {
   SUBORDINATES_GET: `${BASE_URL}/api/subordinates`,
   ALERTS: `${BASE_URL}/api/notifications`,
   USERS: `${BASE_URL}/api/users`,
+  BIRTHDAYS: `${BASE_URL}/api/birthdays`,
   SUPPORT_TICKETS: `${BASE_URL}/api/support-tickets`,
   PROJECT_SPRINTS: `${BASE_URL}/api/project-sprints`,
   SPRINTS_STATUS: `${BASE_URL}/api/sprints-status`,

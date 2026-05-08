@@ -80,6 +80,12 @@ const SECTIONS = [
     icon: <GraduationCap size={20} />,
     color: '#f59e0b',
     fields: [
+      { key: 'sslc_percentage', label: 'SSLC Percentage', type: 'text' },
+      { key: 'sslc_markscard', label: 'SSLC Marks Card', type: 'file' },
+      { key: 'puc_percentage', label: 'PUC Percentage', type: 'text' },
+      { key: 'puc_markscard', label: 'PUC Marks Card', type: 'file' },
+      { key: 'ug_pg_percentage', label: 'Degree Percentage', type: 'text' },
+      { key: 'ug_pg_markscard', label: 'Degree Marks Card', type: 'file' },
       { key: 'qualification', label: 'Qualification', type: 'text' },
       { key: 'edu_completion_year', label: 'EDU Completion Year', type: 'text' },
       { key: 'college', label: 'College', type: 'text' },
@@ -101,7 +107,7 @@ const SECTIONS = [
       { key: 'attrition_bucket', label: 'Attrition Bucket', type: 'select', options: ['N/A', 'Resignation', 'Performance', 'Behavioral', 'Medical'] },
       { key: 'reason', label: 'Reason of Separation', type: 'text' },
       { key: 'experience_letter', label: 'Experience Letter', type: 'file' },
-      { key: 'previous_payslip', label: 'Previous Company 3 Month Payslip', type: 'file' },
+      { key: 'previous_company_payslip', label: 'Previous Company 3 Month Payslip', type: 'file' },
     ]
   },
   {
@@ -117,6 +123,7 @@ const SECTIONS = [
       { key: 'gross_salary_a', label: 'Gross Salary (A)', type: 'text' },
       { key: 'salary', label: 'Net Salary', type: 'text' },
       { key: 'pt', label: 'Professional Tax (PT)', type: 'text' },
+      { key: 'passbook_photo', label: 'Bank Passbook', type: 'file' },
     ]
   },
   {
@@ -143,10 +150,12 @@ export default function PersonalInfo({ onBack }) {
     pancard_photo: '', adharcard_photo: '', voter_id: '', voter_card: '', passport_no: '', passport: '',
     designation: '', department: '', process: '', supervisor_l1: '', supervisor_l2: '', doj: '', ft_pt: 'Full Time', status: 'Active', place: '', moved: '', official_email: '',
     contact_no: '', emergency_contact_no: '', personal_email: '', present_address: '', permanent_address: '', state: '',
+    sslc_percentage: '', sslc_markscard: '', puc_percentage: '', puc_markscard: '',
+    ug_pg_percentage: '', ug_pg_markscard: '',
     qualification: '', edu_completion_year: '', college: '', university: '', previous_org: '', previous_exp: '', source: '', languages_known: '',
     separation: '', lwd: '', attrition_bucket: 'N/A', reason: '',
-    experience_letter: '', previous_payslip: '',
-    bank_name: '', bank_account_no: '', ifsc_code: '', bank_branch: '', gross_salary_a: '', salary: '', pt: '',
+    experience_letter: '', previous_company_payslip: '',
+    bank_name: '', bank_account_no: '', ifsc_code: '', bank_branch: '', gross_salary_a: '', salary: '', pt: '', passbook_photo: '',
     bgv_status: 'Pending', appointment_letter: 'Not Sent', approved_by_ceo: 'No', onboarding_doc_completed: 'No', id_card: 'Not Issued', onboarding_link: '',
     profile_pic: ''
   });
@@ -208,10 +217,12 @@ export default function PersonalInfo({ onBack }) {
           pancard_photo: '', adharcard_photo: '', voter_id: '', voter_card: '', passport_no: '', passport: '',
           designation: '', department: '', process: '', supervisor_l1: '', supervisor_l2: '', doj: '', ft_pt: 'Full Time', status: 'Active', place: '', moved: '', official_email: '',
           contact_no: '', emergency_contact_no: '', personal_email: '', present_address: '', permanent_address: '', state: '',
+          sslc_percentage: '', sslc_markscard: '', puc_percentage: '', puc_markscard: '',
+          ug_pg_percentage: '', ug_pg_markscard: '',
           qualification: '', edu_completion_year: '', college: '', university: '', previous_org: '', previous_exp: '', source: '', languages_known: '',
           separation: '', lwd: '', attrition_bucket: 'N/A', reason: '',
-          experience_letter: '', previous_payslip: '',
-          bank_name: '', bank_account_no: '', ifsc_code: '', bank_branch: '', gross_salary_a: '', salary: '', pt: '',
+          experience_letter: '', previous_company_payslip: '',
+          bank_name: '', bank_account_no: '', ifsc_code: '', bank_branch: '', gross_salary_a: '', salary: '', pt: '', passbook_photo: '',
           bgv_status: 'Pending', appointment_letter: 'Not Sent', approved_by_ceo: 'No', onboarding_doc_completed: 'No', id_card: 'Not Issued', onboarding_link: '',
           profile_pic: ''
         };
@@ -241,8 +252,12 @@ export default function PersonalInfo({ onBack }) {
             if (lowerKey.includes('aadhar_card') || lowerKey.includes('adhar_card') || lowerKey === 'adharcard') targetKey = 'adharcard_photo';
             if (lowerKey.includes('voter_card') || lowerKey.includes('voter_id')) targetKey = 'voter_card';
             if (lowerKey.includes('passport')) targetKey = 'passport';
+            if (lowerKey.includes('sslc_markscard')) targetKey = 'sslc_markscard';
+            if (lowerKey.includes('puc_markscard')) targetKey = 'puc_markscard';
+            if (lowerKey.includes('ug_pg_markscard')) targetKey = 'ug_pg_markscard';
+            if (lowerKey.includes('passbook_photo') || lowerKey.includes('bank_passbook')) targetKey = 'passbook_photo';
             if (lowerKey.includes('experience_letter')) targetKey = 'experience_letter';
-            if (lowerKey.includes('previous_payslip') || lowerKey.includes('payslip')) targetKey = 'previous_payslip';
+            if (lowerKey.includes('previous_company_payslip') || lowerKey.includes('previous_payslip') || lowerKey.includes('payslip')) targetKey = 'previous_company_payslip';
             if (lowerKey === 'profile_picture' || lowerKey === 'profile_pic') targetKey = 'profile_pic';
 
             cleanData[targetKey] = normalizedVal;
@@ -310,8 +325,12 @@ export default function PersonalInfo({ onBack }) {
         if (key === 'adharcard_photo') docType = 'aadhar_card';
         if (key === 'voter_card') docType = 'voter_id_proof';
         if (key === 'passport') docType = 'passport_proof';
+        if (key === 'sslc_markscard') docType = 'other';
+        if (key === 'puc_markscard') docType = 'other';
+        if (key === 'ug_pg_markscard') docType = 'other';
+        if (key === 'passbook_photo') docType = 'other';
         if (key === 'experience_letter') docType = 'experience_letter';
-        if (key === 'previous_payslip') docType = 'previous_payslip';
+        if (key === 'previous_company_payslip') docType = 'previous_payslip';
 
         formData.append('docType', docType);
         formData.append('type', key);
@@ -329,7 +348,7 @@ export default function PersonalInfo({ onBack }) {
 
           if (url) {
             setForm(prev => ({ ...prev, [key]: url }));
-            
+
             const updatePayload = {
               employee_id: selectedEmpId,
               id: selectedEmpId,
@@ -350,6 +369,7 @@ export default function PersonalInfo({ onBack }) {
         } else {
           const errData = await res.json().catch(() => ({}));
           setToast({ type: 'error', msg: errData.message || `Upload failed` });
+          setForm(prev => ({ ...prev, [key]: '' })); // Clear local preview on failure
         }
       }
     } catch (err) {

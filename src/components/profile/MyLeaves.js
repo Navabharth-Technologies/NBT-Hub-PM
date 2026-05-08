@@ -4,9 +4,9 @@ import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS, BASE_URL } from '../../config';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
-import { 
-  Calendar, Clock, CheckCircle, XCircle, 
-  ChevronLeft, Plus, Info, AlertCircle,
+import {
+  Calendar, Clock, CheckCircle, XCircle,
+  ArrowLeft, Plus, Info, AlertCircle,
   FileText, Briefcase, User, Send,
   ArrowRight, Filter, Download
 } from 'lucide-react';
@@ -54,11 +54,26 @@ export default function MyLeaves() {
         const data = await res.json();
         const list = Array.isArray(data) ? data : (data.data || data.all || []);
         
-        // Filter for current user by ID or EmpCode
-        const myData = list.filter(l => 
-          String(l.user_id || l.employee_id) === String(user.id) || 
-          String(l.Empcode || l.employee_id) === String(user.emp_id || user.id)
-        );
+        // Define current user identification strings for broad matching
+        const currentUserId = String(user.id || '').trim();
+        const currentEmpId = String(user.employee_id || user.emp_id || user.id || '20251').trim();
+        const currentEmail = (user.email || '').toLowerCase();
+        const currentName = (user.name || '').toLowerCase();
+
+        // Comprehensive filter to ensure we catch the correct user data across different API field names
+        const myData = list.filter(l => {
+          const lUserId = String(l.user_id || '').trim();
+          const lEmpId = String(l.employee_id || l.Empcode || l.EmpID || '').trim();
+          const lEmail = (l.email || '').toLowerCase();
+          const lName = (l.employee_name || l.name || '').toLowerCase();
+
+          return (
+            (lUserId && lUserId === currentUserId) ||
+            (lEmpId && (lEmpId === currentEmpId || lEmpId === currentUserId)) ||
+            (lEmail && lEmail === currentEmail) ||
+            (lName && currentName && lName.includes(currentName))
+          );
+        });
         setLeaves(myData.sort((a, b) => new Date(b.created_at || b.start_date) - new Date(a.created_at || a.start_date)));
       }
     } catch (err) {
@@ -71,25 +86,49 @@ export default function MyLeaves() {
   const fetchLeaveStats = async () => {
     if (!user?.token) return;
     try {
-      const empId = user.employee_id || user.emp_id || user.id;
+      const empId = user.employee_id || user.emp_id || user.id || '20251';
+      
+      // Try LEAVE_BALANCE first for "exact" current balance
+      const balRes = await fetch(API_ENDPOINTS.LEAVE_BALANCE(empId), {
+        headers: { 'Authorization': `Bearer ${user.token}` }
+      });
+      
+      if (balRes.ok) {
+        const balData = await balRes.json();
+        const b = balData.data || balData;
+        
+        if (b && (b.leaves_available !== undefined || b.balance !== undefined)) {
+          setLeaveStats({
+            cl_available: b.leaves_available ?? b.balance ?? 0,
+            cl_taken: b.leaves_taken ?? b.taken ?? 0,
+            lop_taken: b.LOP ?? b.lop ?? 0,
+            half_days: b.half_days ?? 0
+          });
+          return; // Success with exact balance
+        }
+      }
+
+      // Fallback to monthly stats if balance endpoint fails or returns incomplete data
       const res = await fetch(`${API_ENDPOINTS.LEAVE_STATS_MY}?userId=${empId}`, {
         headers: { 'Authorization': `Bearer ${user.token}` }
       });
       if (res.ok) {
         const data = await res.json();
-        // Handle both { stats: [...] } and direct array response
-        const list = Array.isArray(data.stats) ? data.stats : (Array.isArray(data) ? data : (data.stats ? [data.stats] : [data]));
+        const list = Array.isArray(data.stats) ? data.stats : 
+                    (Array.isArray(data.data) ? data.data : 
+                    (Array.isArray(data) ? data : 
+                    (data.stats ? [data.stats] : [data])));
         
-        // Find current month's record or use the last one
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
         
-        const latestStats = list.find(s => parseInt(s.month) === currentMonth && parseInt(s.year) === currentYear) || list[list.length - 1] || {};
+        const latestStats = list.find(s => parseInt(s.month) === currentMonth && parseInt(s.year) === currentYear) || 
+                           list[list.length - 1] || {};
 
         setLeaveStats({
-          cl_available: latestStats.leaves_available || 0,
-          cl_taken: latestStats.leaves_taken || 0,
-          lop_taken: latestStats.LOP || latestStats.lop || 0,
+          cl_available: latestStats.leaves_available ?? latestStats.available_leaves ?? latestStats.balance ?? 0,
+          cl_taken: latestStats.leaves_taken ?? latestStats.taken_leaves ?? latestStats.used_leaves ?? 0,
+          lop_taken: latestStats.LOP ?? latestStats.lop ?? latestStats.lop_leaves ?? 0,
           half_days: latestStats.half_days || 0
         });
       }
@@ -103,6 +142,22 @@ export default function MyLeaves() {
     fetchLeaveStats();
   }, [user]);
 
+  // Recalculate stats locally if API stats seem incomplete (optional but good for 'exact' parity)
+  useEffect(() => {
+    if (leaves.length > 0) {
+      const approvedLeaves = leaves.filter(l => String(l.status || '').toUpperCase() === 'APPROVED');
+      const calculatedTaken = approvedLeaves.filter(l => !String(l.leave_type || '').toUpperCase().includes('LOP')).length;
+      const calculatedLop = approvedLeaves.filter(l => String(l.leave_type || '').toUpperCase().includes('LOP')).length;
+      
+      setLeaveStats(prev => ({
+        ...prev,
+        // Only override if the local count is higher (avoiding overwriting valid balance)
+        cl_taken: Math.max(prev.cl_taken, calculatedTaken),
+        lop_taken: Math.max(prev.lop_taken, calculatedLop)
+      }));
+    }
+  }, [leaves]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.start_date || !formData.reason) {
@@ -114,7 +169,7 @@ export default function MyLeaves() {
     const start = new Date(formData.start_date);
     const end = new Date(finalEndDate);
     const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    
+
     // Create DD-MM-YYYY versions for legacy compatibility
     const startDMY = formData.start_date.split('-').reverse().join('-');
     const endDMY = finalEndDate.split('-').reverse().join('-');
@@ -133,31 +188,31 @@ export default function MyLeaves() {
           emp_id: user.employee_id || user.id,
           user_id: user.id,
           EmpID: user.id,
-          
+
           // Basic Info
           employee_name: user.name,
           leave_type: formData.leave_type,
-          
+
           // YYYY-MM-DD format
           start_date: formData.start_date,
           end_date: finalEndDate,
-          
+
           // DD-MM-YYYY format aliases
           from_date: startDMY,
           to_date: endDMY,
           from: startDMY,
           to: endDMY,
-          
+
           // Reason
           reason: formData.reason,
           description: formData.reason,
-          
+
           // Status & Ledger Counts
           status: 'Pending',
           total_days: totalDays,
           cl: formData.leave_type.includes('Casual') ? totalDays : 0,
           lop: formData.leave_type.includes('LOP') ? totalDays : 0,
-          
+
           // Flags
           is_half_day: formData.is_half_day ? 1 : 0,
           half_day: formData.is_half_day ? 1 : 0
@@ -217,27 +272,27 @@ export default function MyLeaves() {
 
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
-      
-      <main style={{ flex: 1, padding: winWidth < 768 ? '15px' : '30px 26px', marginTop: winWidth < 768 ? '80px' : '100px' }}>
+
+      <main style={{ flex: 1, padding: winWidth < 768 ? '15px' : '30px 40px', marginTop: winWidth < 768 ? '80px' : '100px' }}>
         {/* Breadcrumb & Title */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
           <div>
-            <button 
+            <button
               onClick={() => navigate(-1)}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: '#64748b', fontSize: '14px', fontWeight: '700', cursor: 'pointer', marginBottom: '8px', padding: 0 }}
+              style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', marginBottom: '10px' }}
             >
-              <ChevronLeft size={16} /> Back
+              <ArrowLeft size={18} color="#64748b" />
             </button>
             <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '900', color: '#0f172a', margin: 0, letterSpacing: '-1px' }}>My Leaves</h1>
           </div>
-          
-          <button 
+
+          <button
             onClick={() => setShowModal(true)}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', 
-              borderRadius: '14px', background: '#0f172a', color: 'white', border: 'none', 
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px',
+              borderRadius: '14px', background: '#0f172a', color: 'white', border: 'none',
               fontWeight: '800', fontSize: '14px', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.2)',
               transition: 'transform 0.2s'
             }}
@@ -276,12 +331,12 @@ export default function MyLeaves() {
           ) : leaves.length > 0 ? (
             <div style={{ overflowX: winWidth < 768 ? 'hidden' : 'auto' }}>
               {winWidth < 768 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', background: '#f8fafc' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', background: '#eaeff2' }}>
                   {leaves.map((l, i) => {
                     const style = getStatusStyle(l.status);
                     return (
-                      <div 
-                        key={i} 
+                      <div
+                        key={i}
                         onClick={() => {
                           setSelectedLeave(l);
                           setShowDetailModal(true);
@@ -298,9 +353,9 @@ export default function MyLeaves() {
                               <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700' }}>#{l.id || 'N/A'}</div>
                             </div>
                           </div>
-                          <div style={{ 
-                            padding: '6px 12px', borderRadius: '100px', 
-                            background: style.bg, color: style.color, 
+                          <div style={{
+                            padding: '6px 12px', borderRadius: '100px',
+                            background: style.bg, color: style.color,
                             fontSize: '10px', fontWeight: '950', textTransform: 'uppercase', letterSpacing: '0.5px'
                           }}>
                             {String(l.status).split(',')[0]}
@@ -319,7 +374,7 @@ export default function MyLeaves() {
                         </div>
 
                         <div style={{ height: '1.5px', background: '#f1f5f9', margin: '0 -20px 16px' }}></div>
-                        
+
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <Clock size={14} color="#94a3b8" /> {l.is_half_day ? 'Half Day' : 'Full Day'}
@@ -346,14 +401,14 @@ export default function MyLeaves() {
                     {leaves.map((l, i) => {
                       const style = getStatusStyle(l.status);
                       return (
-                        <tr 
-                          key={i} 
+                        <tr
+                          key={i}
                           onClick={() => {
                             setSelectedLeave(l);
                             setShowDetailModal(true);
                           }}
-                          style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.2s', cursor: 'pointer' }} 
-                          onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} 
+                          style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.2s', cursor: 'pointer' }}
+                          onMouseOver={e => e.currentTarget.style.background = '#f8fafc'}
                           onMouseOut={e => e.currentTarget.style.background = 'transparent'}
                         >
                           <td style={{ padding: '16px 20px' }}>
@@ -380,9 +435,9 @@ export default function MyLeaves() {
                             </p>
                           </td>
                           <td style={{ padding: '16px 20px' }}>
-                            <div style={{ 
-                              display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', 
-                              borderRadius: '100px', background: style.bg, color: style.color, fontSize: '11px', fontWeight: '900' 
+                            <div style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px',
+                              borderRadius: '100px', background: style.bg, color: style.color, fontSize: '11px', fontWeight: '900'
                             }}>
                               {style.icon}
                               {String(l.status).split(',')[0]}
@@ -425,9 +480,9 @@ export default function MyLeaves() {
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>Leave Type</label>
-                <select 
+                <select
                   value={formData.leave_type}
-                  onChange={e => setFormData({...formData, leave_type: e.target.value})}
+                  onChange={e => setFormData({ ...formData, leave_type: e.target.value })}
                   style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontWeight: '700', fontSize: '14px', outline: 'none' }}
                 >
                   <option value="Casual Leave">Casual Leaves</option>
@@ -438,54 +493,54 @@ export default function MyLeaves() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>From Date</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={formData.start_date}
-                    onChange={e => setFormData({...formData, start_date: e.target.value})}
-                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontWeight: '700', fontSize: '14px', outline: 'none' }} 
+                    onChange={e => setFormData({ ...formData, start_date: e.target.value })}
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontWeight: '700', fontSize: '14px', outline: 'none' }}
                   />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>To Date (Optional)</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={formData.end_date}
-                    onChange={e => setFormData({...formData, end_date: e.target.value})}
-                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontWeight: '700', fontSize: '14px', outline: 'none' }} 
+                    onChange={e => setFormData({ ...formData, end_date: e.target.value })}
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontWeight: '700', fontSize: '14px', outline: 'none' }}
                   />
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input 
-                  type="checkbox" 
-                  id="halfday" 
+                <input
+                  type="checkbox"
+                  id="halfday"
                   checked={formData.is_half_day}
-                  onChange={e => setFormData({...formData, is_half_day: e.target.checked})}
+                  onChange={e => setFormData({ ...formData, is_half_day: e.target.checked })}
                 />
                 <label htmlFor="halfday" style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>Apply as Half Day</label>
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>Reason for Leave</label>
-                <textarea 
-                  rows="3" 
+                <textarea
+                  rows="3"
                   placeholder="Explain why you need leave..."
                   value={formData.reason}
-                  onChange={e => setFormData({...formData, reason: e.target.value})}
+                  onChange={e => setFormData({ ...formData, reason: e.target.value })}
                   style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontWeight: '600', fontSize: '14px', outline: 'none', resize: 'none' }}
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
                 <button type="button" onClick={() => setShowModal(false)} style={{ flex: 1, padding: '14px', borderRadius: '14px', border: '1px solid #e2e8f0', background: 'white', fontWeight: '800', cursor: 'pointer' }}>Cancel</button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={submitting}
-                  style={{ 
-                    flex: 1, padding: '14px', borderRadius: '14px', border: 'none', background: '#0f172a', 
-                    color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', 
-                    justifyContent: 'center', gap: '8px' 
+                  style={{
+                    flex: 1, padding: '14px', borderRadius: '14px', border: 'none', background: '#0f172a',
+                    color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', gap: '8px'
                   }}
                 >
                   {submitting ? 'Sending...' : <><Send size={18} /> Submit Request</>}
@@ -520,9 +575,9 @@ export default function MyLeaves() {
                     <div style={{ fontSize: '16px', fontWeight: '950', color: '#0f172a' }}>{selectedLeave.leave_type}</div>
                   </div>
                 </div>
-                <div style={{ 
-                  padding: '8px 16px', borderRadius: '100px', 
-                  background: getStatusStyle(selectedLeave.status).bg, 
+                <div style={{
+                  padding: '8px 16px', borderRadius: '100px',
+                  background: getStatusStyle(selectedLeave.status).bg,
                   color: getStatusStyle(selectedLeave.status).color,
                   fontSize: '11px', fontWeight: '950', textTransform: 'uppercase', letterSpacing: '1px',
                   display: 'flex', alignItems: 'center', gap: '6px', border: `1.5px solid ${getStatusStyle(selectedLeave.status).color}20`
@@ -573,7 +628,7 @@ export default function MyLeaves() {
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={() => setShowDetailModal(false)}
                 style={{ width: '100%', padding: '16px', borderRadius: '16px', background: '#0f172a', color: 'white', border: 'none', fontWeight: '950', fontSize: '14px', cursor: 'pointer', transition: '0.2s', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.2)', marginTop: '8px' }}
                 onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}

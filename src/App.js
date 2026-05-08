@@ -15,10 +15,13 @@ import NewJoineeModule from './components/profile/NewJoineeModule';
 import JoineeCourseModules from './components/profile/JoineeCourseModules';
 import LoginScreen from './components/profile/LoginScreen';
 import AlertScreen from './components/profile/AlertScreen';
+import BirthdayScreen from './components/profile/BirthdayScreen';
+import HolidayScreen from './components/profile/HolidayScreen';
 import TicketManagement from './components/profile/TicketManagement';
 import ReportScreen from './components/profile/ReportScreen';
 
-import LeaveAttendanceCenter from './components/profile/LeaveAttendanceCenter';
+import AttendanceManagement from './components/profile/AttendanceManagement';
+import LeaveManagement from './components/profile/LeaveManagement';
 import QuizModule from './components/profile/QuizModule';
 import EmployeeAttendanceDetail from './components/profile/EmployeeAttendanceDetail';
 import AttendanceReportScreen from './components/profile/AttendanceReportScreen';
@@ -64,7 +67,8 @@ function AppRoutes() {
       <Route path="/alerts" element={<AlertScreen />} />
       <Route path="/reports" element={<ReportScreen />} />
 
-      <Route path="/attendance" element={<LeaveAttendanceCenter />} />
+      <Route path="/attendance" element={<AttendanceManagement />} />
+      <Route path="/leaves" element={<LeaveManagement />} />
       <Route path="/attendance/detail/:id" element={<EmployeeAttendanceDetail />} />
       <Route path="/attendance/leave/:id" element={<LeaveRequestDetail />} />
       <Route path="/attendance/report" element={<AttendanceReportScreen />} />
@@ -76,6 +80,8 @@ function AppRoutes() {
       <Route path="/personal-info" element={<PersonalInfo onBack={() => window.history.back()} />} />
       <Route path="/assets" element={<AssetsManagement />} />
       <Route path="/my-leaves" element={<MyLeaves />} />
+      <Route path="/birthdays" element={<BirthdayScreen />} />
+      <Route path="/holidays" element={<HolidayScreen />} />
 
     </Routes>
   );

@@ -1,4 +1,5 @@
 import React from 'react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getTheme } from '../../constants/Theme';
 import { useNavigate } from 'react-router-dom';
@@ -6,11 +7,12 @@ import { useNavigate } from 'react-router-dom';
 import { BASE_URL, API_ENDPOINTS } from '../../config';
 
 export default function AppHeader() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const theme = getTheme(user?.role);
   const navigate = useNavigate();
   const [winWidth, setWinWidth] = React.useState(window.innerWidth);
   const [fetchedRole, setFetchedRole] = React.useState('');
+  const [showLogoutModal, setShowLogoutModal] = React.useState(false);
 
   React.useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -182,7 +184,7 @@ export default function AppHeader() {
              borderRadius: '12px', 
              background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.1)', 
              display: 'flex', alignItems: 'center', justifyContent: 'center', 
-             cursor: 'pointer', transition: '0.2s transform', overflow: 'hidden'
+             cursor: 'pointer', transition: '0.2s transform', overflow: 'hidden', position: 'relative'
            }}
            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
@@ -196,8 +198,109 @@ export default function AppHeader() {
            ) : (
              <svg width={winWidth < 768 ? "18" : "22"} height={winWidth < 768 ? "18" : "22"} viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
            )}
+
+           <div 
+             onClick={(e) => {
+               e.stopPropagation();
+               setShowLogoutModal(true);
+             }}
+             style={{
+               position: 'absolute',
+               bottom: '0',
+               right: '0',
+               background: '#ef4444',
+               width: winWidth < 768 ? '18px' : '22px',
+               height: winWidth < 768 ? '18px' : '22px',
+               borderRadius: '5px 0 0 0',
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'center',
+               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+               cursor: 'pointer',
+               zIndex: 10
+             }}
+             title="Logout"
+           >
+             <LogOut size={winWidth < 768 ? 10 : 12} color="white" strokeWidth={3} />
+           </div>
         </div>
       </div>
+
+      {/* Custom Logout Modal */}
+      {showLogoutModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 3000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '32px',
+            borderRadius: '24px',
+            width: '100%',
+            maxWidth: '380px',
+            textAlign: 'center',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            transform: 'scale(1)',
+            animation: 'modalIn 0.3s ease-out'
+          }}>
+            <div style={{ 
+              width: '64px', height: '64px', background: '#fee2e2', borderRadius: '50%', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              margin: '0 auto 20px', color: '#ef4444' 
+            }}>
+              <LogOut size={32} />
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b', marginBottom: '8px' }}>Confirm Logout</h2>
+            <p style={{ color: '#64748b', fontSize: '15px', fontWeight: '600', marginBottom: '32px' }}>
+              Are you sure you want to log out of your NBT HUB account?
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => setShowLogoutModal(false)}
+                style={{ 
+                  flex: 1, padding: '14px', borderRadius: '16px', border: '1.5px solid #e2e8f0', 
+                  background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer',
+                  transition: '0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#f8fafc'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  logout();
+                  navigate('/login');
+                }}
+                style={{ 
+                  flex: 1, padding: '14px', borderRadius: '16px', border: 'none', 
+                  background: '#ef4444', color: 'white', fontWeight: '800', cursor: 'pointer',
+                  boxShadow: '0 10px 15px -3px rgba(239, 68, 68, 0.3)',
+                  transition: '0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes modalIn {
+          from { opacity: 0; transform: scale(0.9) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

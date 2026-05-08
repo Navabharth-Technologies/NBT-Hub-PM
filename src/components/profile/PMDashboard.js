@@ -13,7 +13,7 @@ const Icons = {
   Teams: () => <span>👥</span>,
   Employees: () => <span>👤</span>,
   Tasks: () => <span>✅</span>,
-  Fun: () => <span>🧩</span>,
+
   Compliance: () => <span>🛡️</span>,
   Alert: () => <span>🔔</span>,
   Asset: () => <span>📦</span>,
@@ -86,7 +86,8 @@ export default function PMDashboard() {
   const [attendanceStats, setAttendanceStats] = useState({ present: 0, leave: 0, late: 0 });
   const [teamUpdates, setTeamUpdates] = useState([]);
   const [projectSprints, setProjectSprints] = useState([]);
-  const [quizStats, setQuizStats] = useState({ count: 0, topScorer: 'N/A', topScore: 0 });
+  const [upcomingBirthdays, setUpcomingBirthdays] = useState([]);
+
 
   // Fetch Holidays, Tasks & Teams on Load
   useEffect(() => {
@@ -98,7 +99,22 @@ export default function PMDashboard() {
         const hRes = await fetch(API_ENDPOINTS.HOLIDAYS, {
           headers: { 'Authorization': `Bearer ${user.token}` }
         }).catch(() => null);
-        if (hRes && hRes.ok) setHolidays(await hRes.json());
+        if (hRes && hRes.ok) {
+          const hData = await hRes.json();
+          const hList = Array.isArray(hData) ? hData : (hData.data || []);
+          const today = new Date();
+          const currentMonth = today.getMonth();
+          const currentDay = today.getDate();
+
+          const processedH = hList.map(h => {
+            const d = new Date(h.date || h.holiday_date);
+            return { ...h, d, month: d.getMonth(), day: d.getDate() };
+          }).filter(h => !isNaN(h.d.getTime()))
+            .filter(h => h.month > currentMonth || (h.month === currentMonth && h.day >= currentDay))
+            .sort((a, b) => a.d - b.d)
+            .slice(0, 5);
+          setHolidays(processedH);
+        }
 
         // Fetch Total Users from 'user' table (REQUIRED for Name Resolution)
         const userRes = await fetch(API_ENDPOINTS.USERS, {
@@ -217,39 +233,59 @@ export default function PMDashboard() {
           }
         }
 
-        // Fetch Quiz Data
+        // Fetch Upcoming Birthdays for Dashboard Preview
         try {
-          const [qRes, qLeaderRes] = await Promise.all([
-            fetch(`${BASE_URL}/api/fun-quizzes?employee_id=${user?.id || user?.userId || 0}`, {
-              headers: { 'Authorization': `Bearer ${user.token}` }
-            }),
-            fetch(`${BASE_URL}/api/fun-quizzes/leaderboard?employee_id=${user?.id || user?.userId || 0}`, {
-              headers: { 'Authorization': `Bearer ${user.token}` }
-            })
-          ]);
+          const bRes = await fetch(API_ENDPOINTS.BIRTHDAYS, {
+            headers: { 'Authorization': `Bearer ${user.token}` }
+          });
+          if (bRes.ok) {
+            const bData = await bRes.json();
+            const bList = Array.isArray(bData) ? bData : (bData.data || []);
 
-          let qCount = 0;
-          if (qRes.ok) {
-            const qData = await qRes.json();
-            const list = Array.isArray(qData) ? qData : (qData.data || []);
-            qCount = list.length;
-          }
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentDay = today.getDate();
 
-          let topScorer = 'N/A';
-          let topScore = 0;
-          if (qLeaderRes.ok) {
-            const lData = await qLeaderRes.json();
-            const list = Array.isArray(lData) ? lData : (lData.data || []);
-            if (list.length > 0) {
-              const sorted = list.sort((a, b) => (b.total_score || b.score || 0) - (a.total_score || a.score || 0));
-              topScorer = sorted[0].employee_name || sorted[0].name || 'User';
-              topScore = sorted[0].total_score || sorted[0].score || 0;
-            }
+            const parseDate = (dateStr) => {
+              if (!dateStr) return new Date(NaN);
+              if (dateStr instanceof Date) return dateStr;
+              const s = String(dateStr).trim();
+              // Handle ISO YYYY-MM-DD
+              if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s);
+              // Handle DD-MM-YYYY or DD/MM/YYYY
+              if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(s)) {
+                const [d, m, y] = s.split(/[-/]/);
+                return new Date(y, m - 1, d);
+              }
+              // Handle DD-MM or DD/MM
+              if (/^\d{1,2}[-/]\d{1,2}$/.test(s)) {
+                const [d, m] = s.split(/[-/]/);
+                return new Date(new Date().getFullYear(), m - 1, d);
+              }
+              return new Date(s);
+            };
+
+            const processed = bList.map(emp => {
+              const dob = parseDate(emp.dob || emp.birthday || emp.date || emp.date_of_birth || emp.birthday_date);
+              let displayDate = 'N/A';
+              if (!isNaN(dob.getTime())) {
+                displayDate = dob.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+              }
+              return { ...emp, month: dob.getMonth(), day: dob.getDate(), dobDate: dob, displayDate };
+            }).filter(emp => !isNaN(emp.dobDate.getTime()))
+              .filter(emp => emp.month > currentMonth || (emp.month === currentMonth && emp.day >= currentDay));
+
+            const sorted = processed.sort((a, b) => {
+              if (a.month !== b.month) return a.month - b.month;
+              return a.day - b.day;
+            });
+            setUpcomingBirthdays(sorted.slice(0, 5));
           }
-          setQuizStats({ count: qCount, topScorer, topScore });
         } catch (e) {
-          console.log('Quiz data sync error');
+          console.log('Birthdays sync error');
         }
+
+
 
       } catch (err) {
         console.error('Dashboard data fetch error:', err);
@@ -263,16 +299,7 @@ export default function PMDashboard() {
     { label: 'Total Teams', value: teams?.length || 'View', icon: <Icons.Teams />, color: '#6366f1', trend: 'Live', trendUp: true, path: '/teams' },
     { label: 'Total Employees', value: employeesCount || 'View', icon: <Icons.Employees />, color: '#8b5cf6', trend: 'Live', trendUp: true, path: '/employees' },
     { label: 'Personal Information', value: 'Manage', icon: <Icons.Employees />, color: '#315A9E', trend: 'Active', trendUp: true, path: '/personal-info' },
-    {
-      label: 'Fun and Quiz',
-      value: quizStats.topScorer !== 'N/A' ? quizStats.topScorer : (quizStats.count > 0 ? `${quizStats.count} Quizzes` : 'Play Now'),
-      icon: <Icons.Fun />,
-      color: '#ec4899',
-      trend: quizStats.topScorer !== 'N/A' ? 'Top Scorer' : 'Live',
-      trendUp: true,
-      path: '/quiz',
-      subText: quizStats.topScorer !== 'N/A' ? `${quizStats.topScore} pts • ${quizStats.count} Qs` : (quizStats.count > 0 ? 'Be the first!' : '')
-    },
+
     { label: 'Assets Management', value: 'Manage', icon: <span>📦</span>, color: '#f59e0b', trend: 'New', trendUp: true, path: '/assets' },
     { label: 'New Joinee', value: newJoineesCount || 'View', icon: <span>✨</span>, color: '#0ea5e9', trend: 'This Month', trendUp: true, path: '/new-joinees' },
   ];
@@ -339,7 +366,7 @@ export default function PMDashboard() {
       }
 
       if (response.ok) {
-        setToastMessage('Task Successfully Synchronized! ✅');
+        setToastMessage('Task assigned Successfully ✅');
         setToastType('success');
         setShowSuccessToast(true);
         setTimeout(() => setShowSuccessToast(false), 3000);
@@ -381,8 +408,8 @@ export default function PMDashboard() {
       <AppHeader />
 
       <main className="dashboard-content">
-        <header className="section-header" style={{ 
-          marginBottom: winWidth < 768 ? '12px' : '15px', 
+        <header className="section-header" style={{
+          marginBottom: winWidth < 768 ? '12px' : '15px',
           gap: winWidth < 768 ? '15px' : '0',
           width: winWidth < 768 ? '88%' : '100%',
           margin: winWidth < 768 ? '0 auto 10px' : '0 0 15px',
@@ -424,7 +451,7 @@ export default function PMDashboard() {
               )}
             </div>
 
-            <button className="btn-primary" onClick={() => navigate('/reports')} style={{ flex: 1, backgroundColor: 'white', color: '#3863a8', border: '1.5px solid #3863a8', padding: '8px 16px', whiteSpace: 'nowrap' }}>Reports</button>
+
           </div>
         </header>
 
@@ -469,14 +496,14 @@ export default function PMDashboard() {
             boxSizing: 'border-box'
           }}>
             {winWidth < 768 ? (
-            <div style={{ 
-              display: 'flex', 
-              gap: '15px', 
-              transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)', 
-              transform: `translateX(calc(-${currentMetricIndex} * (100% + 15px)))`, 
-              width: '100%', 
-              touchAction: 'pan-y' 
-            }}>
+              <div style={{
+                display: 'flex',
+                gap: '15px',
+                transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: `translateX(calc(-${currentMetricIndex} * (100% + 15px)))`,
+                width: '100%',
+                touchAction: 'pan-y'
+              }}>
                 {dynamicMetrics.map((m, i) => (
                   <div
                     key={i}
@@ -548,14 +575,14 @@ export default function PMDashboard() {
 
         <div className="main-dashboard-grid">
           {/* Column 1: Team Overview (Spans 2 columns on Desktop) */}
-          <section className="dashboard-section team-overview-section animate-fade-in" style={{ 
-            animationDelay: '0.4s', 
-            position: 'relative', 
+          <section className="dashboard-section team-overview-section animate-fade-in" style={{
+            animationDelay: '0.4s',
+            position: 'relative',
             borderRadius: '32px',
             width: '100%',
             boxSizing: 'border-box'
           }}>
-            <div className="section-header" style={{ 
+            <div className="section-header" style={{
               marginBottom: '20px',
               display: 'flex',
               justifyContent: 'space-between',
@@ -649,41 +676,41 @@ export default function PMDashboard() {
               ) : (
                 <div className="team-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                   {teams.map(team => (
-                        <div key={team.id}
-                        style={{ 
-                          padding: '20px', 
-                          borderRadius: '24px', 
-                          background: '#ffffff', 
-                          border: '3px solid #cbd5e1',
-                          boxShadow: '0 10px 30px rgba(0,0,0,0.04)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '15px',
-                          cursor: 'pointer',
-                          transition: '0.3s transform'
-                        }}
-                        onClick={() => navigate(`/teams/${team.id}`)}
-                        onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-                        onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', border: '1.5px solid #e2e8f0' }}>🛡️</div>
-                              <div>
-                                <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>{team.name}</div>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{team.members || 0} Operatives</div>
-                              </div>
-                            </div>
-                            <div style={{ padding: '4px 10px', borderRadius: '8px', background: '#eff6ff', color: '#3863a8', fontSize: '10px', fontWeight: '900' }}>UNIT {team.id}</div>
-                          </div>
-                          {/* Removed Sprints/Progress stats row as per user request */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                             <div style={{ flex: 1, height: '8px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
-                                <div style={{ width: `${team.progress || 0}%`, height: '100%', background: 'linear-gradient(90deg, #3863a8, #1e40af)', borderRadius: '10px' }} />
-                             </div>
-                             <span style={{ fontSize: '12px', color: '#cbd5e1' }}>›</span>
+                    <div key={team.id}
+                      style={{
+                        padding: '20px',
+                        borderRadius: '24px',
+                        background: '#ffffff',
+                        border: '3px solid #cbd5e1',
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.04)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '15px',
+                        cursor: 'pointer',
+                        transition: '0.3s transform'
+                      }}
+                      onClick={() => navigate(`/teams/${team.id}`)}
+                      onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+                      onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', border: '1.5px solid #e2e8f0' }}>🛡️</div>
+                          <div>
+                            <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>{team.name}</div>
+                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{team.members || 0} Operatives</div>
                           </div>
                         </div>
+                        <div style={{ padding: '4px 10px', borderRadius: '8px', background: '#eff6ff', color: '#3863a8', fontSize: '10px', fontWeight: '900' }}>UNIT {team.id}</div>
+                      </div>
+                      {/* Removed Sprints/Progress stats row as per user request */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ flex: 1, height: '8px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                          <div style={{ width: `${team.progress || 0}%`, height: '100%', background: 'linear-gradient(90deg, #3863a8, #1e40af)', borderRadius: '10px' }} />
+                        </div>
+                        <span style={{ fontSize: '12px', color: '#cbd5e1' }}>›</span>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -691,8 +718,8 @@ export default function PMDashboard() {
           </section>
 
           {/* Column 2: Task Hub */}
-          <section className="dashboard-section animate-fade-in" style={{ 
-            animationDelay: '0.6s', 
+          <section className="dashboard-section animate-fade-in" style={{
+            animationDelay: '0.6s',
             cursor: 'pointer',
             marginBottom: winWidth < 768 ? '15px' : '0',
             padding: winWidth < 768 ? '12px' : '32px',
@@ -712,8 +739,8 @@ export default function PMDashboard() {
               {recentTasks.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {recentTasks.slice(0, 4).map((task, i) => (
-                    <div key={i} onClick={(e) => { e.stopPropagation(); navigate('/tasks'); }} style={{ 
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px', 
+                    <div key={i} onClick={(e) => { e.stopPropagation(); navigate('/tasks'); }} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px',
                       borderRadius: '16px', background: '#ffffff', border: '3px solid #cbd5e1',
                       boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer', transition: '0.2s', width: '100%', boxSizing: 'border-box'
                     }}>
@@ -732,20 +759,20 @@ export default function PMDashboard() {
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px', background: '#f8fafc', borderRadius: '24px', border: '3px dashed #cbd5e1' }}>Unit Sprints Neutralized</div>
               )}
             </div>
-            <button className="animate-fade-in" style={{ 
-              width: '100%', 
-              padding: winWidth < 768 ? '14px 10px' : '14px', 
-              background: '#0f172a', 
-              borderRadius: '16px', 
-              color: 'white', 
-              fontWeight: '900', 
-              fontSize: winWidth < 768 ? '13px' : '14px', 
-              border: 'none', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              gap: '8px', 
+            <button className="animate-fade-in" style={{
+              width: '100%',
+              padding: winWidth < 768 ? '14px 10px' : '14px',
+              background: '#0f172a',
+              borderRadius: '16px',
+              color: 'white',
+              fontWeight: '900',
+              fontSize: winWidth < 768 ? '13px' : '14px',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
               boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.15)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -754,19 +781,19 @@ export default function PMDashboard() {
           </section>
 
           {/* Column 3: Attendance Analytics */}
-          <section className="dashboard-section animate-fade-in" style={{ 
-            animationDelay: '0.7s', 
-            cursor: 'pointer', 
-            borderRadius: winWidth < 768 ? '35px' : '32px', 
+          <section className="dashboard-section animate-fade-in" style={{
+            animationDelay: '0.7s',
+            cursor: 'pointer',
+            borderRadius: winWidth < 768 ? '35px' : '32px',
             padding: winWidth < 768 ? '12px' : '32px',
             width: '100%',
             boxSizing: 'border-box',
             overflow: 'hidden'
           }} onClick={() => navigate('/attendance')}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'flex-start', 
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
               marginBottom: winWidth < 768 ? '20px' : '25px',
               width: '100%'
             }}>
@@ -774,17 +801,23 @@ export default function PMDashboard() {
                 <div style={{ width: winWidth < 768 ? '38px' : '48px', height: winWidth < 768 ? '38px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '16px' : '22px', flexShrink: 0 }}>📅</div>
                 <h2 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '950', color: '#1e293b', margin: 0, lineHeight: 1.2 }}>Leave/Attendance<br /> Management</h2>
               </div>
-              <button 
-                style={{ background: 'none', border: 'none', color: '#64748b', fontWeight: '800', cursor: 'pointer', fontSize: winWidth < 768 ? '12px' : '13px', paddingTop: '4px' }}
+              <button
+                style={{ background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer', fontSize: winWidth < 768 ? '12px' : '13px', paddingTop: '4px' }}
+                onClick={(e) => { e.stopPropagation(); navigate('/leaves'); }}
+              >
+                Leaves
+              </button>
+              <button
+                style={{ background: 'none', border: 'none', color: '#64748b', fontWeight: '800', cursor: 'pointer', fontSize: winWidth < 768 ? '12px' : '13px', paddingTop: '4px', marginLeft: '12px' }}
                 onClick={(e) => { e.stopPropagation(); navigate('/attendance'); }}
               >
-                View All
+                Attendance
               </button>
             </div>
 
-            <div style={{ 
-              display: 'flex', 
-              gap: winWidth < 768 ? '6px' : '20px', 
+            <div style={{
+              display: 'flex',
+              gap: winWidth < 768 ? '6px' : '20px',
               marginBottom: '32px',
               width: '100%',
               boxSizing: 'border-box',
@@ -795,21 +828,33 @@ export default function PMDashboard() {
                 { label: 'On Leave', count: attendanceStats.leave, bg: '#fffbeb', border: '#fef3c7', color: '#b45309', countColor: '#92400e' },
                 { label: 'Late', count: attendanceStats.late, bg: '#fef2f2', border: '#fee2e2', color: '#b91c1c', countColor: '#991b1b' }
               ].map((stat, idx) => (
-                <div key={idx} style={{ 
-                  padding: winWidth < 768 ? '10px 4px' : '24px',
-                  flex: 1,
-                  background: stat.bg,
-                  borderRadius: winWidth < 768 ? '12px' : '24px',
-                  border: `1px solid ${stat.border}`,
-                  textAlign: 'center',
-                  boxSizing: 'border-box',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)',
-                  minWidth: 0 // Allows shrinking in flex
-                }}>
+                <div key={idx} 
+                  onClick={(e) => { 
+                    if (stat.label === 'On Leave') {
+                      e.stopPropagation();
+                      navigate('/leaves');
+                    } else if (stat.label === 'Present' || stat.label === 'Late') {
+                      e.stopPropagation();
+                      navigate('/attendance');
+                    }
+                  }}
+                  style={{
+                    padding: winWidth < 768 ? '10px 4px' : '24px',
+                    flex: 1,
+                    background: stat.bg,
+                    borderRadius: winWidth < 768 ? '12px' : '24px',
+                    border: `1px solid ${stat.border}`,
+                    textAlign: 'center',
+                    boxSizing: 'border-box',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.02)',
+                    minWidth: 0,
+                    cursor: 'pointer'
+                  }}
+                >
                   <div style={{ fontSize: winWidth < 768 ? '8px' : '11px', fontWeight: '900', color: stat.color, marginBottom: '2px', textTransform: 'uppercase', letterSpacing: winWidth < 768 ? '0px' : '1px' }}>{stat.label}</div>
                   <div style={{ fontSize: winWidth < 768 ? '18px' : '36px', fontWeight: '950', color: stat.countColor, lineHeight: 1 }}>{stat.count || 0}</div>
                 </div>
@@ -821,8 +866,8 @@ export default function PMDashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {leaveRequests.filter(r => String(r.status || '').toUpperCase().includes('PENDING')).slice(0, 3).length > 0 ? (
                   leaveRequests.filter(r => String(r.status || '').toUpperCase().includes('PENDING')).slice(0, 3).map((req, rid) => (
-                    <div key={rid} onClick={(e) => { e.stopPropagation(); navigate(`/attendance/leave/${req.id}`); }} style={{ 
-                      display: 'flex', alignItems: 'center', padding: winWidth < 768 ? '10px' : '16px', 
+                    <div key={rid} onClick={(e) => { e.stopPropagation(); navigate(`/attendance/leave/${req.id}`); }} style={{
+                      display: 'flex', alignItems: 'center', padding: winWidth < 768 ? '10px' : '16px',
                       borderRadius: winWidth < 768 ? '18px' : '24px', background: '#ffffff', border: '1px solid #cbd5e1',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.03)', cursor: 'pointer', transition: '0.2s', width: '100%', boxSizing: 'border-box',
                       gap: winWidth < 768 ? '8px' : '12px'
@@ -844,6 +889,78 @@ export default function PMDashboard() {
               </div>
             </div>
             <button style={{ width: '100%', padding: '14px', background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '16px', color: '#3863a8', fontWeight: '900', fontSize: '14px', cursor: 'pointer', transition: '0.2s' }}>Manage Workforce</button>
+          </section>
+
+          {/* Upcoming Birthdays Section */}
+          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.8s', cursor: 'pointer' }} onClick={() => navigate('/birthdays')}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 className="section-title">🎂 Upcoming Birthdays</h2>
+              <button className="btn-ghost" style={{ fontSize: '12px', background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer' }}>View All</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {upcomingBirthdays.length > 0 ? upcomingBirthdays.map((bday, idx) => (
+                <div key={idx} style={{
+                  display: 'flex', alignItems: 'center', gap: '15px', padding: '14px',
+                  borderRadius: '16px', background: '#ffffff', border: '3px solid #cbd5e1',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ background: '#fdf2f8', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                    🎈
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a' }}>{bday.name || bday.employee_name}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{bday.role || bday.designation || 'Member'}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '950', color: '#ec4899' }}>
+                      {bday.displayDate}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '800' }}>WISH</div>
+                  </div>
+                </div>
+              )) : (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px', border: '2px dashed #cbd5e1', borderRadius: '24px' }}>
+                  No upcoming birthdays found
+                </div>
+              )}
+            </div>
+          </section>
+
+
+
+          {/* List of Holidays Section */}
+          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '1.0s', cursor: 'pointer' }} onClick={() => navigate('/holidays')}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 className="section-title">🏖️ List of Holidays</h2>
+              <button className="btn-ghost" style={{ fontSize: '12px', background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer' }}>View All</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {holidays.length > 0 ? holidays.map((holiday, idx) => (
+                <div key={idx} style={{
+                  display: 'flex', alignItems: 'center', gap: '15px', padding: '14px',
+                  borderRadius: '16px', background: '#f8fafc', border: '3px solid #cbd5e1',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                }}>
+                  <div style={{ background: '#ffffff', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', fontSize: '20px' }}>
+                    📅
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '15px', fontWeight: '950', color: '#1e293b' }}>{holiday.name || holiday.title}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{holiday.day || holiday.d?.toLocaleDateString('en-US', { weekday: 'long' }) || 'Holiday'}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '950', color: '#3863a8' }}>{holiday.date || holiday.d?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
+                    <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '800' }}>2026</div>
+                  </div>
+                </div>
+              )) : (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px', border: '2px dashed #cbd5e1', borderRadius: '24px' }}>
+                  No upcoming holidays found
+                </div>
+              )}
+            </div>
           </section>
         </div>
       </main>
@@ -991,7 +1108,7 @@ export default function PMDashboard() {
           <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: toastType === 'success' ? '#ecfdf5' : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>{toastType === 'success' ? '✅' : '❌'}</div>
           <div>
             <h3 style={{ fontSize: '15px', fontWeight: '900', color: toastType === 'success' ? '#065f46' : '#991b1b', margin: 0 }}>{toastMessage}</h3>
-            <p style={{ fontSize: '11px', color: toastType === 'success' ? '#059669' : '#b91c1c', fontWeight: '700', margin: 0 }}>NBT Hub Database System</p>
+            <p style={{ fontSize: '11px', color: toastType === 'success' ? '#059669' : '#b91c1c', fontWeight: '700', margin: 0 }}></p>
           </div>
         </div>
       )}

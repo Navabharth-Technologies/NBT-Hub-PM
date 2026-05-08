@@ -188,7 +188,7 @@ export default function AttendanceManagement() {
               </p>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
-
+              <button onClick={() => navigate('/leaves')} style={{ padding: '12px 24px', borderRadius: '12px', background: '#10b981', color: 'white', border: 'none', fontWeight: '800', fontSize: '13px' }}>Manage Leaves</button>
               <button style={{ padding: '12px 24px', borderRadius: '12px', background: '#0f172a', color: 'white', border: 'none', fontWeight: '800', fontSize: '13px' }}>Export</button>
             </div>
           </div>
