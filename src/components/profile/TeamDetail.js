@@ -586,7 +586,7 @@ export default function TeamDetail() {
                   </div>
                   <div>
                     <div style={{ fontSize: '10px', color: '#64748b' }}>Active Tasks</div>
-                    <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{teamUpdates?.length || 0}</div>
+                    <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{team.tasks?.length || 0}</div>
                   </div>
                 </div>
               </div>
