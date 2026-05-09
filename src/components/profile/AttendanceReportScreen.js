@@ -361,12 +361,14 @@ export default function AttendanceReportScreen() {
                     <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Punch Activity</th>
                     <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Work Session</th>
                     <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Status / Remarks</th>
+                    <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>IN Location</th>
+                    <th style={{ padding: '24px 30px', fontSize: '11px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>OUT Location</th>
                  </tr>
                </thead>
                <tbody>
                  {loading ? (
                      <tr>
-                       <td colSpan="5" style={{ padding: '100px', textAlign: 'center' }}>
+                       <td colSpan="7" style={{ padding: '100px', textAlign: 'center' }}>
                           <div className="animate-spin" style={{ margin: '0 auto', width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid #3b82f6', borderRadius: '50%' }}></div>
                           <p style={{ marginTop: '20px', fontWeight: '800', color: '#64748b', fontSize: '14px' }}>Aggregating Attendance Intelligence...</p>
                        </td>
@@ -392,7 +394,14 @@ export default function AttendanceReportScreen() {
                           <td style={{ padding: '20px 30px' }}>
                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '800', color: '#475569' }}>
                                 <Calendar size={16} color="#94a3b8" />
-                                {log.punch_date ? new Date(log.punch_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                                {(() => {
+                                   if (!log.punch_date) return 'N/A';
+                                   const dateStr = String(log.punch_date).split('T')[0];
+                                   const d = new Date(dateStr);
+                                   if (isNaN(d.getTime())) return dateStr;
+                                   const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+                                   return `${dateStr} (${dayName})`;
+                                })()}
                              </div>
                           </td>
                           <td style={{ padding: '20px 30px' }}>
@@ -430,12 +439,18 @@ export default function AttendanceReportScreen() {
                                 )}
                              </div>
                           </td>
+                          <td style={{ padding: '20px 30px', fontSize: '13px', color: '#475569', fontWeight: '800' }}>
+                             {log.punchin_location || log.in_location || log.PunchIn_location || log.location || '----'}
+                          </td>
+                          <td style={{ padding: '20px 30px', fontSize: '13px', color: '#475569', fontWeight: '800' }}>
+                             {log.punchout_location || log.out_location || log.PunchOut_location || '----'}
+                          </td>
                        </tr>
                      )
                    })
                  ) : (
                    <tr>
-                     <td colSpan="5" style={{ padding: '100px', textAlign: 'center' }}>
+                     <td colSpan="7" style={{ padding: '100px', textAlign: 'center' }}>
                         <AlertCircle size={48} color="#cbd5e1" style={{ margin: '0 auto 16px' }} />
                         <h3 style={{ fontSize: '18px', fontWeight: '950', color: '#1e293b' }}>No reporting data found</h3>
                         <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '700' }}>Try adjusting your filters or checking a different date range.</p>

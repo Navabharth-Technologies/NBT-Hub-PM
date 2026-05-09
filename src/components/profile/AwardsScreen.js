@@ -151,6 +151,24 @@ export default function AwardsScreen() {
         return true;
     });
 
+    // Derive top contributor from rewards history for UI consistency
+    const topContributor = React.useMemo(() => {
+        if (!rewards || rewards.length === 0) return leaderboard[0] || null;
+        
+        const stats = Array.from(new Set(rewards.map(r => r.employee_id))).map(id => {
+            const userRewards = rewards.filter(r => String(r.employee_id) === String(id));
+            const totalRep = userRewards.reduce((sum, r) => sum + (Number(r.points) || 0), 0);
+            return { 
+                id, 
+                name: resolveEmployeeName(id), 
+                total_points: totalRep,
+                role: employees.find(e => String(e.id) === String(id) || String(e.employee_id) === String(id))?.role || 'Team Member'
+            };
+        }).sort((a, b) => b.total_points - a.total_points);
+        
+        return stats[0] || leaderboard[0] || null;
+    }, [rewards, leaderboard, employees, startDate, endDate]);
+
     const handleGrantAward = async () => {
         if (!selectedEmployee) {
             showFeedback("Please select a recipient first.", "error");
@@ -328,7 +346,7 @@ export default function AwardsScreen() {
                             <p style={{ margin: '0 0 5px 0', fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Top Recognition</p>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: winWidth < 768 ? 'flex-start' : 'flex-end', gap: '10px' }}>
                                 <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '950', color: '#ffffff' }}>
-                                    {leaderboard[0] ? leaderboard[0].name : "Syncing..."}
+                                    {topContributor ? topContributor.name : "Syncing..."}
                                 </h3>
                                 <Star size={20} color="#facc15" fill="#facc15" />
                             </div>
@@ -524,16 +542,16 @@ export default function AwardsScreen() {
                                     <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '24px' : '28px', fontWeight: '1000', letterSpacing: '-0.8px', color: '#ffffff', lineHeight: '1.2' }}>Recognition Spotlight</h3>
                                     <p style={{ margin: winWidth < 768 ? '10px 0 30px 0' : '15px 0 40px 0', fontSize: winWidth < 768 ? '14px' : '15px', color: '#94a3b8', fontWeight: '600', lineHeight: '1.7' }}>Celebrate the champions pushing our organization forward with exceptional dedication and vision.</p>
                                     
-                                    {leaderboard.length > 0 && (
+                                    {topContributor && (
                                         <div style={{ background: 'rgba(255,255,255,0.05)', padding: '25px', borderRadius: '24px', border: '1.5px solid rgba(255,255,255,0.1)', marginBottom: '40px' }}>
                                             <div style={{ fontSize: '11px', fontWeight: '900', color: '#facc15', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '15px' }}>Top Contributor</div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                                                 <div style={{ width: '55px', height: '55px', borderRadius: '18px', background: '#facc15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: '1000', color: '#0f172a' }}>
-                                                    {leaderboard[0].name.charAt(0)}
+                                                    {topContributor.name.charAt(0)}
                                                 </div>
                                                 <div>
-                                                    <div style={{ fontSize: '17px', fontWeight: '900', color: '#ffffff' }}>{leaderboard[0].name}</div>
-                                                    <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '700' }}>{leaderboard[0].total_points} Reputation Points</div>
+                                                    <div style={{ fontSize: '17px', fontWeight: '900', color: '#ffffff' }}>{topContributor.name}</div>
+                                                    <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '700' }}>{topContributor.total_points} Reputation Points</div>
                                                 </div>
                                             </div>
                                         </div>

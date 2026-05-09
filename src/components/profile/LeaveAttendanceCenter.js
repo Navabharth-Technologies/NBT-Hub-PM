@@ -169,7 +169,13 @@ export default function AttendanceManagement() {
   };
 
   const metrics = calculateMetrics();
-  const filteredEmployees = allEmployees.filter(emp => (emp.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredEmployees = allEmployees.filter(emp => {
+    const s = searchTerm.toLowerCase();
+    return (emp.name || emp.user_name || '').toLowerCase().includes(s) ||
+           String(emp.id).toLowerCase().includes(s) ||
+           (emp.role || '').toLowerCase().includes(s) ||
+           (emp.department || '').toLowerCase().includes(s);
+  });
 
   return (
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
@@ -193,7 +199,7 @@ export default function AttendanceManagement() {
             </div>
           </div>
 
-          <div style={{ background: 'white', borderRadius: '24px', padding: '32px', marginBottom: '32px', border: '1.5px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ background: 'white', borderRadius: '24px', padding: winWidth < 768 ? '20px' : '32px', marginBottom: '32px', border: '1.5px solid #f1f5f9', display: 'flex', flexDirection: winWidth < 1024 ? 'column' : 'row', gap: winWidth < 1024 ? '20px' : '0', justifyContent: 'space-between', alignItems: winWidth < 1024 ? 'stretch' : 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
               <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#e0f2fe', color: '#0369a1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <MapPin size={28} />
@@ -204,8 +210,8 @@ export default function AttendanceManagement() {
                 <div style={{ fontSize: '10px', color: '#94a3b8' }}>{userLocation}</div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '8px 14px', borderRadius: '16px', border: '1.5px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', flexDirection: winWidth < 768 ? 'column' : 'row', alignItems: winWidth < 768 ? 'stretch' : 'center', gap: winWidth < 768 ? '16px' : '32px' }}>
+               <div style={{ display: 'flex', alignItems: 'center', justifyContent: winWidth < 768 ? 'space-between' : 'flex-start', gap: '12px', background: '#f8fafc', padding: '8px 14px', borderRadius: '16px', border: '1.5px solid #e2e8f0' }}>
                  <div style={{ width: '38px', height: '40px', background: 'white', borderRadius: '10px', border: '1.5px solid #e2e8f0', overflow: 'hidden' }}>
                     <div style={{ background: '#ef4444', color: 'white', fontSize: '6px', fontWeight: '950', textAlign: 'center' }}>MAY</div>
                     <div style={{ textAlign: 'center', fontSize: '16px', fontWeight: '950' }}>{new Date().getDate()}</div>
@@ -221,13 +227,13 @@ export default function AttendanceManagement() {
                    <div style={{ fontSize: '20px', fontWeight: '900' }}>{elapsedTime}</div>
                  </div>
                )}
-               <button onClick={personalAttendance?.in_time ? handleCheckOut : handleCheckIn} style={{ padding: '14px 32px', borderRadius: '100px', background: personalAttendance?.in_time ? '#ef4444' : '#0f172a', color: 'white', fontWeight: '950', border: 'none' }}>
+               <button onClick={personalAttendance?.in_time ? handleCheckOut : handleCheckIn} style={{ padding: '14px 32px', borderRadius: '100px', background: personalAttendance?.in_time ? '#ef4444' : '#0f172a', color: 'white', fontWeight: '950', border: 'none', width: winWidth < 768 ? '100%' : 'auto' }}>
                  {personalAttendance?.in_time ? 'PUNCH OUT' : 'PUNCH IN'}
                </button>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '20px', marginBottom: '40px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: winWidth < 768 ? 'repeat(2, 1fr)' : winWidth < 1024 ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: winWidth < 768 ? '12px' : '20px', marginBottom: '40px' }}>
             <div style={{ background: 'white', padding: '24px', borderRadius: '24px', border: '1.5px solid #f1f5f9' }}>
                <div style={{ color: '#16a34a', marginBottom: '12px' }}><UserCheck size={18} /></div>
                <div style={{ fontSize: '24px', fontWeight: '950' }}>{metrics.present}</div>
@@ -279,11 +285,34 @@ export default function AttendanceManagement() {
                     <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '900', color: '#64748b' }}>PUNCH OUT</th>
                     <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '900', color: '#64748b' }}>WORK HRS</th>
                     <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '900', color: '#64748b' }}>STATUS</th>
+                    <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '900', color: '#64748b' }}>IN LOCATION</th>
+                    <th style={{ padding: '16px 24px', textAlign: 'left', fontSize: '11px', fontWeight: '900', color: '#64748b' }}>OUT LOCATION</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEmployees.map((emp, i) => {
-                    const log = attendanceLogs.find(l => String(l.user_id) === String(emp.id));
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const logsForEmp = (attendanceLogs || [])
+                      .filter(l => {
+                        if (!l) return false;
+                        const logUserId = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+                        const empId = String(emp?.id || '').trim();
+                        const logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0];
+                        return empId && logUserId && (logUserId === empId) && (logDate === todayStr);
+                      })
+                      .sort((a, b) => new Date(a?.created_at || a?.punch_time) - new Date(b?.created_at || b?.punch_time));
+
+                    const firstLog = logsForEmp[0];
+                    const lastLog = logsForEmp.length > 1 ? logsForEmp[logsForEmp.length - 1] : null;
+
+                    const log = firstLog ? {
+                      ...firstLog,
+                      in_time: firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time,
+                      out_time: lastLog ? (lastLog?.out_time || lastLog?.OUTTime || lastLog?.PunchOut || lastLog?.punch_time) : '----',
+                      in_location: firstLog?.punchin_location || firstLog?.in_location || firstLog?.PunchIn_location || firstLog?.location,
+                      out_location: lastLog ? (lastLog?.punchout_location || lastLog?.out_location || lastLog?.PunchOut_location || lastLog?.location) : '----',
+                      work_time: lastLog ? (lastLog?.work_time || firstLog?.work_time || '00:00') : '00:00'
+                    } : null;
                     return (
                       <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         <td style={{ padding: '16px 24px' }}>
@@ -293,11 +322,31 @@ export default function AttendanceManagement() {
                           </div>
                         </td>
                         <td style={{ padding: '16px 24px', fontSize: '13px', color: '#64748b' }}>#{emp.id}</td>
-                        <td style={{ padding: '16px 24px', fontSize: '13px', color: '#64748b' }}>2026-05-07</td>
+                        <td style={{ padding: '16px 24px', fontSize: '13px', color: '#64748b' }}>
+                          {(() => {
+                            const d = new Date(todayStr);
+                            if (isNaN(d.getTime())) return todayStr;
+                            const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+                            return `${todayStr} (${dayName})`;
+                          })()}
+                        </td>
                         <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '700' }}>{log?.in_time || '----'}</td>
                         <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '700' }}>{log?.out_time || '----'}</td>
                         <td style={{ padding: '16px 24px', fontSize: '14px', fontWeight: '900', color: '#6366f1' }}>00:00</td>
-                        <td style={{ padding: '16px 24px' }}><span style={{ padding: '4px 10px', borderRadius: '8px', background: '#f0fdf4', color: '#16a34a', fontSize: '11px', fontWeight: '900' }}>A</span></td>
+                        <td style={{ padding: '16px 24px' }}>
+                          <span style={{ 
+                            padding: '4px 10px', 
+                            borderRadius: '8px', 
+                            background: log ? '#f0fdf4' : '#fef2f2', 
+                            color: log ? '#16a34a' : '#ef4444', 
+                            fontSize: '11px', 
+                            fontWeight: '900' 
+                          }}>
+                            {log ? 'Present' : 'Absent'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px 24px', fontSize: '12px', color: '#64748b' }}>{log?.in_location || '----'}</td>
+                        <td style={{ padding: '16px 24px', fontSize: '12px', color: '#64748b' }}>{log?.out_location || '----'}</td>
                       </tr>
                     );
                   })}

@@ -411,13 +411,13 @@ export default function PMDashboard() {
         <header className="section-header" style={{
           marginBottom: winWidth < 768 ? '12px' : '15px',
           gap: winWidth < 768 ? '15px' : '0',
-          width: winWidth < 768 ? '88%' : '100%',
-          margin: winWidth < 768 ? '0 auto 10px' : '0 0 15px',
+          width: '100%',
+          margin: winWidth < 768 ? '0 0 10px' : '0 0 15px',
           boxSizing: 'border-box'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div>
-              <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '800', color: '#1e293b', marginBottom: '4px', letterSpacing: '-1px' }}>Titan Dashboard</h1>
+              <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '800', color: '#1e293b', marginBottom: '5px', letterSpacing: '0px' }}>Project Manager Dashboard</h1>
               <p style={{ color: '#64748b', fontSize: winWidth < 768 ? '12px' : '14px', fontWeight: '500' }}>Strength and scale • {teams.length} Active Teams</p>
             </div>
           </div>
@@ -491,8 +491,8 @@ export default function PMDashboard() {
             gridTemplateColumns: winWidth < 768 ? 'none' : 'repeat(auto-fit, minmax(240px, 1fr))',
             gap: winWidth < 768 ? '0' : '20px',
             overflow: winWidth < 768 ? 'hidden' : 'visible',
-            width: winWidth < 768 ? '92%' : '100%',
-            margin: winWidth < 768 ? '0 auto' : '0',
+            width: '100%',
+            margin: '0',
             boxSizing: 'border-box'
           }}>
             {winWidth < 768 ? (
@@ -701,7 +701,7 @@ export default function PMDashboard() {
                             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{team.members || 0} Operatives</div>
                           </div>
                         </div>
-                        <div style={{ padding: '4px 10px', borderRadius: '8px', background: '#eff6ff', color: '#3863a8', fontSize: '10px', fontWeight: '900' }}>UNIT {team.id}</div>
+                        <div style={{ padding: '4px 10px', borderRadius: '8px', background: '#eff6ff', color: '#3863a8', fontSize: '10px', fontWeight: '900' }}> {team.id}</div>
                       </div>
                       {/* Removed Sprints/Progress stats row as per user request */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -828,8 +828,8 @@ export default function PMDashboard() {
                 { label: 'On Leave', count: attendanceStats.leave, bg: '#fffbeb', border: '#fef3c7', color: '#b45309', countColor: '#92400e' },
                 { label: 'Late', count: attendanceStats.late, bg: '#fef2f2', border: '#fee2e2', color: '#b91c1c', countColor: '#991b1b' }
               ].map((stat, idx) => (
-                <div key={idx} 
-                  onClick={(e) => { 
+                <div key={idx}
+                  onClick={(e) => {
                     if (stat.label === 'On Leave') {
                       e.stopPropagation();
                       navigate('/leaves');
