@@ -5,7 +5,7 @@
   transform: translateX(-50%);
   z-index: 3000;
   width: auto;
-  min-width: 760px;
+  min-width: 600px;
   max-width: 95%;
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
 }
@@ -17,7 +17,8 @@
 }
 
 .app-footer {
-  background: #a7d6da; /* Matching Header Light Teal */
+  background: #a7d6da;
+  /* Matching Header Light Teal */
   border-radius: 50px;
   display: flex;
   justify-content: space-between;
@@ -36,10 +37,12 @@
   align-items: center;
   gap: 5px;
   cursor: pointer;
-  color: #000000; /* Deep Black for max contrast */
-  opacity: 0.85; /* Higher base visibility */
+  color: #000000;
+  /* Deep Black for max contrast */
+  opacity: 0.85;
+  /* Higher base visibility */
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  min-width: 100px;
+  min-width: 80px;
   padding: 4px 6px;
 }
 
@@ -67,13 +70,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   z-index: 5;
 }
 
 .footer-label {
   font-size: 8.5px;
-  font-weight: 800;
+  font-weight: 950;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #000000;
@@ -89,7 +92,7 @@
 .footer-item.active .footer-label,
 .footer-item.action-active .footer-label {
   font-size: 9.5px;
-  font-weight: 900;
+  font-weight: 950;
 }
 
 .footer-item:hover:not(.active) {
@@ -103,7 +106,8 @@
 /* Upward Menu Styles */
 .add-upward-menu {
   position: absolute;
-  bottom: 70px; /* Centered relative to the button */
+  bottom: 70px;
+  /* Centered relative to the button */
   left: 50%;
   transform: translateX(-50%);
   background: white;
@@ -146,8 +150,15 @@
 
 /* Animation */
 @keyframes footerSlideUp {
-  from { opacity: 0; transform: translate(-50%, 20px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 
 .footer-animate-slide-up {
@@ -160,7 +171,7 @@
     min-width: auto;
     width: 98%;
   }
-  
+
   .app-footer {
     padding: 6px 4px;
     gap: 0;
@@ -175,14 +186,15 @@
   }
 
   .footer-label {
-    font-size: 6.2px;
+    font-size: 10px;
     letter-spacing: 0;
+    font-weight: 950;
   }
 
   .footer-item.active .footer-label,
   .footer-item.action-active .footer-label {
     font-size: 7px;
-    font-weight: 900;
+    font-weight: 950;
   }
 
   .footer-icon svg {

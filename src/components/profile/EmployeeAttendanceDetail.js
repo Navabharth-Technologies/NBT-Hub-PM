@@ -157,11 +157,11 @@ export default function EmployeeAttendanceDetail() {
             ...firstPunch,
             punch_date: date,
             in_time: punchInTime,
-            out_time: (dayPunches.length > 1 || (punchOutTime !== '----' && punchOutTime !== '--:--')) ? punchOutTime : '----',
-            in_location: firstPunch?.in_location || firstPunch?.location || '----',
-            out_location: (dayPunches.length > 1 || (punchOutTime !== '----' && punchOutTime !== '--:--')) ? (lastPunch?.out_location || lastPunch?.location || '----') : '----',
+            out_time: dayPunches.length > 1 ? punchOutTime : '----',
+            in_location: firstPunch?.punchin_location || firstPunch?.in_location || firstPunch?.location || '----',
+            out_location: dayPunches.length > 1 ? (lastPunch?.punchout_location || lastPunch?.out_location || lastPunch?.location || '----') : '----',
             status: firstPunch?.status || (punchInTime !== '----' ? 'P' : 'ABSENT'),
-            work_hrs: calculateWorkHours(punchInTime, (dayPunches.length > 1 || (punchOutTime !== '----' && punchOutTime !== '--:--')) ? punchOutTime : null)
+            work_hrs: calculateWorkHours(punchInTime, dayPunches.length > 1 ? punchOutTime : null)
           };
         });
 
@@ -226,11 +226,13 @@ export default function EmployeeAttendanceDetail() {
       log.out_time || '----',
       resolveWorkHrs(log),
       log.status || (log.in_time !== '----' ? 'P' : 'A'),
+      log.in_location || '----',
+      log.out_location || '----'
     ]);
 
     autoTable(doc, {
       startY: 78,
-      head: [['Date', 'Punch In', 'Punch Out', 'Work Hrs', 'Status']],
+      head: [['Date', 'Punch In', 'Punch Out', 'Work Hrs', 'Status', 'In Location', 'Out Location']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: [15, 23, 42], textColor: 255, fontStyle: 'bold', fontSize: 9 },
@@ -254,7 +256,7 @@ export default function EmployeeAttendanceDetail() {
   const handleExportExcel = () => {
     const filteredLogs = getFilteredLogs();
     const empName = employee?.name || 'Employee';
-    const headers = ['Employee Name', 'Employee ID', 'Date', 'Punch In', 'Punch Out', 'Work Hours', 'Status'];
+    const headers = ['Employee Name', 'Employee ID', 'Date', 'Punch In', 'Punch Out', 'Work Hours', 'Status', 'In Location', 'Out Location'];
     const rows = filteredLogs.map(log => [
       empName,
       id,
@@ -263,6 +265,8 @@ export default function EmployeeAttendanceDetail() {
       log.out_time || '----',
       resolveWorkHrs(log),
       log.status || (log.in_time !== '----' ? 'P' : 'A'),
+      log.in_location || '----',
+      log.out_location || '----'
     ]);
 
     const csvContent = [headers, ...rows]
@@ -446,8 +450,11 @@ export default function EmployeeAttendanceDetail() {
                       <div style={{ height: '1px', background: '#f1f5f9', margin: '0 -20px 16px' }}></div>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '11px', fontWeight: '700', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          <MapPin size={12} /> {log.in_location || log.location || '----'}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '11px', fontWeight: '700', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.in_location}>
+                          <MapPin size={12} /> {log.in_location || '----'}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '11px', fontWeight: '700', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.out_location}>
+                          <MapPin size={12} /> {log.out_location || '----'}
                         </div>
                         <div style={{ 
                           display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', 
@@ -516,7 +523,15 @@ export default function EmployeeAttendanceDetail() {
                         </td>
                         <td style={{ padding: '24px 32px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: '800', color: '#475569' }}>
-                            <Calendar size={18} color="#94a3b8" /> {dateStr}
+                            <Calendar size={18} color="#94a3b8" /> 
+                            {(() => {
+                              if (!log.punch_date) return 'N/A';
+                              const dateStr = String(log.punch_date).split('T')[0];
+                              const d = new Date(dateStr);
+                              if (isNaN(d.getTime())) return dateStr;
+                              const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+                              return `${dateStr} (${dayName})`;
+                            })()}
                           </div>
                         </td>
                         <td style={{ padding: '24px 32px' }}>
