@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 
 import { BASE_URL, API_ENDPOINTS } from '../../config';
 
+import logo from '../../assets/logo.png';
+
 export default function AppHeader() {
   const { user, logout } = useAuth();
   const theme = getTheme(user?.role);
@@ -88,7 +90,7 @@ export default function AppHeader() {
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
         >
           <img
-            src={`${process.env.PUBLIC_URL}/image.png`}
+            src={logo}
             alt="Navabharatha"
             style={{
               height: winWidth < 768 ? '65px' : '85px',

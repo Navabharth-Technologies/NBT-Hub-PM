@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThreadProvider } from './context/ThreadContext';
 import PMDashboard from './components/profile/PMDashboard';
@@ -37,6 +37,8 @@ import MyLeaves from './components/profile/MyLeaves';
 
 
 
+import LoginScreen from './components/profile/LoginScreen';
+
 function AppRoutes() {
   const { user, loading } = useAuth();
 
@@ -45,7 +47,7 @@ function AppRoutes() {
   if (!user) {
     return (
       <Routes>
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<LoginScreen />} />
       </Routes>
     );
   }
@@ -91,11 +93,13 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <ThreadProvider>
-        <AppRoutes />
-      </ThreadProvider>
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <ThreadProvider>
+          <AppRoutes />
+        </ThreadProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

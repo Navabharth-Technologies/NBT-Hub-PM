@@ -18,7 +18,7 @@ export default function CourseModule() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -46,9 +46,9 @@ export default function CourseModule() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data)) {
+        if (data && Array.isArray(data)) {
           setActiveCourses(data);
-        } else {
+        } else if (data) {
           setActiveCourses(data.active || []);
           setAtRiskEmployees(data.atRisk || []);
         }
@@ -73,7 +73,7 @@ export default function CourseModule() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!user?.token) return;
-    
+
     setSubmitting(true);
     setError(null);
     setUploadProgress(0);
@@ -157,8 +157,8 @@ export default function CourseModule() {
     return (
       <div className="pm-dashboard-container">
         <AppHeader />
-        <main className="dashboard-content" style={{textAlign: 'center', paddingTop: '150px'}}>
-             <div className="animate-pulse">Loading courses...</div>
+        <main className="dashboard-content" style={{ textAlign: 'center', paddingTop: '150px' }}>
+          <div className="animate-pulse">Loading courses...</div>
         </main>
         <AppFooter />
       </div>
@@ -168,88 +168,99 @@ export default function CourseModule() {
   return (
     <div className="pm-dashboard-container">
       <AppHeader />
-      
-      <main className="dashboard-content" style={{paddingBottom: '100px'}}>
+
+      <main className="dashboard-content" style={{ paddingBottom: '100px' }}>
         <header className="section-header">
-          <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
-            <button 
-              onClick={() => navigate(-1)} 
-              style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                background: 'white',
+                padding: '10px',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+              }}
+              title="Go Back"
             >
               <ArrowLeft size={18} color="#64748b" />
             </button>
             <div>
-              <h1 style={{fontSize: '24px', fontWeight: '800', color: '#1e293b'}}>Course Compliance</h1>
-              <p style={{color: '#64748b'}}>Track and manage professional development certifications </p>
+              <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b' }}>Course Compliance</h1>
+              <p style={{ color: '#64748b' }}>Track and manage professional development certifications </p>
             </div>
           </div>
           <button className="btn-primary" onClick={() => setShowModal(true)}>
-             <Plus size={18} style={{marginRight: '8px'}} /> Add New Course
+            <Plus size={18} style={{ marginRight: '8px' }} /> Add New Course
           </button>
         </header>
 
         <section className="dashboard-section animate-fade-in">
-           <h2 className="section-title"><BookOpen size={20} color="#3863a8" /> Active Courses</h2>
-           {activeCourses.length === 0 ? (
-             <div style={{padding: '40px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '12px', marginTop: '20px'}}>
-                No active courses found. Click "Add New Course" to get started.
-             </div>
-           ) : (
-             <div style={{marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px'}}>
-                {activeCourses.map(c => (
-                  <div key={c.id} className="team-card" style={{padding: '24px', position: 'relative'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '12px'}}>
-                      <span style={{
-                        fontSize: '10px', fontWeight: '800', padding: '4px 10px', borderRadius: '10px', 
-                        background: c.category === 'Policy' ? '#fee2e2' : '#e0e7ff', 
-                        color: c.category === 'Policy' ? '#ef4444' : '#3863a8',
-                        textTransform: 'uppercase'
-                      }}>
-                        {c.category || 'General'}
-                      </span>
-                      <button className="btn-ghost" onClick={() => handleDeleteCourse(c.id)} style={{color: '#94a3b8'}}>
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                    <h3 style={{fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: '#1e293b'}}>{c.title}</h3>
-                    <p className="course-card-description">{c.description || 'No description provided.'}</p>
-                    
-                    <div style={{marginBottom: '12px', fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '5px'}}>
-                      <Calendar size={12} /> Deadline: {c.deadline || 'No deadline'}
-                    </div>
-
-                    <div style={{marginBottom: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '12px'}}>
-                      <span style={{fontWeight: '600', color: '#64748b'}}>Completion Progress</span>
-                      <span style={{fontWeight: '900', color: '#3863a8'}}>
-                        {typeof c.completed === 'number' && typeof c.assigned_to === 'number' ? 
-                          `${Math.round((c.completed / c.assigned_to) * 100)}%` : 
-                          (c.completed && c.assigned_to ? 'In Progress' : '0%')
-                        }
-                      </span>
-                    </div>
-                    <div className="progress-bar-container" style={{height: '10px', borderRadius: '5px'}}>
-                      <div className="progress-bar-fill" style={{
-                        width: typeof c.completed === 'number' && typeof c.assigned_to === 'number' ? `${(c.completed / c.assigned_to) * 100}%` : '0%', 
-                        background: c.category === 'Policy' ? '#ef4444' : 'linear-gradient(90deg, #3863a8, #5c85d6)'
-                      }}></div>
-                    </div>
-                    
-                    <div className="course-action-buttons">
-                       {c.pdf_url && (
-                         <a href={getFullUrl(c.pdf_url)} target="_blank" rel="noopener noreferrer" className="btn-outline" style={{flex: 1, textDecoration: 'none', justifyContent: 'center'}}>
-                           <FileText size={14} /> PDF
-                         </a>
-                       )}
-                       {c.video_url && (
-                         <a href={getFullUrl(c.video_url)} target="_blank" rel="noopener noreferrer" className="btn-outline" style={{flex: 1, textDecoration: 'none', justifyContent: 'center'}}>
-                           <Video size={14} /> Video
-                         </a>
-                       )}
-                    </div>
+          <h2 className="section-title"><BookOpen size={20} color="#3863a8" /> Active Courses</h2>
+          {activeCourses.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '12px', marginTop: '20px' }}>
+              No active courses found. Click "Add New Course" to get started.
+            </div>
+          ) : (
+            <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+              {activeCourses.map(c => (
+                <div key={c.id} className="team-card" style={{ padding: '24px', position: 'relative' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <span style={{
+                      fontSize: '10px', fontWeight: '800', padding: '4px 10px', borderRadius: '10px',
+                      background: c.category === 'Policy' ? '#fee2e2' : '#e0e7ff',
+                      color: c.category === 'Policy' ? '#ef4444' : '#3863a8',
+                      textTransform: 'uppercase'
+                    }}>
+                      {c.category || 'General'}
+                    </span>
+                    <button className="btn-ghost" onClick={() => handleDeleteCourse(c.id)} style={{ color: '#94a3b8' }}>
+                      <Trash2 size={14} />
+                    </button>
                   </div>
-                ))}
-             </div>
-           )}
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '8px', color: '#1e293b' }}>{c.title}</h3>
+                  <p className="course-card-description">{c.description || 'No description provided.'}</p>
+
+                  <div style={{ marginBottom: '12px', fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Calendar size={12} /> Deadline: {c.deadline || 'No deadline'}
+                  </div>
+
+                  <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ fontWeight: '600', color: '#64748b' }}>Completion Progress</span>
+                    <span style={{ fontWeight: '900', color: '#3863a8' }}>
+                      {typeof c.completed === 'number' && typeof c.assigned_to === 'number' ?
+                        `${Math.round((c.completed / c.assigned_to) * 100)}%` :
+                        (c.completed && c.assigned_to ? 'In Progress' : '0%')
+                      }
+                    </span>
+                  </div>
+                  <div className="progress-bar-container" style={{ height: '10px', borderRadius: '5px' }}>
+                    <div className="progress-bar-fill" style={{
+                      width: typeof c.completed === 'number' && typeof c.assigned_to === 'number' ? `${(c.completed / c.assigned_to) * 100}%` : '0%',
+                      background: c.category === 'Policy' ? '#ef4444' : 'linear-gradient(90deg, #3863a8, #5c85d6)'
+                    }}></div>
+                  </div>
+
+                  <div className="course-action-buttons">
+                    {c.pdf_url && (
+                      <a href={getFullUrl(c.pdf_url)} target="_blank" rel="noopener noreferrer" className="btn-outline" style={{ flex: 1, textDecoration: 'none', justifyContent: 'center' }}>
+                        <FileText size={14} /> PDF
+                      </a>
+                    )}
+                    {c.video_url && (
+                      <a href={getFullUrl(c.video_url)} target="_blank" rel="noopener noreferrer" className="btn-outline" style={{ flex: 1, textDecoration: 'none', justifyContent: 'center' }}>
+                        <Video size={14} /> Video
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Modal for adding course */}
@@ -257,13 +268,13 @@ export default function CourseModule() {
           <div className="modal-overlay">
             <div className="modal-content">
               <header className="modal-header">
-                <h2 style={{fontSize: '18px', fontWeight: '800'}}><Plus size={20} /> Create New Course</h2>
+                <h2 style={{ fontSize: '18px', fontWeight: '800' }}><Plus size={20} /> Create New Course</h2>
                 <button className="btn-ghost" onClick={() => setShowModal(false)}><X size={20} /></button>
               </header>
               <form onSubmit={handleSubmit}>
                 <div className="modal-body">
                   {error && (
-                    <div style={{padding: '12px', background: '#fef2f2', color: '#ef4444', borderRadius: '12px', marginBottom: '20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '10px'}}>
+                    <div style={{ padding: '12px', background: '#fef2f2', color: '#ef4444', borderRadius: '12px', marginBottom: '20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <AlertCircle size={16} /> {error}
                     </div>
                   )}
@@ -291,13 +302,13 @@ export default function CourseModule() {
                       <input type="date" name="deadline" value={formData.deadline} onChange={handleInputChange} required />
                     </div>
                   </div>
-                  
-                  <div className="modal-grid" style={{marginTop: '10px'}}>
+
+                  <div className="modal-grid" style={{ marginTop: '10px' }}>
                     <div className="form-group">
                       <label>PDF Material</label>
                       <label className="file-upload-label">
                         <Upload size={18} />
-                        <span style={{flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {files.pdf ? files.pdf.name : 'Choose PDF'}
                         </span>
                         <input type="file" name="pdf" className="file-upload-input" accept=".pdf" onChange={handleFileChange} />
@@ -307,7 +318,7 @@ export default function CourseModule() {
                       <label>Video Tutorial</label>
                       <label className="file-upload-label">
                         <Video size={18} />
-                        <span style={{flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {files.video ? files.video.name : 'Choose Video'}
                         </span>
                         <input type="file" name="video" className="file-upload-input" accept="video/*" onChange={handleFileChange} />
@@ -317,19 +328,19 @@ export default function CourseModule() {
 
                   {submitting && (
                     <div className="upload-progress-container">
-                       <div className="upload-status">
-                         <span>{uploadProgress < 100 ? 'Uploading Course Materials...' : 'Finalizing...'}</span>
-                         <span>{uploadProgress}%</span>
-                       </div>
-                       <div className="upload-progress-bar">
-                         <div className="upload-progress-fill" style={{width: `${uploadProgress}%`}}></div>
-                       </div>
+                      <div className="upload-status">
+                        <span>{uploadProgress < 100 ? 'Uploading Course Materials...' : 'Finalizing...'}</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="upload-progress-bar">
+                        <div className="upload-progress-fill" style={{ width: `${uploadProgress}%` }}></div>
+                      </div>
                     </div>
                   )}
 
                   {uploadProgress === 100 && !submitting && !error && (
-                    <div style={{marginTop: '15px', padding: '10px', background: '#d1fae5', color: '#065f46', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 'bold'}}>
-                       <CheckCircle size={18} /> Upload Complete!
+                    <div style={{ marginTop: '15px', padding: '10px', background: '#d1fae5', color: '#065f46', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 'bold' }}>
+                      <CheckCircle size={18} /> Upload Complete!
                     </div>
                   )}
                 </div>
@@ -344,7 +355,7 @@ export default function CourseModule() {
           </div>
         )}
       </main>
-      
+
       <AppFooter />
 
       {/* Success Popup */}
@@ -370,7 +381,7 @@ export default function CourseModule() {
             <p style={{ color: '#64748b', fontSize: '15px', fontWeight: '600', lineHeight: '1.6', marginBottom: '30px' }}>
               {success}
             </p>
-            <button 
+            <button
               onClick={() => setSuccess(null)}
               style={{
                 width: '100%', padding: '14px', background: '#3863a8', color: 'white',
@@ -389,4 +400,3 @@ export default function CourseModule() {
     </div>
   );
 }
-
