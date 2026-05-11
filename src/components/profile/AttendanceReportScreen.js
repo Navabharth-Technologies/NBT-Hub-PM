@@ -73,7 +73,7 @@ export default function AttendanceReportScreen() {
         setError('Session expired or unauthorized. Please log in again.');
         setTimeout(() => {
           localStorage.removeItem('token');
-          localStorage.removeItem('navAuthUser');
+          localStorage.removeItem('user');
           window.location.href = '/';
         }, 2000);
         setLoading(false);

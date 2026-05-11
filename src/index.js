@@ -19,7 +19,7 @@ window.fetch = async (...args) => {
       } catch (e) { /* Ignore non-JSON errors */ }
 
       localStorage.removeItem('token');
-      localStorage.removeItem('navAuthUser');
+      localStorage.removeItem('user');
       localStorage.removeItem('userRole');
       window.location.href = '/login';
     }

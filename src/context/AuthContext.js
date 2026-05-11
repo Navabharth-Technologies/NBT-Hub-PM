@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
 
   // Restore session from localStorage on app load
   useEffect(() => {
-    const savedUser = localStorage.getItem('navAuthUser');
+    const savedUser = localStorage.getItem('user');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
 
         setUser(authData);
         try {
-          localStorage.setItem('navAuthUser', JSON.stringify(authData));
+          localStorage.setItem('user', JSON.stringify(authData));
           localStorage.setItem('token', data.token);
           localStorage.setItem('userRole', data.user.role);
         } catch (e) {
@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('navAuthUser');
+    localStorage.removeItem('user');
     localStorage.removeItem('token');
     localStorage.removeItem('userRole');
   };
@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }) => {
     setUser(prev => {
       const updated = { ...prev, ...newData };
       try {
-        localStorage.setItem('navAuthUser', JSON.stringify(updated));
+        localStorage.setItem('user', JSON.stringify(updated));
       } catch (e) {
         console.warn('LocalStorage quota exceeded. Changes will not persist after refresh.', e);
       }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThreadProvider } from './context/ThreadContext';
 import PMDashboard from './components/profile/PMDashboard';
@@ -13,7 +13,7 @@ import EngagementModule from './components/profile/EngagementModule';
 import EmployeeModule from './components/profile/EmployeeModule';
 import NewJoineeModule from './components/profile/NewJoineeModule';
 import JoineeCourseModules from './components/profile/JoineeCourseModules';
-import LoginScreen from './components/profile/LoginScreen';
+
 import AlertScreen from './components/profile/AlertScreen';
 import BirthdayScreen from './components/profile/BirthdayScreen';
 import HolidayScreen from './components/profile/HolidayScreen';
@@ -38,12 +38,14 @@ import MyLeaves from './components/profile/MyLeaves';
 
 
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) return null; // Wait for localStorage to be read
 
   if (!user) {
     return (
       <Routes>
-        <Route path="*" element={<LoginScreen />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
   }
@@ -89,13 +91,11 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ThreadProvider>
-          <AppRoutes />
-        </ThreadProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <AuthProvider>
+      <ThreadProvider>
+        <AppRoutes />
+      </ThreadProvider>
+    </AuthProvider>
   );
 }
 
