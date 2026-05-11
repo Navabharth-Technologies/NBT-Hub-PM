@@ -221,7 +221,7 @@ export default function AttendanceManagement() {
       if (logsRes.status === 401) {
         setAttendanceError('Session expired. Please log in again.');
         localStorage.removeItem('token');
-        localStorage.removeItem('navAuthUser');
+        localStorage.removeItem('user');
         window.location.href = '/';
         return;
       }
