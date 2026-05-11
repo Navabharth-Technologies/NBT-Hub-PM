@@ -17,6 +17,7 @@ export default function CourseModule() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -99,7 +100,7 @@ export default function CourseModule() {
         setShowModal(false);
         resetForm();
         fetchCourses();
-        alert('Course created successfully with uploaded files!');
+        setSuccess('Course created successfully with uploaded files!');
       } else {
         try {
           const resp = JSON.parse(xhr.responseText);
@@ -171,7 +172,12 @@ export default function CourseModule() {
       <main className="dashboard-content" style={{paddingBottom: '100px'}}>
         <header className="section-header">
           <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
-
+            <button 
+              onClick={() => navigate(-1)} 
+              style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+            >
+              <ArrowLeft size={18} color="#64748b" />
+            </button>
             <div>
               <h1 style={{fontSize: '24px', fontWeight: '800', color: '#1e293b'}}>Course Compliance</h1>
               <p style={{color: '#64748b'}}>Track and manage professional development certifications </p>
@@ -291,7 +297,7 @@ export default function CourseModule() {
                       <label>PDF Material</label>
                       <label className="file-upload-label">
                         <Upload size={18} />
-                        <span style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                        <span style={{flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
                           {files.pdf ? files.pdf.name : 'Choose PDF'}
                         </span>
                         <input type="file" name="pdf" className="file-upload-input" accept=".pdf" onChange={handleFileChange} />
@@ -301,7 +307,7 @@ export default function CourseModule() {
                       <label>Video Tutorial</label>
                       <label className="file-upload-label">
                         <Video size={18} />
-                        <span style={{overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                        <span style={{flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
                           {files.video ? files.video.name : 'Choose Video'}
                         </span>
                         <input type="file" name="video" className="file-upload-input" accept="video/*" onChange={handleFileChange} />
@@ -340,6 +346,46 @@ export default function CourseModule() {
       </main>
       
       <AppFooter />
+
+      {/* Success Popup */}
+      {success && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
+        }}>
+          <div className="animate-slide-up" style={{
+            background: 'white', padding: '40px', borderRadius: '30px',
+            maxWidth: '400px', width: '90%', textAlign: 'center',
+            border: '3px solid #cbd5e1', boxShadow: '0 20px 50px rgba(0,0,0,0.15)'
+          }}>
+            <div style={{
+              width: '80px', height: '80px', borderRadius: '50%', background: '#dcfce7',
+              color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 24px', fontSize: '40px'
+            }}>
+              ✓
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', marginBottom: '12px' }}>Success!</h2>
+            <p style={{ color: '#64748b', fontSize: '15px', fontWeight: '600', lineHeight: '1.6', marginBottom: '30px' }}>
+              {success}
+            </p>
+            <button 
+              onClick={() => setSuccess(null)}
+              style={{
+                width: '100%', padding: '14px', background: '#3863a8', color: 'white',
+                border: 'none', borderRadius: '15px', fontWeight: '900', cursor: 'pointer',
+                fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => e.currentTarget.style.backgroundColor = '#5c85d6'}
+              onMouseOut={e => e.currentTarget.style.backgroundColor = '#3863a8'}
+            >
+              Great, thanks!
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

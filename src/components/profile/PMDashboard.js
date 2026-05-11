@@ -406,12 +406,12 @@ export default function PMDashboard() {
   return (
     <div className="pm-dashboard-container">
       <AppHeader />
-      <main style={{ 
-        flex: 1, 
-        padding: winWidth < 768 ? '20px 16px 40px' : '40px 26px 40px', 
-        maxWidth: '100%', 
-        margin: '0 auto', 
-        width: '100%', 
+      <main style={{
+        flex: 1,
+        padding: winWidth < 768 ? '20px 16px 40px' : '40px 26px 40px',
+        maxWidth: '100%',
+        margin: '0 auto',
+        width: '100%',
         boxSizing: 'border-box',
         marginTop: winWidth < 768 ? '85px' : '100px'
       }}>
@@ -464,8 +464,8 @@ export default function PMDashboard() {
         </header>
 
         <section style={{ marginBottom: winWidth < 768 ? '32px' : '40px' }}>
-          <div style={{ 
-            display: 'grid', 
+          <div style={{
+            display: 'grid',
             gridTemplateColumns: winWidth < 640 ? 'repeat(2, 1fr)' : winWidth < 1024 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)',
             gap: winWidth < 768 ? '12px' : '20px'
           }}>
@@ -523,7 +523,9 @@ export default function PMDashboard() {
             animationDelay: '0.4s',
             position: 'relative',
             borderRadius: '32px',
-            width: '100%',
+            width: winWidth < 600 ? 320 : '100%',
+            marginLeft: 'auto',
+            marginRight: '20px',
             boxSizing: 'border-box'
           }}>
             <div className="section-header" style={{
@@ -667,7 +669,9 @@ export default function PMDashboard() {
             cursor: 'pointer',
             marginBottom: winWidth < 768 ? '15px' : '0',
             padding: winWidth < 768 ? '12px' : '32px',
-            width: '100%',
+            width: winWidth < 600 ? '92%' : '100%',
+            marginLeft: 'auto',
+            marginRight: 'auto',
             boxSizing: 'border-box'
           }} onClick={() => navigate('/tasks')}>
             <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '10px' : '15px', marginBottom: winWidth < 768 ? '16px' : '25px' }}>
@@ -730,7 +734,9 @@ export default function PMDashboard() {
             cursor: 'pointer',
             borderRadius: winWidth < 768 ? '35px' : '32px',
             padding: winWidth < 768 ? '12px' : '32px',
-            width: '100%',
+            width: winWidth < 600 ? '92%' : '100%',
+            marginLeft: 'auto',
+            marginRight: 'auto',
             boxSizing: 'border-box',
             overflow: 'hidden'
           }} onClick={() => navigate('/attendance')}>
@@ -836,7 +842,7 @@ export default function PMDashboard() {
           </section>
 
           {/* Upcoming Birthdays Section */}
-          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.8s', cursor: 'pointer' }} onClick={() => navigate('/birthdays')}>
+          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.8s', cursor: 'pointer', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }} onClick={() => navigate('/birthdays')}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 className="section-title">🎂 Upcoming Birthdays</h2>
               <button className="btn-ghost" style={{ fontSize: '12px', background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer' }}>View All</button>
@@ -874,7 +880,7 @@ export default function PMDashboard() {
 
 
           {/* List of Holidays Section */}
-          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '1.0s', cursor: 'pointer' }} onClick={() => navigate('/holidays')}>
+          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '1.0s', cursor: 'pointer', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }} onClick={() => navigate('/holidays')}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 className="section-title">🏖️ List of Holidays</h2>
               <button className="btn-ghost" style={{ fontSize: '12px', background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer' }}>View All</button>

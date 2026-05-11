@@ -224,7 +224,9 @@ export default function LeaveManagement() {
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                           <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#f8fafc', border: '1.5px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}><User size={20} /></div>
                           <div>
-                            <div style={{ fontSize: '16px', fontWeight: '950', color: '#1e293b' }}>{req.employee_name || req.name || 'Unknown'}</div>
+                            <div style={{ fontSize: '16px', fontWeight: '950', color: '#1e293b' }}>
+                              {req.employee_name || req.name || allEmployees.find(e => String(e.id) === String(req.user_id || req.employee_id))?.name || 'Unknown'}
+                            </div>
                             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                                 <span style={{ fontSize: '10px', fontWeight: '900', color: '#1d4ed8', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px' }}>#{req.user_id || req.id}</span>
                                 <span style={{ fontSize: '10px', fontWeight: '900', color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>{req.leave_type || 'Leave'}</span>

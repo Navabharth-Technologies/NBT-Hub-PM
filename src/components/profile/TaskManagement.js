@@ -23,6 +23,7 @@ export default function TaskManagement() {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [reviewTask, setReviewTask] = useState(null);
   const [reviewText, setReviewText] = useState('');
+  const [success, setSuccess] = useState(null);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [selectedAssignee, setSelectedAssignee] = useState(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -723,7 +724,46 @@ export default function TaskManagement() {
       </main>
 
       <AppFooter />
-      
+
+      {/* Success Popup */}
+      {success && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
+        }}>
+          <div className="animate-slide-up" style={{
+            background: 'white', padding: '40px', borderRadius: '30px',
+            maxWidth: '400px', width: '90%', textAlign: 'center',
+            border: '3px solid #cbd5e1', boxShadow: '0 20px 50px rgba(0,0,0,0.15)'
+          }}>
+            <div style={{
+              width: '80px', height: '80px', borderRadius: '50%', background: '#dcfce7',
+              color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 24px', fontSize: '40px'
+            }}>
+              ✓
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', marginBottom: '12px' }}>Success!</h2>
+            <p style={{ color: '#64748b', fontSize: '15px', fontWeight: '600', lineHeight: '1.6', marginBottom: '30px' }}>
+              {success}
+            </p>
+            <button 
+              onClick={() => setSuccess(null)}
+              style={{
+                width: '100%', padding: '14px', background: '#3863a8', color: 'white',
+                border: 'none', borderRadius: '15px', fontWeight: '900', cursor: 'pointer',
+                fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => e.currentTarget.style.backgroundColor = '#5c85d6'}
+              onMouseOut={e => e.currentTarget.style.backgroundColor = '#3863a8'}
+            >
+              Great, thanks!
+            </button>
+          </div>
+        </div>
+      )}
       {/* REVIEW MODAL */}
       {reviewTask && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -784,6 +824,7 @@ export default function TaskManagement() {
                     
                     if (response.ok) {
                       setTasks(tasks.map(t => t.id === reviewTask.id ? { ...t, has_review: true, task_review: reviewText, review: reviewText } : t));
+                      setSuccess('Review submitted successfully! 🚀');
                       setReviewTask(null);
                       setReviewText('');
                     } else if (response.status === 405 || response.status === 404) {
@@ -794,6 +835,7 @@ export default function TaskManagement() {
                        });
                        if (postResponse.ok) {
                           setTasks(tasks.map(t => t.id === reviewTask.id ? { ...t, has_review: true, task_review: reviewText, review: reviewText } : t));
+                          setSuccess('Review submitted successfully! 🚀');
                           setReviewTask(null);
                           setReviewText('');
                        }

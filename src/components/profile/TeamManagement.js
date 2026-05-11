@@ -34,6 +34,7 @@ export default function TeamManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -228,7 +229,7 @@ export default function TeamManagement() {
 
       if (response.ok) {
         setIsEditingAlignment(false);
-        alert('Hierarchy Synced! Both Users and Individual Team tables updated successfully. 🚀');
+        setSuccess('Hierarchy Synced! Both Users and Individual Team tables updated successfully. 🚀');
       } else {
         const errorText = await response.text();
         console.error('Realignment Sync Error:', errorText);
@@ -629,6 +630,46 @@ export default function TeamManagement() {
 
       <AppFooter />
 
+      {/* Success Popup */}
+      {success && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
+        }}>
+          <div className="animate-slide-up" style={{
+            background: 'white', padding: '40px', borderRadius: '30px',
+            maxWidth: '400px', width: '90%', textAlign: 'center',
+            border: '3px solid #cbd5e1', boxShadow: '0 20px 50px rgba(0,0,0,0.15)'
+          }}>
+            <div style={{
+              width: '80px', height: '80px', borderRadius: '50%', background: '#dcfce7',
+              color: '#166534', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 24px', fontSize: '40px'
+            }}>
+              ✓
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', marginBottom: '12px' }}>Success!</h2>
+            <p style={{ color: '#64748b', fontSize: '15px', fontWeight: '600', lineHeight: '1.6', marginBottom: '30px' }}>
+              {success}
+            </p>
+            <button 
+              onClick={() => setSuccess(null)}
+              style={{
+                width: '100%', padding: '14px', background: '#3863a8', color: 'white',
+                border: 'none', borderRadius: '15px', fontWeight: '900', cursor: 'pointer',
+                fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => e.currentTarget.style.backgroundColor = '#5c85d6'}
+              onMouseOut={e => e.currentTarget.style.backgroundColor = '#3863a8'}
+            >
+              Great, thanks!
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* CREATE TEAM MODAL */}
       {showCreateModal && (
         <div style={{
@@ -721,7 +762,7 @@ export default function TeamManagement() {
                 style={{ flex: 1, padding: '12px', borderRadius: '50px', border: '1.5px solid #eef2f6', background: 'white', color: '#64748b', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
               >Cancel</button>
               <button 
-                onClick={() => { alert('Unit Established! ✅'); setShowCreateModal(false); }}
+                onClick={() => { setSuccess('Unit Established! ✅'); setShowCreateModal(false); }}
                 style={{ flex: 2, padding: '12px', borderRadius: '50px', border: 'none', background: '#3863a8', color: 'white', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: '0 8px 12px rgba(56,99,168,0.2)' }}
               >Confirm Unit</button>
             </div>

@@ -997,6 +997,8 @@ body {
   font-size: 14px;
   color: #475569;
   font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .file-upload-label:hover {

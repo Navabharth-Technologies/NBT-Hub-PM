@@ -899,7 +899,7 @@ export default function AttendanceManagement() {
                             onClick={() => navigate(`/attendance/detail/${emp.id}`)}
                             style={{ flex: 1, cursor: 'pointer' }}
                           >
-                            <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{emp.name || emp.user_name || 'Unknown User'}</div>
+                            <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{emp.name || emp.user_name || 'Unknown'}</div>
                             <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>#{emp.id} • {emp.role || 'Employee'}</div>
                           </div>
                           <button
@@ -1073,7 +1073,7 @@ export default function AttendanceManagement() {
                                 {String(emp?.name || emp?.user_name || 'U').charAt(0).toUpperCase()}
                               </div>
                               <span style={{ borderBottom: '1px solid transparent' }} onMouseOver={e => e.currentTarget.style.borderBottom = '1px solid #1e293b'} onMouseOut={e => e.currentTarget.style.borderBottom = '1px solid transparent'}>
-                                {emp?.name || emp?.user_name}
+                                {emp?.name || emp?.user_name || 'Unknown'}
                               </span>
                             </div>
                           </td>
@@ -1199,7 +1199,7 @@ export default function AttendanceManagement() {
                                 {String(emp?.name || log?.user_name || 'U').charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{emp?.name || log?.user_name || 'Unknown Employee'}</div>
+                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{emp?.name || log?.user_name || 'Unknown'}</div>
                                 <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>ID: #{empId} {logDate ? `· ${logDate}` : ''}</div>
                               </div>
                             </div>
@@ -1288,7 +1288,7 @@ export default function AttendanceManagement() {
                                 {String(emp?.name || log?.user_name || 'U').charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{emp?.name || log?.user_name || 'Unknown Employee'}</div>
+                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{emp?.name || log?.user_name || 'Unknown'}</div>
                                 <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>ID: #{empId} {logDate ? `· ${logDate}` : ''}</div>
                               </div>
                             </div>
@@ -1364,7 +1364,7 @@ export default function AttendanceManagement() {
                                 {String(emp?.name || log?.user_name || 'U').charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{emp?.name || log?.user_name || 'Unknown Employee'}</div>
+                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{emp?.name || log?.user_name || 'Unknown'}</div>
                                 <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>ID: #{empId} {logDate ? `· ${logDate}` : ''}</div>
                               </div>
                             </div>
