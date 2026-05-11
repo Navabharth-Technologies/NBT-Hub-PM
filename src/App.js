@@ -38,7 +38,9 @@ import MyLeaves from './components/profile/MyLeaves';
 
 
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) return null; // Wait for localStorage to be read
 
   if (!user) {
     return (
