@@ -406,19 +406,27 @@ export default function PMDashboard() {
   return (
     <div className="pm-dashboard-container">
       <AppHeader />
-
-      <main className="dashboard-content">
+      <main style={{ 
+        flex: 1, 
+        padding: winWidth < 768 ? '20px 16px 40px' : '40px 26px 40px', 
+        maxWidth: '100%', 
+        margin: '0 auto', 
+        width: '100%', 
+        boxSizing: 'border-box',
+        marginTop: winWidth < 768 ? '85px' : '100px'
+      }}>
         <header className="section-header" style={{
-          marginBottom: winWidth < 768 ? '12px' : '15px',
-          gap: winWidth < 768 ? '15px' : '0',
-          width: '100%',
-          margin: winWidth < 768 ? '0 0 10px' : '0 0 15px',
-          boxSizing: 'border-box'
+          marginBottom: winWidth < 768 ? '24px' : '32px',
+          display: 'flex',
+          flexDirection: winWidth < 1024 ? 'column' : 'row',
+          justifyContent: 'space-between',
+          alignItems: winWidth < 1024 ? 'stretch' : 'center',
+          gap: '20px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div>
-              <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '800', color: '#1e293b', marginBottom: '5px', letterSpacing: '0px' }}>Project Manager Dashboard</h1>
-              <p style={{ color: '#64748b', fontSize: winWidth < 768 ? '12px' : '14px', fontWeight: '500' }}>Strength and scale • {teams.length} Active Teams</p>
+              <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '950', color: '#0f172a', margin: '0', letterSpacing: '-1px' }}>Dashboard</h1>
+              <p style={{ color: '#64748b', fontSize: winWidth < 768 ? '12px' : '14px', fontWeight: '700', margin: '4px 0 0 0' }}>Strength and scale • {teams.length} Active Teams</p>
             </div>
           </div>
 
@@ -455,121 +463,57 @@ export default function PMDashboard() {
           </div>
         </header>
 
-        <section className="metrics-grid-container" style={{ position: 'relative', marginBottom: winWidth < 768 ? '20px' : '40px' }}>
-          {winWidth < 768 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '0 5px' }}>
-              <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quick Insights</span>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={() => setCurrentMetricIndex(prev => Math.max(0, prev - 1))}
-                  disabled={currentMetricIndex === 0}
-                  style={{
-                    width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #e2e8f0',
-                    background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', opacity: currentMetricIndex === 0 ? 0.3 : 1
-                  }}
-                >
-                  ←
-                </button>
-                <button
-                  onClick={() => setCurrentMetricIndex(prev => Math.min(dynamicMetrics.length - 1, prev + 1))}
-                  disabled={currentMetricIndex === dynamicMetrics.length - 1}
-                  style={{
-                    width: '32px', height: '32px', borderRadius: '50%', border: '1px solid #e2e8f0',
-                    background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', opacity: currentMetricIndex === dynamicMetrics.length - 1 ? 0.3 : 1
-                  }}
-                >
-                  →
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div style={{
-            display: winWidth < 768 ? 'flex' : 'grid',
-            gridTemplateColumns: winWidth < 768 ? 'none' : 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: winWidth < 768 ? '0' : '20px',
-            overflow: winWidth < 768 ? 'hidden' : 'visible',
-            width: '100%',
-            margin: '0',
-            boxSizing: 'border-box'
+        <section style={{ marginBottom: winWidth < 768 ? '32px' : '40px' }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: winWidth < 640 ? 'repeat(2, 1fr)' : winWidth < 1024 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)',
+            gap: winWidth < 768 ? '12px' : '20px'
           }}>
-            {winWidth < 768 ? (
-              <div style={{
-                display: 'flex',
-                gap: '15px',
-                transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                transform: `translateX(calc(-${currentMetricIndex} * (100% + 15px)))`,
-                width: '100%',
-                touchAction: 'pan-y'
-              }}>
-                {dynamicMetrics.map((m, i) => (
-                  <div
-                    key={i}
-                    className="metric-card animate-fade-in"
-                    style={{
-                      flex: '0 0 100%',
-                      boxSizing: 'border-box',
-                      cursor: m.path ? 'pointer' : 'default',
-                      margin: '0',
-                      padding: winWidth < 768 ? '16px' : '24px',
-                      borderRadius: '24px',
-                      background: 'white',
-                      border: winWidth < 768 ? '1px solid #cbd5e1' : '3px solid #cbd5e1',
-                      boxShadow: '0 8px 30px rgba(0,0,0,0.04)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '12px',
-                      minHeight: '150px'
-                    }}
-                    onClick={() => m.path && navigate(m.path)}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div className="icon-wrapper" style={{
-                        background: `${m.color}15`, color: m.color, width: '48px', height: '48px',
-                        borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px'
-                      }}>
-                        {m.icon}
-                      </div>
-                      <span style={{
-                        fontSize: '10px', fontWeight: '800', color: m.trendUp ? '#10b981' : '#f59e0b',
-                        backgroundColor: m.trendUp ? '#ecfdf5' : '#fffbeb', padding: '4px 10px', borderRadius: '8px'
-                      }}>{m.trend}</span>
-                    </div>
-                    <div>
-                      <div className="label" style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.label}</div>
-                      <div className="value" style={{
-                        fontSize: (typeof m.value === 'string' && isNaN(m.value)) ? '24px' : '32px',
-                        fontWeight: '950',
-                        color: '#1e293b',
-                        lineHeight: 1,
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}>{m.value}</div>
-                      {m.subText && (
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#ec4899', marginTop: '4px' }}>{m.subText}</div>
-                      )}
-                    </div>
+            {dynamicMetrics.map((m, i) => (
+              <div
+                key={i}
+                className="metric-card animate-fade-in"
+                style={{
+                  cursor: m.path ? 'pointer' : 'default',
+                  padding: winWidth < 768 ? '16px' : '24px',
+                  borderRadius: '24px',
+                  background: 'white',
+                  border: '1.5px solid #f1f5f9',
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  transition: '0.2s transform, 0.2s box-shadow'
+                }}
+                onClick={() => m.path && navigate(m.path)}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.02)';
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{
+                    background: `${m.color}15`, color: m.color, width: winWidth < 768 ? '36px' : '48px', height: winWidth < 768 ? '36px' : '48px',
+                    borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '18px' : '24px'
+                  }}>
+                    {m.icon}
                   </div>
-                ))}
-              </div>
-            ) : (
-              dynamicMetrics.map((m, i) => (
-                <div key={i} className="metric-card animate-fade-in" style={{ animationDelay: `${i * 0.1}s`, cursor: m.path ? 'pointer' : 'default' }} onClick={() => m.path && navigate(m.path)}>
-                  <div className="icon-wrapper" style={{ background: `${m.color}20`, color: m.color }}>{m.icon}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <span className="label" style={{ fontSize: '14px' }}>{m.label}</span>
-                    <span style={{ fontSize: '10px', fontWeight: '800', color: m.trendUp ? '#10b981' : '#f59e0b', backgroundColor: m.trendUp ? '#d1fae5' : '#fef3c7', padding: '2px 6px', borderRadius: '4px' }}>{m.trend}</span>
-                  </div>
-                  <span className="value" style={{ fontSize: (typeof m.value === 'string' && isNaN(m.value)) ? '26px' : '38px' }}>{m.value}</span>
-                  {m.subText && (
-                    <div style={{ fontSize: '12px', fontWeight: '800', color: '#ec4899', marginTop: '2px' }}>{m.subText}</div>
-                  )}
                 </div>
-              ))
-            )}
+                <div>
+                  <div style={{ fontSize: winWidth < 768 ? '11px' : '13px', color: '#64748b', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{m.label}</div>
+                  <div style={{
+                    fontSize: winWidth < 768 ? '20px' : '28px',
+                    fontWeight: '950',
+                    color: '#0f172a',
+                    lineHeight: 1
+                  }}>{m.value}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 

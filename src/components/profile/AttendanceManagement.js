@@ -28,7 +28,7 @@ export default function AttendanceManagement() {
   const [isLocating, setIsLocating] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const dropdownRef = useRef(null);
-  const [fromDate, setFromDate] = useState(new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]);
+  const [fromDate, setFromDate] = useState('2026-01-01');
   const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0]);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
 
@@ -232,22 +232,11 @@ export default function AttendanceManagement() {
         const validLogs = masterLogs.filter(l => l !== null);
         setAttendanceLogs(validLogs);
 
-        const currentUserId = String(user?.id || '').trim();
-        const currentEmpId = String(user?.employee_id || user?.emp_id || user?.id || '20251').trim();
-        const currentEmail = (user?.email || '').toLowerCase();
-
         const todayStr = new Date().toISOString().split('T')[0];
         const myTodayLogs = validLogs.filter(log => {
           const logDate = (log?.punch_date || log?.PunchDate || log?.date || log?.created_at || '').split('T')[0];
           const isToday = logDate === todayStr;
-          
-          const lUserId = String(log?.user_id || '').trim();
-          const lEmpId = String(log?.employee_id || log?.Empcode || log?.EmpID || '').trim();
-          const lEmail = (log?.email || '').toLowerCase();
-
-          const isMe = (lUserId && lUserId === currentUserId) || 
-                       (lEmpId && (lEmpId === currentEmpId || lEmpId === currentUserId)) ||
-                       (lEmail && currentEmail && lEmail === currentEmail);
+          const isMe = String(log?.user_id) === String(user?.id) || String(log?.Empcode) === String(user?.id) || String(log?.EmpID) === String(user?.id) || log?.email === user?.email;
           return isToday && isMe;
         }).sort((a, b) => new Date(a?.created_at || a?.punch_time) - new Date(b?.created_at || b?.punch_time));
 
@@ -572,9 +561,9 @@ export default function AttendanceManagement() {
   const displayedEmployees = allEmployees.filter(emp => {
     const s = searchTerm.toLowerCase();
     return (emp.name || emp.user_name || '').toLowerCase().includes(s) ||
-           String(emp.id).toLowerCase().includes(s) ||
-           (emp.role || '').toLowerCase().includes(s) ||
-           (emp.department || '').toLowerCase().includes(s);
+      String(emp.id).toLowerCase().includes(s) ||
+      (emp.role || '').toLowerCase().includes(s) ||
+      (emp.department || '').toLowerCase().includes(s);
   });
 
   return (
@@ -886,9 +875,17 @@ export default function AttendanceManagement() {
                       return empId && logUserId && logUserId === empId && logDate === todayStr;
                     });
 
+                    const isMultiLog = (attendanceLogs || []).filter(l => {
+                      if (!l) return false;
+                      const logUserId = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+                      const empId = String(emp?.id || '').trim();
+                      const logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0];
+                      return empId && logUserId && (logUserId === empId) && (logDate === todayStr);
+                    }).length > 1;
+
                     const punchIn = log?.in_time || log?.INTime || log?.PunchIn || log?.punch_time || '----';
-                    const punchOut = log?.out_time || log?.OUTTime || log?.PunchOut || (log?.in_time || log?.INTime ? '----' : log?.punch_time) || '----';
-                    const workHrs = log?.work_time || log?.work_hrs || log?.WorkTime || '00:00';
+                    const punchOut = isMultiLog ? (log?.out_time || log?.OUTTime || log?.PunchOut || '----') : '----';
+                    const workHrs = isMultiLog ? (log?.work_time || log?.work_hrs || log?.WorkTime || '00:00') : '00:00';
                     const pDate = log?.punch_date || log?.date || log?.created_at;
 
                     return (
@@ -897,7 +894,7 @@ export default function AttendanceManagement() {
                           <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '950' }}>
                             {String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}
                           </div>
-                          <div 
+                          <div
                             onClick={() => navigate(`/attendance/detail/${emp.id}`)}
                             style={{ flex: 1, cursor: 'pointer' }}
                           >
@@ -1007,28 +1004,66 @@ export default function AttendanceManagement() {
                       const logsForEmp = (attendanceLogs || [])
                         .filter(l => {
                           if (!l) return false;
-                          const logUserId = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+                          const logId = String(l?.user_id || l?.Empcode || l?.EmpID || l?.userId || l?.UserId || '').trim();
                           const empId = String(emp?.id || '').trim();
                           const logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0];
-                          return empId && logUserId && (logUserId === empId) && (logDate >= fromDate && logDate <= toDate);
+                          return empId && logId && (logId === empId) && (logDate >= fromDate && logDate <= toDate);
                         })
                         .sort((a, b) => new Date(a?.created_at || a?.punch_time) - new Date(b?.created_at || b?.punch_time));
 
-                      const firstLog = logsForEmp[0];
-                      const lastLog = logsForEmp.length > 1 ? logsForEmp[logsForEmp.length - 1] : null;
+                      // 1. Group logs by date to prevent cross-day data leaking
+                      const groupedByDate = (logsForEmp || []).reduce((acc, log) => {
+                        const d = (log.punch_date || log.date || log.created_at || '').split('T')[0];
+                        if (d) {
+                          if (!acc[d]) acc[d] = [];
+                          acc[d].push(log);
+                        }
+                        return acc;
+                      }, {});
+
+                      // 2. Get the latest date available in the range for this employee
+                      const dates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+                      const latestDate = dates[0];
+                      const latestDayLogs = groupedByDate[latestDate] || [];
+
+                      // 3. Sort logs within THAT day only
+                      const sortedDayLogs = latestDayLogs.sort((a, b) => new Date(a.created_at || a.punch_time) - new Date(b.created_at || b.punch_time));
+
+                      const firstLog = sortedDayLogs[0];
+                      const lastLog = sortedDayLogs.length > 1 ? sortedDayLogs[sortedDayLogs.length - 1] : null;
 
                       const log = firstLog ? {
                         ...firstLog,
-                        in_time: firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time,
-                        out_time: lastLog ? (lastLog?.out_time || lastLog?.OUTTime || lastLog?.PunchOut || lastLog?.punch_time) : '----',
-                        in_location: firstLog?.punchin_location || firstLog?.in_location || firstLog?.PunchIn_location || firstLog?.location,
-                        out_location: lastLog ? (lastLog?.punchout_location || lastLog?.out_location || lastLog?.PunchOut_location || lastLog?.location) : '----',
-                        work_time: lastLog ? (lastLog?.work_time || firstLog?.work_time || '00:00') : '00:00'
+                        punch_date: latestDate,
+                        in_time: firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time || '----',
+                        out_time: (latestDate === todayStr && sortedDayLogs.length === 1) ? '----' : (lastLog?.out_time || lastLog?.OUTTime || lastLog?.PunchOut || '----'),
+                        in_location: firstLog?.punchin_location || firstLog?.in_location || '----',
+                        out_location: (latestDate === todayStr && sortedDayLogs.length === 1) ? '----' : (lastLog?.punchout_location || lastLog?.out_location || '----'),
+                        work_hrs: (latestDate === todayStr && sortedDayLogs.length === 1) ? '00:00' : (lastLog?.work_hrs || firstLog?.work_hrs || '00:00')
                       } : null;
+
+                      const getCleanAttendance = (record) => {
+                        if (!record) return { displayInTime: '----', displayOutTime: '----', displayWorkTime: '00:00' };
+                        const today = new Date().toLocaleDateString('en-CA');
+                        const rawDate = record?.punch_date || record?.date || record?.created_at || '';
+                        const recordDate = rawDate ? String(rawDate).split('T')[0].split(' ')[0] : '';
+                        const isToday = recordDate === today;
+                        const isMissing = (t) => !t || t === '--:--' || t === '00:00' || t === 'null' || t === '----';
+                        const rawIn = record?.in_time || record?.INTime;
+                        const rawOut = record?.out_time || record?.OUTTime || record?.PunchOut;
+                        const rawWork = record?.work_time || record?.work_hrs;
+                        return {
+                          displayInTime: isMissing(rawIn) ? '----' : rawIn,
+                          displayOutTime: (isToday && logsForEmp.length < 2) || isMissing(rawOut) ? '----' : rawOut,
+                          displayWorkTime: (isToday && logsForEmp.length < 2) || isMissing(rawWork) ? '00:00' : rawWork
+                        };
+                      };
+                      const cleanLog = getCleanAttendance(log);
+
 
                       return (
                         <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'white' : '#f8fafc' }}>
-                          <td 
+                          <td
                             onClick={() => navigate(`/attendance/detail/${emp.id}`)}
                             style={{ padding: '20px', fontWeight: '800', color: '#1e293b', cursor: 'pointer' }}
                           >
@@ -1053,13 +1088,13 @@ export default function AttendanceManagement() {
                             })()}
                           </td>
                           <td style={{ padding: '20px', fontWeight: '900', color: '#1e293b' }}>
-                            {log?.in_time || log?.INTime || log?.PunchIn || '----'}
+                            {cleanLog.displayInTime}
                           </td>
                           <td style={{ padding: '20px', fontWeight: '900', color: '#1e293b' }}>
-                            {log?.out_time || log?.OUTTime || log?.PunchOut || '----'}
+                            {cleanLog.displayOutTime}
                           </td>
                           <td style={{ padding: '20px', fontWeight: '800', color: '#6366f1' }}>
-                            {log?.work_time || log?.work_hrs || '00:00'}
+                            {cleanLog.displayWorkTime}
                           </td>
                           <td style={{ padding: '20px' }}>
                             <div style={{

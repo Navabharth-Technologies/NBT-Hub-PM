@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Shield, Key, Lock, CheckCircle } from 'lucide-react';
 import { API_ENDPOINTS } from '../../config';
+import { useAuth } from '../../context/AuthContext';
 
 export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
+  const { logout } = useAuth();
   const [resetMode, setResetMode] = useState(false);
   const [passwords, setPasswords] = useState({
     currentPassword: '',
@@ -11,6 +13,7 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
     newPassword: '',
     confirmPassword: ''
   });
+  const [logoutAllDevices, setLogoutAllDevices] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -35,6 +38,10 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
       setError('Please enter and confirm your new password');
       return;
     }
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setError('New passwords do not match');
       return;
@@ -44,8 +51,8 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
     try {
       const endpoint = resetMode ? API_ENDPOINTS.PASSWORD_RESET : API_ENDPOINTS.PASSWORD_CHANGE;
       const body = resetMode 
-        ? { email: userEmail, otp, newPassword }
-        : { email: userEmail, oldPassword: currentPassword, newPassword };
+        ? { email: userEmail, otp, newPassword, logoutAllDevices }
+        : { email: userEmail, oldPassword: currentPassword, newPassword, logoutAllDevices };
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -60,10 +67,15 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
       if (response.ok) {
         setSuccess(true);
         setTimeout(() => {
-          onClose();
-          setSuccess(false);
-          setResetMode(false);
-          setPasswords({ currentPassword: '', otp: '', newPassword: '', confirmPassword: '' });
+          if (logoutAllDevices && !resetMode) {
+            logout();
+            window.location.href = '/login';
+          } else {
+            onClose();
+            setSuccess(false);
+            setResetMode(false);
+            setPasswords({ currentPassword: '', otp: '', newPassword: '', confirmPassword: '' });
+          }
         }, 2000);
       } else {
         setError(data.error || data.message || 'Failed to process request');
@@ -196,6 +208,19 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
                   onChange={handleChange}
                   style={{ width: '100%', padding: '16px 20px', borderRadius: '18px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontSize: '15px', fontWeight: '600', color: '#0B1E3F', outline: 'none', boxSizing: 'border-box' }}
                 />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
+                <input 
+                  type="checkbox" 
+                  id="logoutAllDevices" 
+                  checked={logoutAllDevices}
+                  onChange={(e) => setLogoutAllDevices(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#315A9E' }}
+                />
+                <label htmlFor="logoutAllDevices" style={{ fontSize: '13px', fontWeight: '700', color: '#475569', cursor: 'pointer' }}>
+                  Logout from all other devices
+                </label>
               </div>
 
               {error && (

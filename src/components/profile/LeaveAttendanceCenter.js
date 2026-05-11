@@ -305,13 +305,20 @@ export default function AttendanceManagement() {
                     const firstLog = logsForEmp[0];
                     const lastLog = logsForEmp.length > 1 ? logsForEmp[logsForEmp.length - 1] : null;
 
+                    const formatPunchTime = (time) => {
+                      if (!time || time === '--:--' || time === '00:00' || time === 'null') {
+                        return '----';
+                      }
+                      return time;
+                    };
+
                     const log = firstLog ? {
                       ...firstLog,
-                      in_time: firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time,
-                      out_time: lastLog ? (lastLog?.out_time || lastLog?.OUTTime || lastLog?.PunchOut || lastLog?.punch_time) : '----',
+                      in_time: formatPunchTime(firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time),
+                      out_time: formatPunchTime(lastLog ? (lastLog?.out_time || lastLog?.OUTTime || lastLog?.PunchOut || lastLog?.punch_time) : null),
                       in_location: firstLog?.punchin_location || firstLog?.in_location || firstLog?.PunchIn_location || firstLog?.location,
                       out_location: lastLog ? (lastLog?.punchout_location || lastLog?.out_location || lastLog?.PunchOut_location || lastLog?.location) : '----',
-                      work_time: lastLog ? (lastLog?.work_time || firstLog?.work_time || '00:00') : '00:00'
+                      work_time: formatPunchTime(lastLog ? (lastLog?.work_time || firstLog?.work_time) : null)
                     } : null;
                     return (
                       <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>

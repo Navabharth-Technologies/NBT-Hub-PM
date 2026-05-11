@@ -376,6 +376,27 @@ export default function AttendanceReportScreen() {
                  ) : filteredLogs.length > 0 ? (
                    filteredLogs.map((log, idx) => {
                      const badge = getStatusBadge(log.status);
+                     const getCleanAttendance = (record) => {
+                        const today = new Date().toLocaleDateString('en-CA');
+                        const rawDate = record?.punch_date || record?.date || record?.created_at || '';
+                        const recordDate = rawDate ? String(rawDate).split('T')[0].split(' ')[0] : 'N/A';
+                        
+                        // If it's today's record, be extra strict about clearing placeholders
+                        const isToday = recordDate === today;
+                        const rawIn = record?.in_time || record?.INTime;
+                        const rawOut = record?.out_time || record?.OUTTime;
+                        const rawWork = record?.work_time || record?.work_hrs || record?.WorkTime;
+                        
+                        const isMissing = (time) => !time || time === '--:--' || time === '00:00' || time === 'null';
+                        
+                        return {
+                          ...record,
+                          displayInTime: isMissing(rawIn) ? '----' : rawIn,
+                          displayOutTime: (isToday || isMissing(rawOut)) ? '----' : rawOut,
+                          displayWorkTime: (isToday || isMissing(rawWork)) ? '00:00' : rawWork
+                        };
+                     };
+                     const cleanLog = getCleanAttendance(log);
                      return (
                        <tr key={idx} style={{ borderBottom: '1.5px solid #f8fafc', transition: '0.2s', cursor: 'pointer' }} onClick={() => navigate(`/attendance/detail/${log.user_id || log.Empcode}`)}>
                           <td style={{ padding: '20px 30px' }}>
@@ -407,10 +428,10 @@ export default function AttendanceReportScreen() {
                           <td style={{ padding: '20px 30px' }}>
                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '900', color: '#3b82f6' }}>
-                                   <LogIn size={13} /> {log.in_time || '----'}
+                                   <LogIn size={13} /> {cleanLog.displayInTime}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '900', color: '#64748b' }}>
-                                   <LogOut size={13} /> {log.out_time || '----'}
+                                   <LogOut size={13} /> {cleanLog.displayOutTime}
                                 </div>
                              </div>
                           </td>
@@ -418,7 +439,7 @@ export default function AttendanceReportScreen() {
                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <BarChart3 size={16} color="#94a3b8" />
                                 <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a' }}>
-                                   {log.work_time || '00:00'} <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '800' }}>HRS</span>
+                                   {cleanLog.displayWorkTime} <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '800' }}>HRS</span>
                                  </div>
                              </div>
                           </td>
