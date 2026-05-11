@@ -204,6 +204,7 @@ export default function AttendanceManagement() {
 
   const fetchAttendance = async () => {
     try {
+      const todayStr = new Date().toISOString().split('T')[0];
       setAttendanceLoading(true);
       const queryParams = new URLSearchParams({ startDate: fromDate, endDate: toDate });
       if (user?.department) queryParams.append('team', user.department);

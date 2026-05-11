@@ -1,7 +1,13 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { BASE_URL, API_ENDPOINTS } from '../config';
 
-const AuthContext = createContext();
+export const AuthContext = (typeof window !== 'undefined' && window.__NBT_AUTH_CONTEXT__)
+  ? window.__NBT_AUTH_CONTEXT__
+  : createContext();
+
+if (typeof window !== 'undefined' && !window.__NBT_AUTH_CONTEXT__) {
+  window.__NBT_AUTH_CONTEXT__ = AuthContext;
+}
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
