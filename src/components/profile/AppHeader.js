@@ -88,7 +88,7 @@ export default function AppHeader() {
           style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
         >
            <img 
-             src="/assets/logo.png" 
+             src={`${process.env.PUBLIC_URL}/image.png`}
              alt="Navabharatha" 
              style={{ 
                height: winWidth < 768 ? '55px' : '75px', 
