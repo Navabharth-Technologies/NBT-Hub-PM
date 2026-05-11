@@ -13,7 +13,7 @@ import EngagementModule from './components/profile/EngagementModule';
 import EmployeeModule from './components/profile/EmployeeModule';
 import NewJoineeModule from './components/profile/NewJoineeModule';
 import JoineeCourseModules from './components/profile/JoineeCourseModules';
-import LoginScreen from './components/profile/LoginScreen';
+
 import AlertScreen from './components/profile/AlertScreen';
 import BirthdayScreen from './components/profile/BirthdayScreen';
 import HolidayScreen from './components/profile/HolidayScreen';
@@ -43,7 +43,7 @@ function AppRoutes() {
   if (!user) {
     return (
       <Routes>
-        <Route path="*" element={<LoginScreen />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
   }
