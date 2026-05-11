@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThreadProvider } from './context/ThreadContext';
 import PMDashboard from './components/profile/PMDashboard';
@@ -89,13 +89,11 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ThreadProvider>
-          <AppRoutes />
-        </ThreadProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <AuthProvider>
+      <ThreadProvider>
+        <AppRoutes />
+      </ThreadProvider>
+    </AuthProvider>
   );
 }
 
