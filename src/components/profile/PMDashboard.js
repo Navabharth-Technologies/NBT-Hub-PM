@@ -877,8 +877,6 @@ export default function PMDashboard() {
             </div>
           </section>
 
-
-
           {/* List of Holidays Section */}
           <section className="dashboard-section animate-fade-in" style={{ animationDelay: '1.0s', cursor: 'pointer', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }} onClick={() => navigate('/holidays')}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -891,7 +889,7 @@ export default function PMDashboard() {
                 <div key={idx} style={{
                   display: 'flex', alignItems: 'center', gap: '15px', padding: '14px',
                   borderRadius: '16px', background: '#f8fafc', border: '3px solid #cbd5e1',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                  boxShadow:'0 2px 4px rgba(0,0,0,0.02)'
                 }}>
                   <div style={{ background: '#ffffff', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', fontSize: '20px' }}>
                     📅
