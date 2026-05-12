@@ -93,13 +93,11 @@ function AppRoutes() {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <ThreadProvider>
-          <AppRoutes />
-        </ThreadProvider>
-      </AuthProvider>
-    </Router>
+    <AuthProvider>
+      <ThreadProvider>
+        <AppRoutes />
+      </ThreadProvider>
+    </AuthProvider>
   );
 }
 
