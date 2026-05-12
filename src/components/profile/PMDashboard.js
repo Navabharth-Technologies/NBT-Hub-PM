@@ -173,7 +173,17 @@ export default function PMDashboard() {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
         if (teamRes.ok) {
-          setTeams(await teamRes.json());
+          const rawTeams = await teamRes.json();
+          const processedTeams = (Array.isArray(rawTeams) ? rawTeams : []).map(t => {
+            // RESOLVE: If team name is numeric (ID), fetch the actual name from the users list lookup
+            const teamNameStr = String(t.name || '').trim();
+            if (/^\d+$/.test(teamNameStr) || !teamNameStr) {
+              const resolvedName = userLookup[teamNameStr] || userLookup[String(t.id)];
+              if (resolvedName) t.name = resolvedName;
+            }
+            return t;
+          });
+          setTeams(processedTeams);
         }
 
         // Fetch Team Activity (Task Updates)
@@ -208,10 +218,22 @@ export default function PMDashboard() {
         if (leavesRes.ok) {
           const lData = await leavesRes.json();
           const lList = Array.isArray(lData) ? lData : (lData?.data || lData?.all || lData?.leaves || lData?.requests || []);
-          setLeaveRequests(Array.isArray(lList) ? lList : []);
+
+          // RESOLVE: Resolve employee names for leave requests if missing using the pre-indexed userLookup
+          const resolvedLeaves = (Array.isArray(lList) ? lList : []).map(r => {
+            if (!r.employee_name && !r.name) {
+              const uid = String(r.userId || r.user_id || r.employee_id || r.empId || '').trim();
+              if (uid && userLookup[uid]) {
+                r.employee_name = userLookup[uid];
+              }
+            }
+            return r;
+          });
+
+          setLeaveRequests(resolvedLeaves);
 
           // Derive metrics safely - using includes to handle 'PENDING,PENDING' or varied formats
-          const onLeaveCount = Array.isArray(lList) ? lList.filter(r => String(r?.status || '').toUpperCase().includes('APPROVED')).length : 0;
+          const onLeaveCount = resolvedLeaves.filter(r => String(r?.status || '').toUpperCase().includes('APPROVED')).length;
           setAttendanceStats(prev => ({ ...prev, leave: onLeaveCount }));
         }
 

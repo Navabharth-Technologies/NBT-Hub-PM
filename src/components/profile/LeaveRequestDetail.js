@@ -185,7 +185,7 @@ export default function LeaveRequestDetail() {
 
           setRequest({
             id: found.id || found.ID || id,
-            employeeName: found.employee_name || found.full_name || found.name || found.emp_name || found.userName || 'Employee',
+            employeeName: masterEmp?.name || masterEmp?.full_name || found.employee_name || found.full_name || found.name || found.emp_name || found.userName || 'Employee',
             empCode: found.user_id || found.emp_id || found.employee_id || found.id || '----',
             leaveType: found.leave_type || found.type || 'Casual Leave',
             startDate: found.start_date || found.startDate || '----',
@@ -214,7 +214,7 @@ export default function LeaveRequestDetail() {
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
       <AppHeader />
-      <main style={{ flex: 1, padding: winWidth < 768 ? '100px 15px 180px' : '100px 20px 60px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', background: '#f8fafc' }}>
+      <main style={{ flex: 1, padding: winWidth < 768 ? '100px 15px 250px' : '100px 20px 60px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', background: '#f8fafc' }}>
         <div style={{ width: '100%', maxWidth: '900px', background: 'white', borderRadius: '32px', padding: winWidth < 768 ? '24px' : '48px', boxShadow: '0 4px 30px rgba(0,0,0,0.06)', border: '1.5px solid #f1f5f9' }}>
           
           <button 
