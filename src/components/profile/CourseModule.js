@@ -138,18 +138,42 @@ export default function CourseModule() {
     return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr || dateStr === 'No deadline') return dateStr;
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      const d = String(date.getDate()).padStart(2, '0');
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const y = date.getFullYear();
+      return `${d}-${m}-${y}`;
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
   const handleDeleteCourse = async (id) => {
+    if (!id) return;
     if (!window.confirm('Are you sure you want to delete this course?')) return;
+    
+    // Optimistically remove from frontend
+    setActiveCourses(prev => prev.filter(c => c.id !== id && c._id !== id));
+    
     try {
       const res = await fetch(`${API_ENDPOINTS.COURSES}/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${user.token}` }
       });
       if (res.ok) {
+        // Refresh to ensure sync
         fetchCourses();
+      } else {
+        console.error('Failed to delete on backend');
+        fetchCourses(); // Revert on failure
       }
     } catch (err) {
       console.error('Delete error:', err);
+      fetchCourses(); // Revert on failure
     }
   };
 
@@ -218,7 +242,7 @@ export default function CourseModule() {
                     }}>
                       {c.category || 'General'}
                     </span>
-                    <button className="btn-ghost" onClick={() => handleDeleteCourse(c.id)} style={{ color: '#94a3b8' }}>
+                    <button className="btn-ghost" onClick={() => handleDeleteCourse(c.id || c._id)} style={{ color: '#94a3b8' }}>
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -226,7 +250,7 @@ export default function CourseModule() {
                   <p className="course-card-description">{c.description || 'No description provided.'}</p>
 
                   <div style={{ marginBottom: '12px', fontSize: '11px', color: '#64748b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <Calendar size={12} /> Deadline: {c.deadline || 'No deadline'}
+                    <Calendar size={12} /> Deadline: {formatDate(c.deadline) || 'No deadline'}
                   </div>
 
                   <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>

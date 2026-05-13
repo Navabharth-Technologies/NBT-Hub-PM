@@ -41,6 +41,8 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color: var(--text-main);
   overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .dashboard-content {

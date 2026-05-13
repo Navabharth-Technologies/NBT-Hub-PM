@@ -243,7 +243,7 @@ export default function PersonalInfo({ onBack }) {
           const cleanData = {};
           Object.keys(data).forEach(apiKey => {
             const val = data[apiKey];
-            const normalizedVal = (val === null || val === undefined) ? '' : val;
+            let normalizedVal = (val === null || val === undefined) ? '' : val;
             const lowerKey = apiKey.toLowerCase();
             let targetKey = Object.keys(emptyForm).find(formKey => formKey.toLowerCase() === lowerKey) || apiKey;
 
@@ -260,8 +260,20 @@ export default function PersonalInfo({ onBack }) {
             if (lowerKey.includes('previous_company_payslip') || lowerKey.includes('previous_payslip') || lowerKey.includes('payslip')) targetKey = 'previous_company_payslip';
             if (lowerKey === 'profile_picture' || lowerKey === 'profile_pic') targetKey = 'profile_pic';
 
+            // Format date fields from ISO to DD-MM-YYYY
+            if ((targetKey === 'dob' || targetKey === 'separation' || targetKey === 'doj') && normalizedVal && String(normalizedVal).includes('T')) {
+              const d = new Date(normalizedVal);
+              if (!isNaN(d.getTime())) {
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                normalizedVal = `${day}-${month}-${year}`;
+              }
+            }
+
             cleanData[targetKey] = normalizedVal;
           });
+
 
           setForm(prev => ({ ...prev, ...cleanData }));
         }
@@ -380,9 +392,36 @@ export default function PersonalInfo({ onBack }) {
   };
 
   const handleChange = (key, value) => {
-    let updates = { [key]: value };
-    if (key === 'dob' && value && value.length === 10) {
-      const parts = value.split('-');
+    let sanitizedValue = value;
+
+    // Strict validation logic
+    const alphaFields = [
+      'emp_name', 'religion', 'nationality', 'father_husband_name', 'designation', 
+      'department', 'process', 'supervisor_l1', 'supervisor_l2', 'place', 'moved', 
+      'state', 'qualification', 'college', 'university', 'previous_org', 'source', 
+      'bank_name', 'bank_branch', 'languages_known', 'blood_group'
+    ];
+    
+    const numericFields = [
+      'age', 'edu_completion_year', 'gross_salary_a', 'salary', 'pt', 
+      'contact_no', 'emergency_contact_no', 'bank_account_no', 'aadhar_number'
+    ];
+
+    const percentageFields = ['sslc_percentage', 'puc_percentage', 'ug_pg_percentage'];
+
+    if (alphaFields.includes(key)) {
+      sanitizedValue = value.replace(/[^a-zA-Z\s.]/g, '');
+    } else if (numericFields.includes(key)) {
+      sanitizedValue = value.replace(/\D/g, '');
+    } else if (percentageFields.includes(key)) {
+      sanitizedValue = value.replace(/[^0-9.]/g, '');
+      const parts = sanitizedValue.split('.');
+      if (parts.length > 2) sanitizedValue = parts[0] + '.' + parts.slice(1).join('');
+    }
+
+    let updates = { [key]: sanitizedValue };
+    if (key === 'dob' && sanitizedValue && sanitizedValue.length === 10) {
+      const parts = sanitizedValue.split('-');
       if (parts.length === 3) {
         const day = parseInt(parts[0], 10);
         const month = parseInt(parts[1], 10) - 1;

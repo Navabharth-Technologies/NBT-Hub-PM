@@ -125,9 +125,9 @@ const TaskNotification = ({ onOpenTask }) => {
   return (
     <div style={{ 
       position: 'fixed', 
-      bottom: isMobile ? '120px' : '175px', 
-      right: isMobile ? '15px' : '30px', 
-      zIndex: 4000, 
+      bottom: isMobile ? '40px' : '50px', 
+      right: isMobile ? '10px' : '30px', 
+      zIndex: 5000, 
       display: 'flex', 
       flexDirection: 'column', 
       alignItems: 'flex-end', 
@@ -142,8 +142,8 @@ const TaskNotification = ({ onOpenTask }) => {
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             style={{
               background: 'white',
-              width: isMobile ? 'calc(100vw - 20px)' : '360px',
-              maxHeight: '520px',
+              width: isMobile ? 'calc(100% - 20px)' : '360px',
+              maxHeight: '420px',
               borderRadius: isMobile ? '20px' : '28px 28px 4px 28px',
               boxShadow: '0 30px 70px rgba(0, 0, 0, 0.2)',
               border: '1.5px solid #f1f5f9',
@@ -176,7 +176,7 @@ const TaskNotification = ({ onOpenTask }) => {
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px', backgroundColor: '#f8fafc' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '24px', backgroundColor: '#f8fafc' }}>
               {notifications.length > 0 ? notifications.map((notif, idx) => {
                 const isLeave = (notif.description || '').toLowerCase().includes('leave request');
                 let leaveInfo = null;
@@ -188,7 +188,7 @@ const TaskNotification = ({ onOpenTask }) => {
                 }
 
                 return (
-                <div key={notif.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div key={notif.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0, marginBottom: '8px' }}>
                   <div style={{ fontSize: '9px', fontWeight: '1000', color: '#94a3b8', marginLeft: '5px', marginBottom: '1px' }}>{notif.time.toUpperCase()} - {notif.date}</div>
                   <div style={{
                     background: notif.isNew ? '#ffffff' : '#f8fafc',
@@ -196,7 +196,9 @@ const TaskNotification = ({ onOpenTask }) => {
                     borderRadius: '16px 16px 16px 4px',
                     boxShadow: notif.isNew ? '0 4px 15px rgba(59, 89, 152, 0.12)' : 'none',
                     border: notif.isNew ? '1.5px solid #3B5998' : '1px solid #eef2f6',
-                    position: 'relative'
+                    position: 'relative',
+                    marginTop: notif.isNew ? '12px' : '4px',
+                    boxSizing: 'border-box'
                   }}>
                     {notif.isNew && (
                       <div style={{ position: 'absolute', top: '-8px', right: '10px', background: '#3B5998', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '8px', fontWeight: '1000' }}>URGENT</div>

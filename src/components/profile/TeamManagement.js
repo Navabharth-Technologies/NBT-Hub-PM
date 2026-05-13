@@ -484,11 +484,15 @@ export default function TeamManagement() {
                           if (isCompletedFilter) return m.completedTasks && m.completedTasks > 0;
                           return true;
                         })
-                        .map((m, idx) => (
-                        <div 
-                          key={idx} 
-                          draggable={isEditingAlignment && !isAnyFilter}
-                          onDragStart={(e) => handleDragStart(e, {type: 'member', memberIdx: idx, teamId: team.id})}
+                        .map((m, mapIdx) => {
+                          // CRITICAL FIX: Find the ACTUAL index in the original membersList to avoid offset bugs caused by lead-filtering
+                          const actualIdx = (team.membersList || []).findIndex(orig => orig === m);
+                          
+                          return (
+                            <div 
+                              key={m.id || m.userid || mapIdx} 
+                              draggable={isEditingAlignment && !isAnyFilter}
+                              onDragStart={(e) => handleDragStart(e, {type: 'member', memberIdx: actualIdx, teamId: team.id})}
                           style={{
                             display: 'flex', 
                             alignItems: 'center', 
@@ -531,8 +535,9 @@ export default function TeamManagement() {
                               {m.completedTasks} Done
                             </div>
                           )}
-                        </div>
-                      ))}
+                            </div>
+                          );
+                        })}
                     </div>
                   </div>
                 ) : (

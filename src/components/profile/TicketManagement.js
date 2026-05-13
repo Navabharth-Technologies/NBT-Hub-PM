@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config';
 import './PMDashboard.css';
-import { AlertCircle, CheckCircle, Clock, Search, Filter, Download, X, Send, MessageCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Search, Filter, Download, X, Send, MessageCircle, ArrowLeft } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function TicketManagement() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -177,9 +179,22 @@ export default function TicketManagement() {
           alignItems: winWidth < 768 ? 'flex-start' : 'flex-end', 
           gap: '24px' 
         }}>
-          <div>
-            <h1 style={{ fontSize: winWidth < 768 ? '26px' : '32px', fontWeight: '950', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-1px' }}>Support Hub</h1>
-            <p style={{ color: '#64748b', margin: 0, fontSize: winWidth < 768 ? '14px' : '15px', fontWeight: '600', lineHeight: '1.5' }}>Manage organization-wide support requests and resolutions</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <button 
+              onClick={() => navigate(-1)}
+              style={{ 
+                width: '40px', height: '40px', borderRadius: '12px', background: 'white', border: '1.5px solid #e2e8f0', 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s' 
+              }}
+              onMouseOver={(e) => e.currentTarget.style.borderColor = '#3863a8'}
+              onMouseOut={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h1 style={{ fontSize: winWidth < 768 ? '26px' : '32px', fontWeight: '950', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-1px' }}>Support Hub</h1>
+              <p style={{ color: '#64748b', margin: 0, fontSize: winWidth < 768 ? '14px' : '15px', fontWeight: '600', lineHeight: '1.5' }}>Manage organization-wide support requests and resolutions</p>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
              <button 
@@ -214,7 +229,7 @@ export default function TicketManagement() {
                 style={{ flex: 1, padding: '14px 16px', borderRadius: '15px', border: '2px solid #eef2f6', background: 'white', fontWeight: '700', color: '#1e293b', outline: 'none', cursor: 'pointer', fontSize: '13px' }}
             >
                 <option>All Status</option>
-                <option>Open</option>
+                <option value="Open">Pending</option>
                 <option>In Progress</option>
                 <option>Resolved</option>
                 <option>Closed</option>
@@ -282,7 +297,7 @@ export default function TicketManagement() {
                           fontSize: '10px', fontWeight: '950', padding: '6px 12px', borderRadius: '100px', textTransform: 'uppercase', letterSpacing: '0.5px',
                           backgroundColor: status.bg, color: status.text, border: `1px solid ${status.border}`, display: 'inline-flex', alignItems: 'center', gap: '6px'
                         }}>
-                          {status.icon} {ticket.status || 'Open'}
+                          {status.icon} {String(ticket.status || '').toUpperCase() === 'OPEN' ? 'Pending' : (ticket.status || 'Pending')}
                         </span>
                       </div>
 
@@ -411,7 +426,7 @@ export default function TicketManagement() {
                               fontSize: '10px', fontWeight: '900', padding: '6px 12px', borderRadius: '8px', textTransform: 'uppercase', letterSpacing: '0.5px',
                               backgroundColor: status.bg, color: status.text, border: `1px solid ${status.border}`, display: 'inline-flex', alignItems: 'center', gap: '6px'
                             }}>
-                              {status.icon} {ticket.status || 'Open'}
+                              {status.icon} {String(ticket.status || '').toUpperCase() === 'OPEN' ? 'Pending' : (ticket.status || 'Pending')}
                             </span>
                           </td>
                           <td style={{ padding: '20px 25px' }}>

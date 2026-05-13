@@ -119,7 +119,7 @@ export default function LoginScreen() {
               style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0 5px' }}
               onClick={() => setShowPassword(!showPassword)}
             >
-              {showPassword ? <EyeOff size={18} color="#94a3b8" /> : <Eye size={18} color="#94a3b8" />}
+              {showPassword ? <Eye size={18} color="#3863a8" /> : <EyeOff size={18} color="#94a3b8" />}
             </button>
           </div>
         </div>

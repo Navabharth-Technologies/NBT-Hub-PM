@@ -547,7 +547,11 @@ export default function TeamDetail() {
                 <input
                   type="text"
                   value={editTeamName}
-                  onChange={(e) => setEditTeamName(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const cleanVal = val.replace(/[0-9]/g, '');
+                    setEditTeamName(cleanVal);
+                  }}
                   placeholder="Enter team name..."
                   style={{
                     padding: '16px 20px', borderRadius: '16px', border: '2px solid #e2e8f0',

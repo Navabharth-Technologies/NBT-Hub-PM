@@ -18,6 +18,7 @@ const Icons = {
   Alert: () => <span>🔔</span>,
   Asset: () => <span>📦</span>,
   Add: () => <span>+</span>,
+  Quiz: () => <span>🎮</span>,
 };
 
 export default function PMDashboard() {
@@ -173,17 +174,7 @@ export default function PMDashboard() {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
         if (teamRes.ok) {
-          const rawTeams = await teamRes.json();
-          const processedTeams = (Array.isArray(rawTeams) ? rawTeams : []).map(t => {
-            // RESOLVE: If team name is numeric (ID), fetch the actual name from the users list lookup
-            const teamNameStr = String(t.name || '').trim();
-            if (/^\d+$/.test(teamNameStr) || !teamNameStr) {
-              const resolvedName = userLookup[teamNameStr] || userLookup[String(t.id)];
-              if (resolvedName) t.name = resolvedName;
-            }
-            return t;
-          });
-          setTeams(processedTeams);
+          setTeams(await teamRes.json());
         }
 
         // Fetch Team Activity (Task Updates)
@@ -202,14 +193,25 @@ export default function PMDashboard() {
           setProjectSprints(await sprintRes.json());
         }
 
-        // Fetch New Joinees Count
-        const joineeRes = await fetch(API_ENDPOINTS.NEW_JOINEES, {
-          headers: { 'Authorization': `Bearer ${user.token}` }
-        });
-        if (joineeRes.ok) {
-          const joineeData = await joineeRes.json();
-          setNewJoineesCount(joineeData.length);
+        // Fetch New Joinees & Interns Count (Combined & Filtered)
+        const [joineeRes, internRes] = await Promise.all([
+          fetch(API_ENDPOINTS.NEW_JOINEES, { headers: { 'Authorization': `Bearer ${user.token}` } }).catch(() => null),
+          fetch(API_ENDPOINTS.INTERNS, { headers: { 'Authorization': `Bearer ${user.token}` } }).catch(() => null)
+        ]);
+        
+        let totalActiveJoinees = 0;
+        if (joineeRes && joineeRes.ok) {
+          const jData = await joineeRes.json();
+          const activeJoinees = (Array.isArray(jData) ? jData : []).filter(j => Number(j.is_blocked) !== 1);
+          totalActiveJoinees += activeJoinees.length;
         }
+        if (internRes && internRes.ok) {
+          const iData = await internRes.json();
+          const internsList = Array.isArray(iData) ? iData : (iData.data || []);
+          const activeInterns = internsList.filter(i => Number(i.is_blocked) !== 1);
+          totalActiveJoinees += activeInterns.length;
+        }
+        setNewJoineesCount(totalActiveJoinees);
 
         // Fetch Leave Requests & All Metrics
         const leavesRes = await fetch(API_ENDPOINTS.LEAVES_GET, {
@@ -218,22 +220,22 @@ export default function PMDashboard() {
         if (leavesRes.ok) {
           const lData = await leavesRes.json();
           const lList = Array.isArray(lData) ? lData : (lData?.data || lData?.all || lData?.leaves || lData?.requests || []);
-
-          // RESOLVE: Resolve employee names for leave requests if missing using the pre-indexed userLookup
-          const resolvedLeaves = (Array.isArray(lList) ? lList : []).map(r => {
-            if (!r.employee_name && !r.name) {
-              const uid = String(r.userId || r.user_id || r.employee_id || r.empId || '').trim();
-              if (uid && userLookup[uid]) {
-                r.employee_name = userLookup[uid];
-              }
-            }
-            return r;
+          
+          // Name Resolution for Leave Requests
+          const resolvedLeaves = (Array.isArray(lList) ? lList : []).map(req => {
+            const uid = String(req.user_id || req.userId || req.empId || '').trim();
+            return {
+              ...req,
+              employee_name: userLookup[uid] || req.employee_name || req.name || 'Member'
+            };
           });
-
           setLeaveRequests(resolvedLeaves);
 
           // Derive metrics safely - using includes to handle 'PENDING,PENDING' or varied formats
-          const onLeaveCount = resolvedLeaves.filter(r => String(r?.status || '').toUpperCase().includes('APPROVED')).length;
+          // Count all active leaves (Pending + Approved)
+          const onLeaveCount = Array.isArray(lList) ? lList.filter(r => 
+            ['PENDING', 'APPROVED'].includes(String(r?.status || '').toUpperCase())
+          ).length : 0;
           setAttendanceStats(prev => ({ ...prev, leave: onLeaveCount }));
         }
 
@@ -251,7 +253,8 @@ export default function PMDashboard() {
               return lDate === todayStr;
             });
             const uniquePresentToday = new Set(todayLogs.map(l => l?.user_id || l?.Empcode || l?.EmpID)).size;
-            setAttendanceStats(prev => ({ ...prev, present: uniquePresentToday }));
+            const lateToday = todayLogs.filter(l => String(l?.status || '').toUpperCase().includes('LATE')).length;
+            setAttendanceStats(prev => ({ ...prev, present: uniquePresentToday, late: lateToday }));
           }
         }
 
@@ -319,11 +322,12 @@ export default function PMDashboard() {
   // Dynamically calculate metrics from live data
   const dynamicMetrics = [
     { label: 'Total Teams', value: teams?.length || 'View', icon: <Icons.Teams />, color: '#6366f1', trend: 'Live', trendUp: true, path: '/teams' },
-    { label: 'Total Employees', value: employeesCount || 'View', icon: <Icons.Employees />, color: '#8b5cf6', trend: 'Live', trendUp: true, path: '/employees' },
+    { label: 'Employees of NBT', value: employeesCount || 'View', icon: <Icons.Employees />, color: '#8b5cf6', trend: 'Live', trendUp: true, path: '/employees' },
     { label: 'Personal Information', value: 'Manage', icon: <Icons.Employees />, color: '#315A9E', trend: 'Active', trendUp: true, path: '/personal-info' },
 
     { label: 'Assets Management', value: 'Manage', icon: <span>📦</span>, color: '#f59e0b', trend: 'New', trendUp: true, path: '/assets' },
     { label: 'New Joinee', value: newJoineesCount || 'View', icon: <span>✨</span>, color: '#0ea5e9', trend: 'This Month', trendUp: true, path: '/new-joinees' },
+    { label: 'Fun and Quiz', value: 'Play', icon: <Icons.Quiz />, color: '#ec4899', trend: 'Active', trendUp: true, path: '/quiz' },
   ];
 
   // Helper for PDF encoding
@@ -488,7 +492,7 @@ export default function PMDashboard() {
         <section style={{ marginBottom: winWidth < 768 ? '32px' : '40px' }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: winWidth < 640 ? 'repeat(2, 1fr)' : winWidth < 1024 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)',
+            gridTemplateColumns: winWidth < 640 ? 'repeat(2, 1fr)' : winWidth < 1024 ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)',
             gap: winWidth < 768 ? '12px' : '20px'
           }}>
             {dynamicMetrics.map((m, i) => (
@@ -688,14 +692,14 @@ export default function PMDashboard() {
           {/* Column 2: Task Hub */}
           <section className="dashboard-section animate-fade-in" style={{
             animationDelay: '0.6s',
-            cursor: 'pointer',
+            cursor: 'default',
             marginBottom: winWidth < 768 ? '15px' : '0',
             padding: winWidth < 768 ? '12px' : '32px',
             width: winWidth < 600 ? '92%' : '100%',
             marginLeft: 'auto',
             marginRight: 'auto',
             boxSizing: 'border-box'
-          }} onClick={() => navigate('/tasks')}>
+          }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '10px' : '15px', marginBottom: winWidth < 768 ? '16px' : '25px' }}>
               <div style={{ width: winWidth < 768 ? '38px' : '48px', height: winWidth < 768 ? '38px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3163aa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '16px' : '22px', boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.1)', flexShrink: 0 }}>📅</div>
               <h2 style={{ fontSize: winWidth < 768 ? '16px' : winWidth < 1024 ? '18px' : '22px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Task Command</h2>
@@ -709,10 +713,10 @@ export default function PMDashboard() {
               {recentTasks.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {recentTasks.slice(0, 4).map((task, i) => (
-                    <div key={i} onClick={(e) => { e.stopPropagation(); navigate('/tasks'); }} style={{
+                    <div key={i} style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px',
                       borderRadius: '16px', background: '#ffffff', border: '3px solid #cbd5e1',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'pointer', transition: '0.2s', width: '100%', boxSizing: 'border-box'
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'default', transition: '0.2s', width: '100%', boxSizing: 'border-box'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden', flex: 1 }}>
                         <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#eff6ff', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>✅</div>
@@ -729,7 +733,7 @@ export default function PMDashboard() {
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px', background: '#f8fafc', borderRadius: '24px', border: '3px dashed #cbd5e1' }}>Unit Sprints Neutralized</div>
               )}
             </div>
-            <button className="animate-fade-in" style={{
+            <button className="animate-fade-in" onClick={() => navigate('/tasks')} style={{
               width: '100%',
               padding: winWidth < 768 ? '14px 10px' : '14px',
               background: '#0f172a',
@@ -747,7 +751,7 @@ export default function PMDashboard() {
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               boxSizing: 'border-box'
-            }}>Access Ops Hub <span>→</span></button>
+            }}>Open Task Management <span>→</span></button>
           </section>
 
           {/* Column 3: Attendance Analytics */}
@@ -756,7 +760,7 @@ export default function PMDashboard() {
             cursor: 'pointer',
             borderRadius: winWidth < 768 ? '35px' : '32px',
             padding: winWidth < 768 ? '12px' : '32px',
-            width: winWidth < 600 ? '92%' : '100%',
+            width: winWidth < 500 ? '320px' : '100%',
             marginLeft: 'auto',
             marginRight: 'auto',
             boxSizing: 'border-box',
@@ -771,7 +775,7 @@ export default function PMDashboard() {
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: winWidth < 768 ? '10px' : '15px' }}>
                 <div style={{ width: winWidth < 768 ? '38px' : '48px', height: winWidth < 768 ? '38px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '16px' : '22px', flexShrink: 0 }}>📅</div>
-                <h2 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '950', color: '#1e293b', margin: 0, lineHeight: 1.2 }}>Leave/Attendance<br /> Management</h2>
+                <h2 style={{ fontSize: winWidth < 768 ? '16px' : '22px', fontWeight: '950', color: '#1e293b', margin: 0, lineHeight: 1.2 }}>Leave/Attendance<br /> Management</h2>
               </div>
               <button
                 style={{ background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer', fontSize: winWidth < 768 ? '12px' : '13px', paddingTop: '4px' }}
@@ -797,15 +801,14 @@ export default function PMDashboard() {
             }}>
               {[
                 { label: 'Present', count: attendanceStats.present, bg: '#f0fdf4', border: '#dcfce7', color: '#15803d', countColor: '#166534' },
-                { label: 'On Leave', count: attendanceStats.leave, bg: '#fffbeb', border: '#fef3c7', color: '#b45309', countColor: '#92400e' },
-                { label: 'Late', count: attendanceStats.late, bg: '#fef2f2', border: '#fee2e2', color: '#b91c1c', countColor: '#991b1b' }
+                { label: 'Total Leaves', count: attendanceStats.leave, bg: '#fffbeb', border: '#fef3c7', color: '#b45309', countColor: '#92400e' }
               ].map((stat, idx) => (
                 <div key={idx}
                   onClick={(e) => {
-                    if (stat.label === 'On Leave') {
+                    if (stat.label === 'Total Leaves') {
                       e.stopPropagation();
                       navigate('/leaves');
-                    } else if (stat.label === 'Present' || stat.label === 'Late') {
+                    } else if (stat.label === 'Present' || stat.label === 'Late Login') {
                       e.stopPropagation();
                       navigate('/attendance');
                     }
@@ -847,10 +850,12 @@ export default function PMDashboard() {
                       <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>🕒</div>
                       <div style={{ flex: 1, overflow: 'hidden' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                          <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.employee_name || req.name || 'Member'}</div>
+                          <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.employee_name || req.name}</div>
                           <div style={{ padding: '3px 10px', background: '#eff6ff', color: '#2563eb', borderRadius: '50px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Pending</div>
                         </div>
-                        <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.leave_type || 'Leave'} • {req.date || req.start_date || '2026-05-07T00:00:00.000Z'}</div>
+                        <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {req.leave_type || 'Leave'} • {(req.date || req.start_date || '').split('T')[0].split('-').reverse().join('-') || 'N/A'}
+                        </div>
                       </div>
                       <div style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300' }}>›</div>
                     </div>
@@ -899,6 +904,8 @@ export default function PMDashboard() {
             </div>
           </section>
 
+
+
           {/* List of Holidays Section */}
           <section className="dashboard-section animate-fade-in" style={{ animationDelay: '1.0s', cursor: 'pointer', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }} onClick={() => navigate('/holidays')}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -911,7 +918,7 @@ export default function PMDashboard() {
                 <div key={idx} style={{
                   display: 'flex', alignItems: 'center', gap: '15px', padding: '14px',
                   borderRadius: '16px', background: '#f8fafc', border: '3px solid #cbd5e1',
-                  boxShadow:'0 2px 4px rgba(0,0,0,0.02)'
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                 }}>
                   <div style={{ background: '#ffffff', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', fontSize: '20px' }}>
                     📅
@@ -987,13 +994,13 @@ export default function PMDashboard() {
       {/* TO TEAM LEAD MODAL */}
       {showLeadModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
-          <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '450px', borderRadius: '40px', padding: '40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative' }}>
+          <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '520px', borderRadius: '40px', padding: '25px 40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative' }}>
             <button onClick={() => setShowLeadModal(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: '#f8fafc', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#64748b' }}>✕</button>
-            <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-              <div style={{ width: '60px', height: '60px', borderRadius: '20px', backgroundColor: '#fff7ed', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 15px' }}>👑</div>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ width: '60px', height: '60px', borderRadius: '20px', backgroundColor: '#fff7ed', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 10px' }}>👑</div>
               <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.5px' }}>Assign to Team Lead</h2>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '60vh', overflowY: 'auto', padding: '5px 15px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: '60vh', overflowY: 'auto', padding: '5px 15px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b', paddingLeft: '15px' }}>SELECT TEAM LEAD</label>
                 <select value={leadTask.assigneeId} onChange={(e) => setLeadTask({ ...leadTask, assigneeId: e.target.value })} style={{ width: '100%', padding: '16px 25px', borderRadius: '20px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '15px', fontWeight: '600', outline: 'none', color: '#1e293b', cursor: 'pointer' }}>
@@ -1032,13 +1039,13 @@ export default function PMDashboard() {
       {/* TO EMPLOYEE MODAL */}
       {showEmployeeModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
-          <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '450px', borderRadius: '40px', padding: '40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative' }}>
+          <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '520px', borderRadius: '40px', padding: '25px 40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative' }}>
             <button onClick={() => setShowEmployeeModal(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: '#f8fafc', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#64748b' }}>✕</button>
-            <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-              <div style={{ width: '60px', height: '60px', borderRadius: '20px', backgroundColor: '#f5f3ff', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 15px' }}>👤</div>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ width: '60px', height: '60px', borderRadius: '20px', backgroundColor: '#f5f3ff', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 10px' }}>👤</div>
               <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.5px' }}>Assign to Employee</h2>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '60vh', overflowY: 'auto', padding: '5px 15px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: '60vh', overflowY: 'auto', padding: '5px 15px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b', paddingLeft: '15px' }}>SELECT EMPLOYEE</label>
                 <select value={employeeTask.assigneeId} onChange={(e) => setEmployeeTask({ ...employeeTask, assigneeId: e.target.value })} style={{ width: '100%', padding: '16px 25px', borderRadius: '20px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '15px', fontWeight: '600', outline: 'none', color: '#1e293b', cursor: 'pointer' }}>

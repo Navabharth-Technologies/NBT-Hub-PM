@@ -148,9 +148,9 @@ const QuizModule = ({ onBack }) => {
     const currentQ = questions[currentIdx];
     if (currentQ.has_answered) return;
 
-    // LOCAL ASSESSMENT (Checking correct answer locally as per user instruction)
+    // LOCAL ASSESSMENT (Checking correct answer locally - handling both text and letter comparisons)
     const optObj = currentQ.options.find(o => o.letter === selectedOption);
-    const isCorrect = optObj?.text === currentQ.correct_answer;
+    const isCorrect = optObj?.text === currentQ.correct_answer || optObj?.letter === currentQ.correct_answer;
 
     try {
       const token = localStorage.getItem('token');
@@ -188,7 +188,12 @@ const QuizModule = ({ onBack }) => {
       // Calculate final summary locally
       const totalQuestions = questions.length;
       const correctCount = questions.filter(q => q.previous_result === 'correct').length;
-      const totalPoints = questions.filter(q => q.previous_result === 'correct').reduce((sum, q) => sum + (q.points_reward || 0), 0);
+      const totalPoints = questions.reduce((sum, q) => {
+        if (q.previous_result === 'correct') {
+          return sum + Number(q.points_reward || 0);
+        }
+        return sum;
+      }, 0);
 
       const body = {
         // User identifiers
@@ -316,7 +321,7 @@ const QuizModule = ({ onBack }) => {
   return (
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
-      <main className="dashboard-content" style={{ flex: 1, padding: isMobile ? '100px 16px 40px' : '120px 26px 40px', width: '100%', boxSizing: 'border-box', margin: '0', fontFamily: '"Nunito", "Segoe UI", sans-serif' }}>
+      <main className="dashboard-content" style={{ flex: 1, padding: isMobile ? '100px 16px 100px' : '120px 26px 100px', width: '100%', boxSizing: 'border-box', margin: '0', fontFamily: '"Nunito", "Segoe UI", sans-serif' }}>
         <AnimatePresence>
           {submissionFeedback.show && (
             <motion.div
@@ -361,23 +366,66 @@ const QuizModule = ({ onBack }) => {
               </div>
 
               {/* HERO SECTION */}
-              <div style={{ ...s.hero, flex: 'none' }}>
-                <div style={{ position: 'relative', zIndex: 10 }}>
-                  <h2 style={s.heroTitle}>Get Ready for<br />a Fun Quiz!</h2>
-                  <p style={s.heroDesc}>Train your brain with smart, scientifically backed games that enhance various cognitive functions.</p>
+              <div style={{ ...s.hero, flex: 'none', minHeight: '380px' }}>
+                <div style={{ position: 'relative', zIndex: 10, flex: 1 }}>
+                  <h2 style={{ ...s.heroTitle, fontSize: isMobile ? '32px' : '48px', marginBottom: '20px' }}>Get Ready for<br />a Fun Quiz!</h2>
+                  <p style={{ ...s.heroDesc, fontSize: '15px', maxWidth: '450px', marginBottom: '40px' }}>Train your brain with smart, scientifically backed games that enhance various cognitive functions.</p>
 
-                  <div style={{ marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: isMobile ? 'center' : 'flex-start' }}>
-                    <div style={{ backgroundColor: 'rgba(255,255,255,0.7)', padding: '8px 12px', borderRadius: '10px', border: '1px solid #dcfce7', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: '900', color: '#15803d', textTransform: 'uppercase' }}>Session Score</div>
-                      <div style={{ fontSize: '14px', fontWeight: '1000', color: '#0B1E3F' }}>{questions.filter(q => q.previous_result === 'correct').reduce((sum, q) => sum + (q.points_reward || 0), 0)}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 210px)', gap: '15px', marginBottom: '40px' }}>
+                    <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '15px', border: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '1000', color: '#1e40af', textTransform: 'uppercase' }}>Daily Questions</div>
+                      <div style={{ fontSize: '16px', fontWeight: '1000', color: '#0B1E3F' }}>{questions.length}</div>
+                    </div>
+                    <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '15px', border: '1px solid #fef3c7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '1000', color: '#92400e', textTransform: 'uppercase' }}>Points Remaining</div>
+                      <div style={{ fontSize: '16px', fontWeight: '1000', color: '#0B1E3F' }}>
+                        {questions.filter(q => !q.has_answered).reduce((sum, q) => sum + Number(q.points_reward || 0), 0)}
+                      </div>
+                    </div>
+                    <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '15px', border: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '1000', color: '#1e40af', textTransform: 'uppercase' }}>Overall Score</div>
+                      <div style={{ fontSize: '16px', fontWeight: '1000', color: '#0B1E3F' }}>
+                        {questions.reduce((sum, q) => sum + Number(q.points_reward || 0), 0)}
+                      </div>
+                    </div>
+                    <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '15px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '1000', color: '#15803d', textTransform: 'uppercase' }}>Session Score</div>
+                      <div style={{ fontSize: '16px', fontWeight: '1000', color: '#0B1E3F' }}>
+                        {questions.reduce((sum, q) => {
+                          if (q.previous_result === 'correct') return sum + Number(q.points_reward || 0);
+                          return sum;
+                        }, 0)}
+                      </div>
                     </div>
                   </div>
 
-                  <button onClick={() => setQuizActive(true)} style={{ ...s.heroBtn, marginTop: isMobile ? '20px' : '20px', width: isMobile ? '100%' : 'auto' }}>Start Quiz</button>
+                  <button onClick={() => setQuizActive(true)} style={{ ...s.heroBtn, padding: '16px 45px', borderRadius: '12px', fontSize: '16px', letterSpacing: '0.5px' }}>Start Quiz</button>
                 </div>
 
-                {/* Default Monster Graphic for Landing */}
-                {LandingMonster}
+                {/* Monster Graphic for Landing */}
+                <div style={{ flexShrink: 0, marginLeft: isMobile ? '0' : '40px', marginTop: isMobile ? '30px' : '0' }}>
+                  <img 
+                    src="https://gifdb.com/images/high/quiz-question-eric-cartman-south-park-hrlfxd5qudqyw7n0.gif" 
+                    alt="South Park Guide" 
+                    style={{ 
+                      width: isMobile ? '200px' : '280px', 
+                      height: 'auto', 
+                      borderRadius: '30px',
+                      boxShadow: '0 15px 35px rgba(0,0,0,0.1)'
+                    }} 
+                  />
+                  <div style={{ 
+                    marginTop: '15px', 
+                    textAlign: 'center', 
+                    fontSize: '18px', 
+                    fontWeight: '1000', 
+                    color: '#0B1E3F',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
+                  }}>
+                    ARE THERE ANY<br />QUESTIONS?
+                  </div>
+                </div>
               </div>
 
               {/* START QUIZ CTA */}
@@ -569,7 +617,12 @@ const QuizModule = ({ onBack }) => {
                           }}
                         >
                           {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Trophy size={18} />}
-                          Submit Final Score ({questions.filter(q => q.previous_result === 'correct').reduce((sum, q) => sum + (q.points_reward || 0), 0)} pts)
+                          Submit Final Score ({questions.reduce((sum, q) => {
+                            if (q.previous_result === 'correct') {
+                              return sum + Number(q.points_reward || 0);
+                            }
+                            return sum;
+                          }, 0)} pts)
                         </button>
                       ) : (
                         <button

@@ -28,8 +28,16 @@ export default function AttendanceManagement() {
   const [isLocating, setIsLocating] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const dropdownRef = useRef(null);
-  const [fromDate, setFromDate] = useState('2026-01-01');
-  const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0]);
+  const [fromDate, setFromDate] = useState(localStorage.getItem('nbtAttendanceFromDate') || '2026-01-01');
+  const [toDate, setToDate] = useState(localStorage.getItem('nbtAttendanceToDate') || new Date().toISOString().split('T')[0]);
+
+  useEffect(() => {
+    localStorage.setItem('nbtAttendanceFromDate', fromDate);
+  }, [fromDate]);
+
+  useEffect(() => {
+    localStorage.setItem('nbtAttendanceToDate', toDate);
+  }, [toDate]);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
 
   useEffect(() => {
@@ -571,7 +579,7 @@ export default function AttendanceManagement() {
     <div className="hr-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
 
-      <main style={{ flex: 1, padding: winWidth < 768 ? '100px 16px 40px' : '120px 26px 40px', width: '100%', boxSizing: 'border-box', margin: '0' }}>
+      <main style={{ flex: 1, padding: winWidth < 768 ? '100px 16px 200px' : '120px 26px 110px', width: '100%', boxSizing: 'border-box', margin: '0' }}>
         <div style={{ width: '100%' }}>
           <button
             onClick={() => navigate(-1)}
@@ -956,14 +964,15 @@ export default function AttendanceManagement() {
                             const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
                             const isHoliday = holidays.includes(dayMonth);
 
-                            let rawStatus = todayPunchIn ? 'Present' : 'Absent';
-                            if (!todayPunchIn) {
+                            const hasValidPunchIn = todayPunchIn && todayPunchIn !== '----' && todayPunchIn !== '--:--' && todayPunchIn !== '00:00';
+                            let rawStatus = hasValidPunchIn ? 'Present' : 'Absent';
+
+                            if (rawStatus === 'Absent') {
                               if (isSunday) rawStatus = 'WO';
                               else if (isHoliday) rawStatus = 'NH';
-                              else rawStatus = 'Absent';
                             }
 
-                            const isPresent = rawStatus.includes('PRESENT');
+                            const isPresent = rawStatus.toUpperCase().includes('PRESENT');
                             const isWO = rawStatus === 'WO';
                             const isNH = rawStatus === 'NH';
 
@@ -1098,17 +1107,38 @@ export default function AttendanceManagement() {
                             {cleanLog.displayWorkTime}
                           </td>
                           <td style={{ padding: '20px' }}>
-                            <div style={{
-                              display: 'inline-flex',
-                              padding: '6px 12px',
-                              borderRadius: '8px',
-                              background: log ? '#f0fdf4' : '#fef2f2',
-                              color: log ? '#16a34a' : '#ef4444',
-                              fontSize: '11px',
-                              fontWeight: '950'
-                            }}>
-                              {log ? 'Present' : 'Absent'}
-                            </div>
+                            {(() => {
+                              const dateStr = log ? (log.punch_date || log.date || '').split('T')[0] : (fromDate === toDate ? fromDate : '----');
+                              const d = dateStr !== '----' ? new Date(dateStr) : new Date();
+                              const isSunday = d.getDay() === 0;
+                              const month = d.toLocaleDateString('en-US', { month: 'short' });
+                              const dateDay = String(d.getDate()).padStart(2, '0');
+                              const dayMonth = `${month} ${dateDay}`;
+                              const holidaysList = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
+                              const isHoliday = holidaysList.includes(dayMonth);
+
+                              const hasValidPunchIn = (log && cleanLog.displayInTime && cleanLog.displayInTime !== '----');
+                              let badgeText = hasValidPunchIn ? 'Present' : 'Absent';
+                              if (badgeText === 'Absent') {
+                                if (isSunday) badgeText = 'WO';
+                                else if (isHoliday) badgeText = 'NH';
+                              }
+
+                              const isPresent = badgeText.toUpperCase().includes('PRESENT');
+                              const isOff = badgeText === 'WO' || badgeText === 'NH';
+
+                              return (
+                                <div style={{
+                                  display: 'inline-flex',
+                                  padding: '6px 12px',
+                                  borderRadius: '8px',
+                                  background: isPresent ? '#f0fdf4' : (isOff ? '#eff6ff' : '#fef2f2'),
+                                  color: isPresent ? '#16a34a' : (isOff ? '#3b82f6' : '#ef4444'),
+                                  fontSize: '11px',
+                                  fontWeight: '950'
+                                }}>{badgeText}</div>
+                              );
+                            })()}
                           </td>
                           <td style={{ padding: '20px', fontSize: '12px', color: '#64748b', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={log?.in_location || '----'}>
                             {log?.in_location || '----'}

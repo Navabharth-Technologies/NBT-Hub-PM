@@ -141,6 +141,22 @@ export default function AssetsManagement() {
     fetchData();
   }, [user]);
 
+  const toInputDate = (dateStr) => {
+    if (!dateStr || dateStr === 'N/A' || dateStr === '--') return '';
+    // Handle ISO format like 2025-10-10T00:00:00 or 2025-10-10
+    if (dateStr.includes('-') && dateStr.split('-')[0].length === 4) {
+      return dateStr.split('T')[0];
+    }
+    // Handle DD-MM-YYYY or DD/MM/YYYY
+    const parts = dateStr.split(/[-/]/);
+    if (parts.length === 3) {
+      const [d, m, y] = parts;
+      if (y.length === 4) return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+      if (d.length === 4) return `${d}-${m.padStart(2, '0')}-${y.padStart(2, '0')}`;
+    }
+    return '';
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr || dateStr === 'N/A' || dateStr === '--') return dateStr;
     // Handle ISO format like 2025-10-10T00:00:00
@@ -191,8 +207,8 @@ export default function AssetsManagement() {
       employee_name: emp.name || currentAsset.name || currentAsset.employee_name || fullEmp?.name || '',
       employee_id: emp.id || emp.EmpID || currentAsset.employee_id || currentAsset.employeeId || '',
       designation: position,
-      joining_date: formatDate(currentAsset.joining_date || currentAsset.doj || currentAsset.joining_date_iso || currentAsset.JoinDate || fullEmp?.joining_date || ''),
-      last_working_date: formatDate(currentAsset.last_working_date || currentAsset.lwd || currentAsset.lwd_iso || ''),
+      joining_date: toInputDate(currentAsset.joining_date || currentAsset.doj || currentAsset.joining_date_iso || currentAsset.JoinDate || fullEmp?.joining_date || ''),
+      last_working_date: toInputDate(currentAsset.last_working_date || currentAsset.lwd || currentAsset.lwd_iso || ''),
       laptop_details: currentAsset.laptop_details || currentAsset.laptop || currentAsset.laptop_unit_details || '',
       mouse: toYesNo(currentAsset.mouse, currentAsset.mouse_unit || currentAsset.mouse_status),
       keyboard: toYesNo(currentAsset.keyboard, currentAsset.keyboard_unit || currentAsset.keyboard_status),
@@ -279,10 +295,10 @@ export default function AssetsManagement() {
 
       const payload = {
         // Essential Identities
-        employee_id: editModal.employee.id || editModal.employee.EmpID,
-        id: editModal.assetId || (editModal.employee.id || editModal.employee.EmpID),
+        employee_id: form.employee_id,
+        id: editModal.assetId || form.employee_id,
         asset_id: editModal.assetId,
-        emp_id: editModal.employee.id || editModal.employee.EmpID,
+        emp_id: form.employee_id,
         name: form.employee_name,
         employee_name: form.employee_name,
 
@@ -384,11 +400,33 @@ export default function AssetsManagement() {
     }
   };
 
-  const filteredEmployees = employees.filter(emp => {
-    const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDept = selectedDept === 'All' || (emp.team && emp.team.includes(selectedDept));
-    return matchesSearch && matchesDept;
-  });
+  const filteredEmployees = React.useMemo(() => {
+    // Combine employees and asset-only records
+    const allIds = new Set([
+      ...employees.map(e => String(e.id || e.EmpID)),
+      ...Object.keys(assets)
+    ]);
+
+    const combined = Array.from(allIds).map(id => {
+      const emp = employees.find(e => String(e.id || e.EmpID) === id);
+      const asset = assets[id];
+      if (emp) return { ...emp };
+      return {
+        id: id,
+        EmpID: id,
+        name: asset.employee_name || asset.name || 'New Member',
+        role: asset.designation || 'Assigned Asset',
+        is_virtual: true
+      };
+    });
+
+    return combined.filter(emp => {
+      const matchesSearch = (emp.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                           (String(emp.id || '')).includes(searchTerm);
+      const matchesDept = selectedDept === 'All' || (emp.team && emp.team.includes(selectedDept));
+      return matchesSearch && matchesDept;
+    });
+  }, [employees, assets, searchTerm, selectedDept]);
 
   return (
     <div className="assets-management-container" style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', fontFamily: "'Outfit', sans-serif" }}>
@@ -396,12 +434,12 @@ export default function AssetsManagement() {
 
       <main className="dashboard-content" style={{ 
         paddingTop: winWidth < 768 ? '100px' : '120px',
-        paddingLeft: winWidth < 768 ? '16px' : '26px',
-        paddingRight: winWidth < 768 ? '16px' : '26px',
+        paddingLeft: winWidth < 768 ? '15px' : '26px',
+        paddingRight: winWidth < 768 ? '15px' : '26px',
         paddingBottom: '100px',
         boxSizing: 'border-box'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '25px', width: '100%', flexWrap: 'wrap', marginBottom: '30px' }}>
+        <div style={{ display: 'flex', flexDirection: winWidth < 1024 ? 'column' : 'row', alignItems: winWidth < 1024 ? 'flex-start' : 'center', justifyContent: 'space-between', gap: '25px', width: '100%', marginBottom: '30px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <button 
               onClick={() => navigate(-1)} 
@@ -413,38 +451,39 @@ export default function AssetsManagement() {
               <Package size={24} color="#3163aa" />
             </div>
             <div>
-              <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Asset Management Hub</h1>
-              <p style={{ fontSize: '14px', color: '#64748b', margin: '2px 0 0 0' }}>Deploy and track workforce hardware inventory</p>
+              <h1 style={{ fontSize: winWidth < 768 ? '20px' : '24px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Asset Management Hub</h1>
+              <p style={{ fontSize: '13px', color: '#64748b', margin: '2px 0 0 0' }}>Deploy and track workforce hardware inventory</p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '15px' }}>
+          <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto', flexDirection: winWidth < 480 ? 'column' : 'row' }}>
             <button 
               onClick={() => setAvailableAssetsModal(true)}
-              style={{ background: 'white', color: '#3163aa', border: '2px solid #3163aa', padding: '12px 24px', borderRadius: '14px', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.3s' }}
+              style={{ flex: 1, background: 'white', color: '#3163aa', border: '2px solid #3163aa', padding: '12px 20px', borderRadius: '14px', fontWeight: '800', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all 0.3s' }}
             >
-              <Package size={18} />
+              <Package size={16} />
               Submitted Assets
             </button>
             <button
               onClick={() => {
                 setForm({
+                  employee_name: '', employee_id: '',
                   designation: '', joining_date: '', last_working_date: '', laptop_details: '',
                   mouse: '', keyboard: '', laptop_stand: '', ruf_pad: '', pendrive: '',
                   mobile: '', camera: '', earphone: '', tablet: ''
                 });
                 setEditModal({ show: true, employee: { is_new: true, name: '' } });
               }}
-              style={{ background: '#3163aa', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '14px', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 8px 15px rgba(49, 99, 170, 0.2)' }}
+              style={{ flex: 1, background: '#3163aa', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '14px', fontWeight: '800', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 8px 15px rgba(49, 99, 170, 0.2)' }}
             >
-              <Plus size={18} />
-              Add new assets details for new joinee
+              <Plus size={16} />
+              Add New Assets
             </button>
           </div>
         </div>
 
         {/* Filters */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', marginBottom: '25px' }} className="animate-fade-in">
-          <div style={{ flex: 1, minWidth: '300px', position: 'relative' }}>
+        <div style={{ display: 'flex', flexDirection: winWidth < 768 ? 'column' : 'row', gap: '15px', marginBottom: '25px' }} className="animate-fade-in">
+          <div style={{ flex: 1, position: 'relative' }}>
             <Search size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
               type="text"
@@ -457,7 +496,7 @@ export default function AssetsManagement() {
           <select
             value={selectedDept}
             onChange={(e) => setSelectedDept(e.target.value)}
-            style={{ padding: '12px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: 'white', fontWeight: '600', color: '#1e293b', minWidth: '180px', fontFamily: "'Outfit', sans-serif", fontSize: '14px' }}
+            style={{ width: winWidth < 768 ? '100%' : '180px', padding: '12px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: 'white', fontWeight: '600', color: '#1e293b', fontFamily: "'Outfit', sans-serif", fontSize: '14px' }}
           >
             <option value="All">All Units</option>
             <option value="Technical Support">Support Sigma</option>
@@ -466,66 +505,112 @@ export default function AssetsManagement() {
           </select>
         </div>
 
-        {/* Table View */}
-        <div className="dashboard-section animate-fade-in" style={{ padding: '0', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', background: 'white', maxWidth: '1000px', margin: '0 auto' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed', fontFamily: "'Outfit', sans-serif" }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #f1f5f9' }}>
-                  <th style={{ padding: '15px 25px', color: '#1e293b', fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', width: '350px', letterSpacing: '0.5px' }}>Member Details</th>
-                  <th style={{ padding: '15px 25px', color: '#1e293b', fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', width: '300px', letterSpacing: '0.5px' }}>Designation</th>
-                  <th style={{ padding: '15px 25px', color: '#1e293b', fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', textAlign: 'center', width: '250px', letterSpacing: '0.5px' }}>Configuration</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  Array(5).fill(0).map((_, i) => (
-                    <tr key={i}><td colSpan="5" style={{ padding: '25px', textAlign: 'center', color: '#94a3b8' }}>Establishing neural link...</td></tr>
-                  ))
-                ) : filteredEmployees.map((emp, i) => {
-                  const empId = emp.id || emp.EmpID;
-                  const asset = assets[empId] || assets[emp.id] || assets[emp.EmpID] || {};
-                  const hasAsset = !!(assets[empId] || assets[emp.id] || assets[emp.EmpID]);
-                  return (
-                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', transition: '0.2s', backgroundColor: i % 2 === 0 ? 'transparent' : '#fcfdfe' }}>
-                      <td style={{ padding: '15px 25px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3163aa', fontWeight: '900', fontSize: '14px' }}>
-                            {emp.name.charAt(0)}
-                          </div>
-                          <div style={{ overflow: 'hidden' }}>
-                            <div style={{ fontWeight: '800', fontSize: '14px', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.name}</div>
-                            <div style={{ fontSize: '11px', color: '#64748b' }}>ID: {emp.id || emp.EmpID}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '15px 25px' }}>
-                        <span style={{ fontSize: '13px', color: '#334155', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{asset.designation || emp.role || 'Unspecified'}</span>
-                      </td>
-                      <td style={{ padding: '15px 25px', textAlign: 'center' }}>
-                        {hasAsset ? (
-                          <button 
-                            onClick={() => handleEdit(emp, true)}
-                            style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 12px', color: '#64748b', cursor: 'pointer', transition: '0.2s', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                          >
-                            <Package size={14} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>View Details</span>
-                          </button>
-                        ) : (
-                          <button 
-                            onClick={() => handleEdit(emp, false)}
-                            style={{ background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: '10px', padding: '8px 12px', color: '#2563eb', cursor: 'pointer', transition: '0.2s', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                          >
-                            <Edit3 size={14} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>Configure</span>
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        {winWidth < 1024 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '40px', background: 'white', borderRadius: '24px' }}>Establishing neural link...</div>
+            ) : filteredEmployees.map((emp, i) => {
+              const empId = emp.id || emp.EmpID;
+              const asset = assets[empId] || assets[emp.id] || assets[emp.EmpID] || {};
+              const hasAsset = !!(assets[empId] || assets[emp.id] || assets[emp.EmpID]);
+              return (
+                <div key={i} style={{ background: 'white', borderRadius: '24px', padding: '26px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3163aa', fontWeight: '900', fontSize: '16px' }}>
+                      {emp.name.charAt(0)}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: '900', fontSize: '15px', color: '#1e293b' }}>{emp.name}</div>
+                      <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>ID: {emp.id || emp.EmpID}</div>
+                    </div>
+                    <div style={{ padding: '4px 12px', borderRadius: '100px', fontSize: '10px', fontWeight: '900', background: hasAsset ? '#f0fdf4' : '#eff6ff', color: hasAsset ? '#16a34a' : '#2563eb', border: `1px solid ${hasAsset ? '#bbf7d0' : '#dbeafe'}` }}>
+                      {hasAsset ? 'CONFIGURED' : 'PENDING'}
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Designation</div>
+                    <div style={{ fontSize: '14px', fontWeight: '800', color: '#334155' }}>{asset.designation || emp.role || 'Unspecified'}</div>
+                  </div>
+
+                  <button 
+                    onClick={() => handleEdit(emp, hasAsset)}
+                    style={{ 
+                      width: '100%', padding: '12px', borderRadius: '14px', border: 'none', 
+                      background: hasAsset ? '#f1f5f9' : '#3163aa', 
+                      color: hasAsset ? '#475569' : 'white', 
+                      fontWeight: '800', fontSize: '13px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                    }}
+                  >
+                    {hasAsset ? <Package size={16} /> : <Edit3 size={16} />}
+                    {hasAsset ? 'View Asset Details' : 'Configure Hardware'}
+                  </button>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        ) : (
+          <div className="dashboard-section animate-fade-in" style={{ padding: '0', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', background: 'white', maxWidth: '1000px', margin: '0 auto' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed', fontFamily: "'Outfit', sans-serif" }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #f1f5f9' }}>
+                    <th style={{ padding: '15px 25px', color: '#1e293b', fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', width: '350px', letterSpacing: '0.5px' }}>Member Details</th>
+                    <th style={{ padding: '15px 25px', color: '#1e293b', fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', width: '300px', letterSpacing: '0.5px' }}>Designation</th>
+                    <th style={{ padding: '15px 25px', color: '#1e293b', fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', textAlign: 'center', width: '250px', letterSpacing: '0.5px' }}>Configuration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    Array(5).fill(0).map((_, i) => (
+                      <tr key={i}><td colSpan="5" style={{ padding: '25px', textAlign: 'center', color: '#94a3b8' }}>Establishing neural link...</td></tr>
+                    ))
+                  ) : filteredEmployees.map((emp, i) => {
+                    const empId = emp.id || emp.EmpID;
+                    const asset = assets[empId] || assets[emp.id] || assets[emp.EmpID] || {};
+                    const hasAsset = !!(assets[empId] || assets[emp.id] || assets[emp.EmpID]);
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', transition: '0.2s', backgroundColor: i % 2 === 0 ? 'transparent' : '#fcfdfe' }}>
+                        <td style={{ padding: '15px 25px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3163aa', fontWeight: '900', fontSize: '14px' }}>
+                              {emp.name.charAt(0)}
+                            </div>
+                            <div style={{ overflow: 'hidden' }}>
+                              <div style={{ fontWeight: '800', fontSize: '14px', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.name}</div>
+                              <div style={{ fontSize: '11px', color: '#64748b' }}>ID: {emp.id || emp.EmpID}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '15px 25px' }}>
+                          <span style={{ fontSize: '13px', color: '#334155', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>{asset.designation || emp.role || 'Unspecified'}</span>
+                        </td>
+                        <td style={{ padding: '15px 25px', textAlign: 'center' }}>
+                          {hasAsset ? (
+                            <button 
+                              onClick={() => handleEdit(emp, true)}
+                              style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 12px', color: '#64748b', cursor: 'pointer', transition: '0.2s', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                            >
+                              <Package size={14} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>View Details</span>
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => handleEdit(emp, false)}
+                              style={{ background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: '10px', padding: '8px 12px', color: '#2563eb', cursor: 'pointer', transition: '0.2s', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                            >
+                              <Edit3 size={14} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>Configure</span>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Edit Modal */}
@@ -545,38 +630,23 @@ export default function AssetsManagement() {
           }}>
             
             {/* Header Redesign for Certificate */}
-            <div style={{ padding: '30px 40px', background: editModal.isCertificate ? 'white' : '#f8fafc', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                <div style={{ width: '60px', height: '60px', borderRadius: '22px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(49, 99, 170, 0.08)' }}>
-                  <Package size={28} color="#3163aa" />
+            <div style={{ padding: winWidth < 768 ? '20px' : '30px 40px', background: editModal.isCertificate ? 'white' : '#f8fafc', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '12px' : '20px' }}>
+                <div style={{ width: winWidth < 768 ? '45px' : '60px', height: winWidth < 768 ? '45px' : '60px', borderRadius: '18px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(49, 99, 170, 0.08)' }}>
+                  <Package size={winWidth < 768 ? 22 : 28} color="#3163aa" />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: '26px', fontWeight: '950', color: '#1e293b', margin: 0, letterSpacing: '-0.5px' }}>
-                    {editModal.isCertificate ? 'Professional Asset Declaration' : (editModal.isReadOnly ? 'Asset Inventory View' : 'Configure Hardware Assets')}
+                  <h2 style={{ fontSize: winWidth < 768 ? '18px' : '26px', fontWeight: '950', color: '#1e293b', margin: 0, letterSpacing: '-0.5px' }}>
+                    {editModal.isCertificate ? 'Asset Declaration' : (editModal.isReadOnly ? 'Asset View' : 'Configure Hardware')}
                   </h2>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
-                    <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>
-                      {editModal.employee.name} (ID: {editModal.employee.id || editModal.employee.EmpID})
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>
+                      {editModal.employee.name}
                     </span>
-                    {editModal.isCertificate && (
-                      <>
-                        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#cbd5e1' }} />
-                        <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '600' }}>Request ID: #{editModal.certificateData?.id}</span>
-                        {editModal.certificateData?.admin_remarks && (
-                          <>
-                            <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#cbd5e1' }} />
-                            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '4px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#166534' }}>Admin Remarks:</span>
-                              <span style={{ fontSize: '11px', fontWeight: '600', color: '#15803d' }}>{editModal.certificateData.admin_remarks}</span>
-                            </div>
-                          </>
-                        )}
-                      </>
-                    )}
                   </div>
                 </div>
               </div>
-              <button onClick={() => setEditModal({ show: false, employee: null })} style={{ background: '#f1f5f9', border: 'none', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#e2e8f0'} onMouseOut={(e) => e.currentTarget.style.background = '#f1f5f9'}><X size={20} /></button>
+              <button onClick={() => setEditModal({ show: false, employee: null })} style={{ background: '#f1f5f9', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={18} /></button>
             </div>
 
             <div style={{ padding: '40px', overflowY: 'auto', flex: 1, position: 'relative', background: '#fcfdfe' }}>
@@ -603,7 +673,7 @@ export default function AssetsManagement() {
                       <h3 style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Hardware Peripherals Verified</h3>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: winWidth < 480 ? 'repeat(2, 1fr)' : (winWidth < 768 ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)'), gap: '12px' }}>
                       {[
                         { label: 'Optical Mouse', key: 'mouse', icon: <MousePointer size={18} /> },
                         { label: 'External Keyboard', key: 'keyboard', icon: <Keyboard size={18} /> },
@@ -620,18 +690,18 @@ export default function AssetsManagement() {
                           <div key={item.key} style={{ 
                             background: isSubmitted ? '#f0fdf4' : 'white', 
                             border: isSubmitted ? '1.5px solid #bbf7d0' : '1.5px solid #e2e8f0',
-                            borderRadius: '16px', padding: '16px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+                            borderRadius: '16px', padding: '12px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
                             transition: '0.2s',
                             boxShadow: isSubmitted ? 'none' : '0 2px 4px rgba(0,0,0,0.02)'
                           }}>
                             <div style={{ 
-                              width: '32px', height: '32px', borderRadius: '50%', 
+                              width: '28px', height: '28px', borderRadius: '50%', 
                               background: isSubmitted ? '#22c55e' : '#f1f5f9', 
                               display: 'flex', alignItems: 'center', justifyContent: 'center', color: isSubmitted ? 'white' : '#94a3b8'
                             }}>
-                              {isSubmitted ? <Check size={18} /> : item.icon}
+                              {isSubmitted ? <Check size={16} /> : item.icon}
                             </div>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: isSubmitted ? '#166534' : '#475569', textAlign: 'center' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '800', color: isSubmitted ? '#166534' : '#475569', textAlign: 'center' }}>
                               {item.label}
                             </span>
                           </div>
@@ -652,11 +722,23 @@ export default function AssetsManagement() {
                     <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '8px', paddingLeft: '4px' }}>EMPLOYEE NAME</label>
-                        <input type="text" value={form.employee_name} readOnly style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f1f5f9', fontWeight: '600', fontSize: '14px', outline: 'none' }} />
+                        <input 
+                          type="text" 
+                          placeholder="Enter Name" 
+                          value={form.employee_name} 
+                          onChange={(e) => setForm({ ...form, employee_name: e.target.value })} 
+                          style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }} 
+                        />
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '8px', paddingLeft: '4px' }}>EMPLOYEE ID</label>
-                        <input type="text" value={form.employee_id} readOnly style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f1f5f9', fontWeight: '600', fontSize: '14px', outline: 'none' }} />
+                        <input 
+                          type="text" 
+                          placeholder="Enter ID" 
+                          value={form.employee_id} 
+                          onChange={(e) => setForm({ ...form, employee_id: e.target.value })} 
+                          style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }} 
+                        />
                       </div>
                     </div>
                     <div>
@@ -666,11 +748,11 @@ export default function AssetsManagement() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '8px', paddingLeft: '4px' }}>JOINING DATE</label>
-                        <input type="text" placeholder="DD-MM-YYYY" value={form.joining_date} onChange={(e) => setForm({ ...form, joining_date: e.target.value })} style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }} />
+                        <input type="date" value={form.joining_date} onChange={(e) => setForm({ ...form, joining_date: e.target.value })} style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none', fontFamily: "'Outfit', sans-serif" }} />
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '8px', paddingLeft: '4px' }}>LWD</label>
-                        <input type="text" placeholder="N/A" value={form.last_working_date} onChange={(e) => setForm({ ...form, last_working_date: e.target.value })} style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }} />
+                        <input type="date" value={form.last_working_date} onChange={(e) => setForm({ ...form, last_working_date: e.target.value })} style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none', fontFamily: "'Outfit', sans-serif" }} />
                       </div>
                     </div>
 
@@ -785,7 +867,7 @@ export default function AssetsManagement() {
         <div className="modal-overlay" style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
         }}>
           <div className="modal-content animate-slide-up" style={{
             background: 'white', borderRadius: '30px', width: '95%', maxWidth: '800px',
@@ -843,7 +925,7 @@ export default function AssetsManagement() {
                       style={{ 
                         flex: '0 0 220px',
                         background: 'white', 
-                        padding: '16px', 
+                        padding: '20px', 
                         borderRadius: '20px', 
                         border: '1px solid #f1f5f9',
                         borderLeft: `5px solid ${badgeColor}`,
@@ -852,7 +934,7 @@ export default function AssetsManagement() {
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '12px',
+                        gap: '16px',
                         boxShadow: '0 10px 30px rgba(0,0,0,0.04)',
                         scrollSnapAlign: 'start',
                         position: 'relative',

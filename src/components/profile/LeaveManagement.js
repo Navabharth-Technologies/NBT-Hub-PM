@@ -98,9 +98,9 @@ export default function LeaveManagement() {
         headers: { 'Authorization': `Bearer ${user.token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           employeeId: leaveEditData.empId,
-          leaves_taken: leaveEditData.cl,
-          leaves_available: leaveEditData.available,
-          LOP: leaveEditData.lop,
+          leaves_taken: parseFloat(leaveEditData.cl || 0),
+          leaves_available: parseFloat(leaveEditData.available || 0),
+          LOP: parseFloat(leaveEditData.lop || 0),
           month: leaveEditData.month,
           year: leaveEditData.year,
           halfDays: leaveEditData.halfDays,
@@ -260,16 +260,16 @@ export default function LeaveManagement() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>Casual Leaves</label>
-                <input type="number" value={leaveEditData.cl} onChange={e => setLeaveEditData({ ...leaveEditData, cl: parseFloat(e.target.value || 0) })} style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontSize: '14px', fontWeight: '700', outline: 'none' }} />
+                <input type="number" step="any" value={leaveEditData.cl} onChange={e => setLeaveEditData({ ...leaveEditData, cl: e.target.value })} style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontSize: '14px', fontWeight: '700', outline: 'none' }} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>LOP Leaves</label>
-                <input type="number" value={leaveEditData.lop} onChange={e => setLeaveEditData({ ...leaveEditData, lop: parseFloat(e.target.value || 0) })} style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontSize: '14px', fontWeight: '700', outline: 'none' }} />
+                <input type="number" step="any" value={leaveEditData.lop} onChange={e => setLeaveEditData({ ...leaveEditData, lop: e.target.value })} style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontSize: '14px', fontWeight: '700', outline: 'none' }} />
               </div>
             </div>
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>Available Balance</label>
-              <input type="number" value={leaveEditData.available} onChange={e => setLeaveEditData({ ...leaveEditData, available: parseFloat(e.target.value || 0) })} style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #16a34a', fontSize: '14px', fontWeight: '700', outline: 'none', background: '#f0fdf4' }} />
+              <input type="number" step="any" value={leaveEditData.available} onChange={e => setLeaveEditData({ ...leaveEditData, available: e.target.value })} style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #16a34a', fontSize: '14px', fontWeight: '700', outline: 'none', background: '#f0fdf4' }} />
             </div>
             <button onClick={submitLeaveAdjustments} disabled={isProcessing} style={{ width: '100%', padding: '14px', borderRadius: '12px', background: '#0f172a', color: 'white', border: 'none', fontWeight: '900', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
               {isProcessing ? 'Saving...' : 'Save Adjustments'}

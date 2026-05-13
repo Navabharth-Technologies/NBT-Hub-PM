@@ -183,6 +183,17 @@ export default function LeaveRequestDetail() {
             found.pm_status, found.l3_status
           ].filter(Boolean).join(',');
 
+          // Resolve RM for Project Managers (Dinesh)
+          let dynamicPMName = found.l3_name || 'Anish V N';
+          const isPMRequester = resolvedRole.includes('PROJECT MANAGER') || resolvedRole === 'PM';
+          if (isPMRequester) {
+            const rmDinesh = Array.isArray(empData) ? empData.find(e => 
+              String(e.name || '').toLowerCase().includes('dinesh') || 
+              String(e.full_name || '').toLowerCase().includes('dinesh')
+            ) : null;
+            if (rmDinesh) dynamicPMName = rmDinesh.name || rmDinesh.full_name;
+          }
+
           setRequest({
             id: found.id || found.ID || id,
             employeeName: masterEmp?.name || masterEmp?.full_name || found.employee_name || found.full_name || found.name || found.emp_name || found.userName || 'Employee',
@@ -198,7 +209,7 @@ export default function LeaveRequestDetail() {
             approvals: {
               l1: { name: dynamicLeadName, status: resolveStatus(pickStatus(found.rm_status, found.l1_status)), stage: 'L1' },
               l2: { name: found.l2_name || 'Sinchana Hs', status: resolveStatus(pickStatus(found.hr_status, found.l2_status)), stage: 'L2' },
-              l3: { name: found.l3_name || 'Anish V N', status: resolveStatus(pickStatus(found.pm_status, found.l3_status, found.manager_status)), stage: 'L3' }
+              l3: { name: dynamicPMName, status: resolveStatus(pickStatus(found.pm_status, found.l3_status, found.manager_status)), stage: 'L3' }
             }
           });
         }
@@ -296,8 +307,14 @@ export default function LeaveRequestDetail() {
                     const isPMOrHR = requesterRole.includes('PM') || requesterRole.includes('HR');
                     
                     let displayRole = app.role;
-                    if (isPMOrHR) {
+                    const rRole = (request.requesterRole || '').toUpperCase();
+                    if (rRole.includes('PROJECT MANAGER') || rRole === 'PM') {
                       if (app.stage === 'L2') displayRole = 'HR Verification';
+                      if (app.stage === 'L3') displayRole = 'RM Approval';
+                    } else if (rRole.includes('HR')) {
+                      if (app.stage === 'L2') displayRole = 'HR Verification';
+                      if (app.stage === 'L3') displayRole = 'CEO Verification';
+                    } else if (rRole.includes('LEAD') || rRole.includes('MANAGER')) {
                       if (app.stage === 'L3') displayRole = 'CEO Verification';
                     }
 
@@ -341,22 +358,24 @@ export default function LeaveRequestDetail() {
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : '1.2fr 2.8fr', gap: '20px', marginBottom: winWidth < 768 ? '40px' : '0' }}>
-            <button 
-              onClick={() => handleStatusUpdate('REJECTED')}
-              disabled={isUpdating}
-              style={{ padding: '18px', borderRadius: '20px', border: 'none', background: '#fee2e2', color: '#ef4444', fontSize: '16px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-            >
-              <XCircle size={20} /> Reject
-            </button>
-            <button 
-              onClick={() => handleStatusUpdate('APPROVED')}
-              disabled={isUpdating}
-              style={{ padding: '18px', borderRadius: '20px', border: 'none', background: '#0f172a', color: 'white', fontSize: '16px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 10px 20px rgba(15, 23, 42, 0.15)' }}
-            >
-              <CheckCircle size={20} /> Approve Leave
-            </button>
-          </div>
+          {(String(user?.employee_id || user?.id || user?.EmpID || '').trim() !== String(request.empCode || '').trim()) && (
+            <div style={{ display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : '1.2fr 2.8fr', gap: '20px', marginBottom: winWidth < 768 ? '40px' : '0' }}>
+              <button 
+                onClick={() => handleStatusUpdate('REJECTED')}
+                disabled={isUpdating}
+                style={{ padding: '18px', borderRadius: '20px', border: 'none', background: '#fee2e2', color: '#ef4444', fontSize: '16px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+              >
+                <XCircle size={20} /> Reject
+              </button>
+              <button 
+                onClick={() => handleStatusUpdate('APPROVED')}
+                disabled={isUpdating}
+                style={{ padding: '18px', borderRadius: '20px', border: 'none', background: '#0f172a', color: 'white', fontSize: '16px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 10px 20px rgba(15, 23, 42, 0.15)' }}
+              >
+                <CheckCircle size={20} /> Approve Leave
+              </button>
+            </div>
+          )}
 
         </div>
       </main>

@@ -18,8 +18,16 @@ export default function EmployeeAttendanceDetail() {
   const [employee, setEmployee] = useState(null);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [startDate, setStartDate] = useState('2026-01-01');
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(localStorage.getItem('nbtAttendanceFromDate') || '2026-01-01');
+  const [endDate, setEndDate] = useState(localStorage.getItem('nbtAttendanceToDate') || new Date().toISOString().split('T')[0]);
+
+  useEffect(() => {
+    localStorage.setItem('nbtAttendanceFromDate', startDate);
+  }, [startDate]);
+
+  useEffect(() => {
+    localStorage.setItem('nbtAttendanceToDate', endDate);
+  }, [endDate]);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Briefcase, Trash2, ArrowLeft } from 'lucide-react';
+import { Sparkles, Pencil, Trash2, ArrowLeft } from 'lucide-react';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
@@ -488,7 +488,7 @@ export default function NewJoineeModule() {
                         onMouseOver={(e) => e.currentTarget.style.background = '#e2e8f0'}
                         onMouseOut={(e) => e.currentTarget.style.background = '#f1f5f9'}
                       >
-                        <Briefcase size={18} />
+                        <Pencil size={18} />
                       </button>
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleDelete(joinee); }}
@@ -544,7 +544,7 @@ export default function NewJoineeModule() {
       <AnimatePresence>
         {showAddModal && (
           <div className="modal-overlay" style={{
-            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+            position: 'fixed', top: 0, left: 0, width: '100%', height: '100vh',
             background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(10px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000
           }}>

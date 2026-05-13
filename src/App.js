@@ -96,6 +96,20 @@ function App() {
     <AuthProvider>
       <ThreadProvider>
         <AppRoutes />
+        <style>{`
+          html, body {
+            overflow-x: hidden;
+            width: 100%;
+            position: relative;
+            margin: 0;
+            padding: 0;
+            touch-action: pan-y;
+            overscroll-behavior-x: none;
+          }
+          * {
+            box-sizing: border-box;
+          }
+        `}</style>
       </ThreadProvider>
     </AuthProvider>
   );

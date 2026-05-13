@@ -335,9 +335,9 @@ export default function AwardsScreen() {
 
                         {/* Points Display */}
                         <div style={{ textAlign: winWidth < 768 ? 'left' : 'center', borderRight: winWidth < 768 ? 'none' : '1.5px solid rgba(255,255,255,0.1)', borderBottom: winWidth < 768 ? '1.5px solid rgba(255,255,255,0.1)' : 'none', paddingBottom: winWidth < 768 ? '20px' : '0' }}>
-                            <p style={{ margin: '0 0 5px 0', fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Total Points Circulating</p>
+                            <p style={{ margin: '0 0 5px 0', fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Top Contributor Score</p>
                             <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '22px' : '28px', fontWeight: '950', color: '#facc15' }}>
-                                {rewards.reduce((acc, r) => acc + (Number(r.points) || 0), 0).toLocaleString()} <span style={{ fontSize: '18px' }}>REP</span>
+                                {topContributor ? topContributor.total_points.toLocaleString() : "0"} <span style={{ fontSize: '18px' }}>REP</span>
                             </h3>
                         </div>
 
@@ -353,7 +353,7 @@ export default function AwardsScreen() {
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: winWidth < 1200 ? '1fr' : '1fr 380px', gap: '30px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: winWidth < 1200 ? '1fr' : '1fr 380px', gap: '30px', alignItems: 'start' }}>
                         <div style={{ background: '#f8fafc', borderRadius: '24px', padding: winWidth < 768 ? '15px' : '30px', border: '1.5px solid #f1f5f9' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
                                 <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>
@@ -399,7 +399,7 @@ export default function AwardsScreen() {
 
                                                 const displayedStats = showAllFeed ? employeeStats : employeeStats.slice(0, 5);
                                                 
-                                                return displayedStats.map(({ id: empId, totalRep, userRewards }) => {
+                                                return displayedStats.map(({ id: empId, totalRep, userRewards }, index) => {
                                                     const latest = userRewards.reduce((prev, current) => (new Date(prev.created_at || prev.date) > new Date(current.created_at || current.date)) ? prev : current, userRewards[0]);
                                                     return (
                                                         <div key={empId} onClick={() => setSelectedHistoryUser(empId)} style={{ background: 'white', padding: winWidth < 768 ? '16px' : '20px', borderRadius: winWidth < 768 ? '20px' : '24px', border: '3px solid #cbd5e1', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.3s ease' }} 
@@ -414,7 +414,7 @@ export default function AwardsScreen() {
                                                                 e.currentTarget.style.boxShadow = 'none';
                                                             }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '12px' : '15px' }}>
-                                                                <div style={{ width: winWidth < 768 ? '40px' : '45px', height: winWidth < 768 ? '40px' : '45px', borderRadius: '14px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid #cbd5e1' }}><Award size={winWidth < 768 ? 20 : 22} color="#0369a1" /></div>
+                                                                <div style={{ width: winWidth < 768 ? '40px' : '45px', height: winWidth < 768 ? '40px' : '45px', borderRadius: '14px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid #cbd5e1', fontSize: '14px', fontWeight: '950', color: '#0369a1' }}>#{index + 1}</div>
                                                                 <div>
                                                                     <div style={{ fontSize: winWidth < 768 ? '14px' : '15px', fontWeight: '1000', color: '#0f172a' }}>{resolveEmployeeName(empId)}</div>
                                                                     <div style={{ fontSize: winWidth < 768 ? '10px' : '11px', color: '#64748b', fontWeight: '700' }}>
@@ -523,13 +523,13 @@ export default function AwardsScreen() {
                         </div>
 
                         {/* Right Sidebar */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', height: '100%' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
                             <div style={{ 
                                 background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', 
                                 borderRadius: winWidth < 768 ? '30px' : '40px', padding: winWidth < 768 ? '40px 25px' : '50px 40px', color: 'white', 
                                 boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.4)',
                                 position: 'relative', overflow: 'hidden',
-                                height: '100%', minHeight: winWidth < 768 ? 'auto' : '520px', display: 'flex', flexDirection: 'column', justifyContent: 'center'
+                                minHeight: winWidth < 768 ? 'auto' : '520px', display: 'flex', flexDirection: 'column', justifyContent: 'center'
                             }}>
                                 {/* Decorative elements */}
                                 <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '150px', height: '150px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '50%', filter: 'blur(40px)' }}></div>

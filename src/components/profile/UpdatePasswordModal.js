@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Shield, Key, Lock, CheckCircle } from 'lucide-react';
+import { X, Shield, Key, Lock, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { API_ENDPOINTS } from '../../config';
 import { useAuth } from '../../context/AuthContext';
 
@@ -12,6 +12,11 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
     otp: '',
     newPassword: '',
     confirmPassword: ''
+  });
+  const [showPass, setShowPass] = useState({
+    current: false,
+    new: false,
+    confirm: false
   });
   const [logoutAllDevices, setLogoutAllDevices] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -159,14 +164,19 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Current Password</label>
                   <div style={{ position: 'relative' }}>
                     <input
-                      type="password"
+                      type={showPass.current ? "text" : "password"}
                       name="currentPassword"
                       placeholder="Enter old password"
                       value={passwords.currentPassword}
                       onChange={handleChange}
-                      style={{ width: '100%', padding: '16px 20px', borderRadius: '18px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontSize: '15px', fontWeight: '600', color: '#0B1E3F', outline: 'none', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '16px 20px', borderRadius: '18px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontSize: '15px', fontWeight: '600', color: '#0B1E3F', outline: 'none', boxSizing: 'border-box', paddingRight: '100px' }}
                     />
-                    <div style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', color: '#315A9E', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }} onClick={() => setResetMode(true)}>FORGOT?</div>
+                    <div style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ cursor: 'pointer', color: '#94a3b8' }} onClick={() => setShowPass({ ...showPass, current: !showPass.current })}>
+                        {showPass.current ? <Eye size={16} color="#315A9E" /> : <EyeOff size={16} />}
+                      </div>
+                      <div style={{ color: '#315A9E', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }} onClick={() => setResetMode(true)}>FORGOT?</div>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -188,26 +198,42 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
 
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>New Password</label>
-                <input
-                  type="password"
-                  name="newPassword"
-                  placeholder="Minimum 6 characters"
-                  value={passwords.newPassword}
-                  onChange={handleChange}
-                  style={{ width: '100%', padding: '16px 20px', borderRadius: '18px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontSize: '15px', fontWeight: '600', color: '#0B1E3F', outline: 'none', boxSizing: 'border-box' }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPass.new ? "text" : "password"}
+                    name="newPassword"
+                    placeholder="Minimum 6 characters"
+                    value={passwords.newPassword}
+                    onChange={handleChange}
+                    style={{ width: '100%', padding: '16px 20px', borderRadius: '18px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontSize: '15px', fontWeight: '600', color: '#0B1E3F', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  <div 
+                    style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#94a3b8' }}
+                    onClick={() => setShowPass({ ...showPass, new: !showPass.new })}
+                  >
+                    {showPass.new ? <Eye size={16} color="#315A9E" /> : <EyeOff size={16} />}
+                  </div>
+                </div>
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Confirm Password</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  placeholder="Repeat new password"
-                  value={passwords.confirmPassword}
-                  onChange={handleChange}
-                  style={{ width: '100%', padding: '16px 20px', borderRadius: '18px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontSize: '15px', fontWeight: '600', color: '#0B1E3F', outline: 'none', boxSizing: 'border-box' }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPass.confirm ? "text" : "password"}
+                    name="confirmPassword"
+                    placeholder="Repeat new password"
+                    value={passwords.confirmPassword}
+                    onChange={handleChange}
+                    style={{ width: '100%', padding: '16px 20px', borderRadius: '18px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontSize: '15px', fontWeight: '600', color: '#0B1E3F', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  <div 
+                    style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#94a3b8' }}
+                    onClick={() => setShowPass({ ...showPass, confirm: !showPass.confirm })}
+                  >
+                    {showPass.confirm ? <Eye size={16} color="#315A9E" /> : <EyeOff size={16} />}
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
