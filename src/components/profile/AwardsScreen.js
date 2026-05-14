@@ -11,6 +11,7 @@ export default function AwardsScreen() {
     const { user } = useAuth();
     const [winWidth, setWinWidth] = React.useState(window.innerWidth);
     const [rewards, setRewards] = React.useState([]);
+    const [quizScores, setQuizScores] = React.useState([]);
     const [loading, setLoading] = React.useState(true);
     const [view, setView] = React.useState('feed'); // 'feed', 'leaderboard', 'points'
     const [leaderboard, setLeaderboard] = React.useState([]);
@@ -30,6 +31,9 @@ export default function AwardsScreen() {
     const [endDate, setEndDate] = React.useState('');
     const [selectedHistoryUser, setSelectedHistoryUser] = React.useState(null);
     const [showAllFeed, setShowAllFeed] = React.useState(false);
+    const [showRecipientDropdown, setShowRecipientDropdown] = React.useState(false);
+    const [recipientSearch, setRecipientSearch] = React.useState('');
+    const [showRewardDropdown, setShowRewardDropdown] = React.useState(false);
     const [availableAwards] = React.useState([
         { id: 'visionary', title: "Visionary Lead", rep: 200, desc: "Acknowledge exceptional leadership and vision." },
         { id: 'achiever', title: "Goal Achiever", rep: 150, desc: "Recognize consistent goal hitting and performance." },
@@ -76,6 +80,17 @@ export default function AwardsScreen() {
             // Deduplicate
             const unique = Array.from(new Map(allStaff.map(s => [s.id || s.employee_id || s.userId, s])).values());
             setEmployees(unique);
+
+            // Fetch Quiz Scores to aggregate
+            try {
+                const uid = user?.employee_id || user?.userId || user?.id;
+                const qRes = await fetch(`${API_ENDPOINTS.QUIZ_LEADERBOARD}?employee_id=${uid}`, { headers: { 'Authorization': `Bearer ${user.token}` } });
+                if (qRes.ok) {
+                    const qData = await qRes.json();
+                    const qList = Array.isArray(qData) ? qData : (qData.data || []);
+                    setQuizScores(qList);
+                }
+            } catch (e) {}
 
             // Fetch Leaderboard for Banner (Top Recognition)
             await fetchLeaderboard();
@@ -132,17 +147,65 @@ export default function AwardsScreen() {
                 headers: { 'Authorization': `Bearer ${user.token}` } 
             });
             if (res.ok) {
-                const data = await res.json();
-                setLeaderboard(data.data || []);
+                const resJson = await res.json();
+                const baseLeaderboard = Array.isArray(resJson.data) ? resJson.data : (Array.isArray(resJson) ? resJson : []);
+                
+                // Merge quiz scores into leaderboard
+                const mergedMap = new Map();
+                
+                // First add base reward points
+                baseLeaderboard.forEach(item => {
+                    const id = String(item.employee_id || item.id || item.userId);
+                    mergedMap.set(id, { 
+                        ...item, 
+                        total_points: Number(item.total_points || 0) 
+                    });
+                });
+                
+                // Then add quiz points
+                quizScores.forEach(q => {
+                    const id = String(q.employee_id || q.id || q.userId);
+                    const score = Number(q.total_score || q.points || q.score || 0);
+                    if (mergedMap.has(id)) {
+                        const existing = mergedMap.get(id);
+                        mergedMap.set(id, { ...existing, total_points: existing.total_points + score });
+                    } else {
+                        mergedMap.set(id, { 
+                            employee_id: id, 
+                            name: resolveEmployeeName(id), 
+                            total_points: score,
+                            role: 'Team Member'
+                        });
+                    }
+                });
+                
+                const finalLeaderboard = Array.from(mergedMap.values()).sort((a, b) => b.total_points - a.total_points);
+                setLeaderboard(finalLeaderboard);
             }
-        } catch (err) { setLeaderboard([]); }
+        } catch (err) { 
+            console.error("Leaderboard fetch error:", err);
+            setLeaderboard([]); 
+        }
     };
 
     React.useEffect(() => {
         fetchLeaderboard();
     }, [startDate, endDate]);
 
-    const filteredRewards = rewards.filter(r => {
+    const combinedRewards = React.useMemo(() => {
+        const quizRewards = quizScores.map(q => ({
+            id: `quiz-${q.employee_id}`,
+            employee_id: q.employee_id,
+            reward_name: 'Quiz Excellence',
+            points: Number(q.total_score || q.points || q.score || 0),
+            created_at: new Date().toISOString(),
+            note: 'Earned from Quiz Hub'
+        })).filter(q => q.points > 0);
+
+        return [...rewards, ...quizRewards];
+    }, [rewards, quizScores]);
+
+    const filteredRewards = combinedRewards.filter(r => {
         if (!startDate && !endDate) return true;
         const rDate = (r.created_at || r.date || "").split('T')[0];
         if (!rDate) return true;
@@ -153,10 +216,10 @@ export default function AwardsScreen() {
 
     // Derive top contributor from rewards history for UI consistency
     const topContributor = React.useMemo(() => {
-        if (!rewards || rewards.length === 0) return leaderboard[0] || null;
+        if (!combinedRewards || combinedRewards.length === 0) return leaderboard[0] || null;
         
-        const stats = Array.from(new Set(rewards.map(r => r.employee_id))).map(id => {
-            const userRewards = rewards.filter(r => String(r.employee_id) === String(id));
+        const stats = Array.from(new Set(combinedRewards.map(r => r.employee_id))).map(id => {
+            const userRewards = combinedRewards.filter(r => String(r.employee_id) === String(id));
             const totalRep = userRewards.reduce((sum, r) => sum + (Number(r.points) || 0), 0);
             return { 
                 id, 
@@ -337,7 +400,7 @@ export default function AwardsScreen() {
                         <div style={{ textAlign: winWidth < 768 ? 'left' : 'center', borderRight: winWidth < 768 ? 'none' : '1.5px solid rgba(255,255,255,0.1)', borderBottom: winWidth < 768 ? '1.5px solid rgba(255,255,255,0.1)' : 'none', paddingBottom: winWidth < 768 ? '20px' : '0' }}>
                             <p style={{ margin: '0 0 5px 0', fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Top Contributor Score</p>
                             <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '22px' : '28px', fontWeight: '950', color: '#facc15' }}>
-                                {topContributor ? topContributor.total_points.toLocaleString() : "0"} <span style={{ fontSize: '18px' }}>REP</span>
+                                {topContributor ? Number(topContributor.total_points || 0).toLocaleString() : "0"} <span style={{ fontSize: '18px' }}>REP</span>
                             </h3>
                         </div>
 
@@ -580,48 +643,105 @@ export default function AwardsScreen() {
                     <div style={{ background: 'white', borderRadius: '30px', padding: winWidth < 768 ? '25px' : '40px', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
                         <h2 style={{ fontSize: '24px', fontWeight: '950', color: '#0f172a', marginBottom: '30px', textAlign: 'center' }}>Grant Recognition</h2>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div>
+                            <div style={{ position: 'relative' }}>
                                 <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Select Recipient</label>
-                                <select 
-                                    value={selectedEmployee?.id || selectedEmployee?.employee_id || selectedEmployee?.userId || ''} 
-                                    onChange={e => {
-                                        const val = e.target.value;
-                                        const found = employees.find(emp => 
-                                            String(emp.id) === val || 
-                                            String(emp.employee_id) === val || 
-                                            String(emp.userId) === val
-                                        );
-                                        setSelectedEmployee(found);
-                                    }} 
-                                    style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontWeight: '700' }}>
-                                    <option value="">Select Recipient...</option>
-                                    {employees.map(emp => {
-                                        const stableId = emp.id || emp.employee_id || emp.userId;
-                                        return <option key={stableId} value={stableId}>{emp.name || emp.employee_name || 'Anonymous'}</option>;
-                                    })}
-                                </select>
+                                <div 
+                                    onClick={() => setShowRecipientDropdown(!showRecipientDropdown)}
+                                    style={{ 
+                                        width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9', 
+                                        background: '#f8fafc', fontWeight: '700', cursor: 'pointer', display: 'flex', 
+                                        justifyContent: 'space-between', alignItems: 'center' 
+                                    }}>
+                                    <span>{selectedEmployee ? (selectedEmployee.name || selectedEmployee.employee_name) : 'Select Recipient...'}</span>
+                                    <ChevronRight size={18} style={{ transform: showRecipientDropdown ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                                </div>
+                                
+                                {showRecipientDropdown && (
+                                    <div style={{ 
+                                        position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', 
+                                        borderRadius: '14px', border: '1.5px solid #f1f5f9', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
+                                        zIndex: 10, marginTop: '8px', maxHeight: '250px', overflowY: 'auto' 
+                                    }}>
+                                        <div style={{ padding: '10px', position: 'sticky', top: 0, background: 'white', borderBottom: '1px solid #f1f5f9' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '10px', padding: '0 10px' }}>
+                                                <Search size={14} color="#64748b" />
+                                                <input 
+                                                    autoFocus
+                                                    placeholder="Search employee..." 
+                                                    value={recipientSearch}
+                                                    onChange={e => setRecipientSearch(e.target.value)}
+                                                    onClick={e => e.stopPropagation()}
+                                                    style={{ width: '100%', padding: '10px', border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '600' }} 
+                                                />
+                                            </div>
+                                        </div>
+                                        {employees.filter(emp => (emp.name || emp.employee_name || '').toLowerCase().includes(recipientSearch.toLowerCase())).map(emp => {
+                                            const stableId = emp.id || emp.employee_id || emp.userId;
+                                            return (
+                                                <div 
+                                                    key={stableId} 
+                                                    onClick={() => {
+                                                        setSelectedEmployee(emp);
+                                                        setShowRecipientDropdown(false);
+                                                        setRecipientSearch('');
+                                                    }}
+                                                    style={{ padding: '12px 15px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#1e293b', borderBottom: '1px solid #f8fafc' }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                >
+                                                    {emp.name || emp.employee_name || 'Anonymous'}
+                                                </div>
+                                            );
+                                        })}
+                                        {employees.length === 0 && <div style={{ padding: '20px', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>No employees found</div>}
+                                    </div>
+                                )}
                             </div>
+
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                                <div>
+                                <div style={{ position: 'relative' }}>
                                     <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Reward Name (Mandatory)</label>
-                                    <select 
-                                        value={grantData.reward_name} 
-                                        onChange={e => {
-                                            const name = e.target.value;
-                                            const pointsMap = {
-                                                "Visionary Lead": 200,
-                                                "Goal Achiever": 150,
-                                                "Team Growth": 150,
-                                                "Star Performer": 50,
-                                                "Problem Solver": 30,
-                                                "Collaborative Hero": 20
-                                            };
-                                            setGrantData({ ...grantData, reward_name: name, points: pointsMap[name] || grantData.points });
-                                        }} 
-                                        style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontWeight: '700' }}>
-                                        <option value="">Select Reward Name...</option>
-                                        {rewardNames.map(name => <option key={name} value={name}>{name}</option>)}
-                                    </select>
+                                    <div 
+                                        onClick={() => setShowRewardDropdown(!showRewardDropdown)}
+                                        style={{ 
+                                            width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9', 
+                                            background: '#f8fafc', fontWeight: '700', cursor: 'pointer', display: 'flex', 
+                                            justifyContent: 'space-between', alignItems: 'center' 
+                                        }}>
+                                        <span>{grantData.reward_name || 'Select Reward...'}</span>
+                                        <ChevronRight size={18} style={{ transform: showRewardDropdown ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                                    </div>
+
+                                    {showRewardDropdown && (
+                                        <div style={{ 
+                                            position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', 
+                                            borderRadius: '14px', border: '1.5px solid #f1f5f9', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
+                                            zIndex: 10, marginTop: '8px', maxHeight: '200px', overflowY: 'auto' 
+                                        }}>
+                                            {rewardNames.map(name => (
+                                                <div 
+                                                    key={name}
+                                                    onClick={() => {
+                                                        const pointsMap = {
+                                                            "Visionary Lead": 200,
+                                                            "Goal Achiever": 150,
+                                                            "Team Growth": 150,
+                                                            "Star Performer": 50,
+                                                            "Problem Solver": 30,
+                                                            "Collaborative Hero": 20
+                                                        };
+                                                        setGrantData({ ...grantData, reward_name: name, points: pointsMap[name] || grantData.points });
+                                                        setShowRewardDropdown(false);
+                                                    }}
+                                                    style={{ padding: '12px 15px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#1e293b', borderBottom: '1px solid #f8fafc' }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                >
+                                                    {name}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Points (REP)</label>

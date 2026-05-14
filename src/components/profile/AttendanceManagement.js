@@ -28,8 +28,13 @@ export default function AttendanceManagement() {
   const [isLocating, setIsLocating] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const getTodayStr = () => new Date().toISOString().split('T')[0];
   const [fromDate, setFromDate] = useState(localStorage.getItem('nbtAttendanceFromDate') || '2026-01-01');
-  const [toDate, setToDate] = useState(localStorage.getItem('nbtAttendanceToDate') || new Date().toISOString().split('T')[0]);
+  const [toDate, setToDate] = useState(() => {
+    const saved = localStorage.getItem('nbtAttendanceToDate');
+    const today = getTodayStr();
+    return (saved && saved < today) ? today : (saved || today);
+  });
 
   useEffect(() => {
     localStorage.setItem('nbtAttendanceFromDate', fromDate);
@@ -212,7 +217,6 @@ export default function AttendanceManagement() {
 
   const fetchAttendance = async () => {
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
       setAttendanceLoading(true);
       const queryParams = new URLSearchParams({ startDate: fromDate, endDate: toDate });
       if (user?.department) queryParams.append('team', user.department);
@@ -243,11 +247,16 @@ export default function AttendanceManagement() {
 
         const todayStr = new Date().toISOString().split('T')[0];
         const myTodayLogs = validLogs.filter(log => {
-          const logDate = (log?.punch_date || log?.PunchDate || log?.date || log?.created_at || '').split('T')[0];
+          let logDate = (log?.punch_date || log?.PunchDate || log?.date || log?.created_at || '').split('T')[0].split(' ')[0];
+          // Handle DD-MM-YYYY or other formats
+          if (logDate.includes('-') && logDate.split('-')[0].length !== 4) {
+            const parts = logDate.split('-');
+            if (parts.length === 3) logDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
           const isToday = logDate === todayStr;
-          const isMe = String(log?.user_id) === String(user?.id) || String(log?.Empcode) === String(user?.id) || String(log?.EmpID) === String(user?.id) || log?.email === user?.email;
+          const isMe = String(log?.user_id || log?.Empcode || log?.EmpID || '') === String(user?.id || '') || log?.email === user?.email;
           return isToday && isMe;
-        }).sort((a, b) => new Date(a?.created_at || a?.punch_time) - new Date(b?.created_at || b?.punch_time));
+        }).sort((a, b) => new Date(a?.created_at || a?.punch_time || 0) - new Date(b?.created_at || b?.punch_time || 0));
 
         if (myTodayLogs.length > 0) {
           const firstLog = myTodayLogs[0];
@@ -520,7 +529,11 @@ export default function AttendanceManagement() {
     const totalCount = allEmployees.length;
     const todayStr = new Date().toISOString().split('T')[0];
     const todayLogs = (attendanceLogs || []).filter(l => {
-      const logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0];
+      let logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0].split(' ')[0];
+      if (logDate.includes('-') && logDate.split('-')[0].length !== 4) {
+        const parts = logDate.split('-');
+        if (parts.length === 3) logDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
       return logDate === todayStr;
     });
     const uniquePresentToday = new Set(todayLogs.map(l => String(l?.user_id || l?.Empcode || l?.EmpID || ''))).size;
@@ -682,8 +695,15 @@ export default function AttendanceManagement() {
               </div>
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <div style={{ fontSize: winWidth < 768 ? '17px' : '20px', fontWeight: '950', color: '#0f172a', marginBottom: '1px' }}>Shift Status</div>
-                <div style={{ fontSize: '10px', fontWeight: '950', color: (personalAttendance?.in_time && personalAttendance.in_time !== '----') ? '#16a34a' : '#ef4444', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
-                  {(personalAttendance?.in_time && personalAttendance.in_time !== '----') ? 'In Office' : 'Offline'}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '950', color: (personalAttendance?.in_time && personalAttendance.in_time !== '----') ? '#16a34a' : '#ef4444', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '2px' }}>
+                    {(personalAttendance?.in_time && personalAttendance.in_time !== '----') ? 'In Office' : 'Offline'}
+                  </div>
+                  {(personalAttendance?.in_time && personalAttendance.in_time !== '----') && (
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#1e293b' }}>
+                      Punch in: {personalAttendance.in_time}
+                    </div>
+                  )}
                 </div>
                 <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '5px', maxWidth: '100%' }}>
                   <MapPin size={11} color="#cbd5e1" /> <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{isLocating ? 'Locating...' : (userLocation || 'Location required')}</span>
@@ -872,7 +892,14 @@ export default function AttendanceManagement() {
                         return empId && logUserId && (logUserId === empId);
                       })
                       .sort((a, b) => {
-                        const getD = x => new Date(x?.punch_date || x?.date || x?.created_at || 0).getTime();
+                        const getD = x => {
+                          let dStr = (x?.punch_date || x?.date || x?.created_at || '').split('T')[0].split(' ')[0];
+                          if (dStr.includes('-') && dStr.split('-')[0].length !== 4) {
+                            const p = dStr.split('-');
+                            if (p.length === 3) dStr = `${p[2]}-${p[1]}-${p[0]}`;
+                          }
+                          return new Date(dStr || 0).getTime();
+                        };
                         return getD(b) - getD(a);
                       })[0];
 
@@ -880,7 +907,11 @@ export default function AttendanceManagement() {
                       if (!l) return false;
                       const logUserId = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
                       const empId = String(emp?.id || '').trim();
-                      const logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0];
+                      let logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0].split(' ')[0];
+                      if (logDate.includes('-') && logDate.split('-')[0].length !== 4) {
+                        const p = logDate.split('-');
+                        if (p.length === 3) logDate = `${p[2]}-${p[1]}-${p[0]}`;
+                      }
                       return empId && logUserId && logUserId === empId && logDate === todayStr;
                     });
 
@@ -888,7 +919,11 @@ export default function AttendanceManagement() {
                       if (!l) return false;
                       const logUserId = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
                       const empId = String(emp?.id || '').trim();
-                      const logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0];
+                      let logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0].split(' ')[0];
+                      if (logDate.includes('-') && logDate.split('-')[0].length !== 4) {
+                        const p = logDate.split('-');
+                        if (p.length === 3) logDate = `${p[2]}-${p[1]}-${p[0]}`;
+                      }
                       return empId && logUserId && (logUserId === empId) && (logDate === todayStr);
                     }).length > 1;
 
@@ -966,10 +1001,10 @@ export default function AttendanceManagement() {
 
                             const hasValidPunchIn = todayPunchIn && todayPunchIn !== '----' && todayPunchIn !== '--:--' && todayPunchIn !== '00:00';
                             let rawStatus = hasValidPunchIn ? 'Present' : 'Absent';
-
-                            if (rawStatus === 'Absent') {
+                            if (!hasValidPunchIn) {
                               if (isSunday) rawStatus = 'WO';
                               else if (isHoliday) rawStatus = 'NH';
+                              else rawStatus = 'Absent';
                             }
 
                             const isPresent = rawStatus.toUpperCase().includes('PRESENT');
@@ -1016,15 +1051,24 @@ export default function AttendanceManagement() {
                           if (!l) return false;
                           const logId = String(l?.user_id || l?.Empcode || l?.EmpID || l?.userId || l?.UserId || '').trim();
                           const empId = String(emp?.id || '').trim();
-                          const logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0];
+                          let logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0].split(' ')[0];
+                          if (logDate.includes('-') && logDate.split('-')[0].length !== 4) {
+                            const parts = logDate.split('-');
+                            if (parts.length === 3) logDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                          }
                           return empId && logId && (logId === empId) && (logDate >= fromDate && logDate <= toDate);
                         })
                         .sort((a, b) => new Date(a?.created_at || a?.punch_time) - new Date(b?.created_at || b?.punch_time));
 
                       // 1. Group logs by date to prevent cross-day data leaking
                       const groupedByDate = (logsForEmp || []).reduce((acc, log) => {
-                        const d = (log.punch_date || log.date || log.created_at || '').split('T')[0];
-                        if (d) {
+                        let d = (log.punch_date || log.date || log.created_at || '').split('T')[0].split(' ')[0];
+                        // Normalize format for grouping consistency
+                        if (d.includes('-') && d.split('-')[0].length !== 4) {
+                          const p = d.split('-');
+                          if (p.length === 3) d = `${p[2]}-${p[1]}-${p[0]}`;
+                        }
+                        if (d && d !== '----') {
                           if (!acc[d]) acc[d] = [];
                           acc[d].push(log);
                         }
@@ -1107,38 +1151,17 @@ export default function AttendanceManagement() {
                             {cleanLog.displayWorkTime}
                           </td>
                           <td style={{ padding: '20px' }}>
-                            {(() => {
-                              const dateStr = log ? (log.punch_date || log.date || '').split('T')[0] : (fromDate === toDate ? fromDate : '----');
-                              const d = dateStr !== '----' ? new Date(dateStr) : new Date();
-                              const isSunday = d.getDay() === 0;
-                              const month = d.toLocaleDateString('en-US', { month: 'short' });
-                              const dateDay = String(d.getDate()).padStart(2, '0');
-                              const dayMonth = `${month} ${dateDay}`;
-                              const holidaysList = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
-                              const isHoliday = holidaysList.includes(dayMonth);
-
-                              const hasValidPunchIn = (log && cleanLog.displayInTime && cleanLog.displayInTime !== '----');
-                              let badgeText = hasValidPunchIn ? 'Present' : 'Absent';
-                              if (badgeText === 'Absent') {
-                                if (isSunday) badgeText = 'WO';
-                                else if (isHoliday) badgeText = 'NH';
-                              }
-
-                              const isPresent = badgeText.toUpperCase().includes('PRESENT');
-                              const isOff = badgeText === 'WO' || badgeText === 'NH';
-
-                              return (
-                                <div style={{
-                                  display: 'inline-flex',
-                                  padding: '6px 12px',
-                                  borderRadius: '8px',
-                                  background: isPresent ? '#f0fdf4' : (isOff ? '#eff6ff' : '#fef2f2'),
-                                  color: isPresent ? '#16a34a' : (isOff ? '#3b82f6' : '#ef4444'),
-                                  fontSize: '11px',
-                                  fontWeight: '950'
-                                }}>{badgeText}</div>
-                              );
-                            })()}
+                            <div style={{
+                              display: 'inline-flex',
+                              padding: '6px 12px',
+                              borderRadius: '8px',
+                              background: (log && cleanLog.displayInTime !== '----') ? '#f0fdf4' : '#fef2f2',
+                              color: (log && cleanLog.displayInTime !== '----') ? '#16a34a' : '#ef4444',
+                              fontSize: '11px',
+                              fontWeight: '950'
+                            }}>
+                              {(log && cleanLog.displayInTime !== '----') ? 'Present' : 'Absent'}
+                            </div>
                           </td>
                           <td style={{ padding: '20px', fontSize: '12px', color: '#64748b', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={log?.in_location || '----'}>
                             {log?.in_location || '----'}
@@ -1152,7 +1175,7 @@ export default function AttendanceManagement() {
                   ) : (
                     <tr>
                       <td colSpan="9" style={{ padding: '60px', textAlign: 'center', color: '#64748b', fontWeight: '800' }}>
-                        No attendance records found for the selected period.
+                        Loading.....
                       </td>
                     </tr>
                   )}

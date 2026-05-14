@@ -141,7 +141,7 @@ export default function ReportScreen() {
       
       <div style={styles.teamGrid}>
         {(teamsReporting || []).map(t => (
-          <div key={t.id} onClick={() => navigate(`/teams/${t.id}`)} className="member-report-card" style={styles.teamCard}>
+          <div key={t.id} onClick={() => navigate(`/teams/${encodeURIComponent(t.id)}`)} className="member-report-card" style={styles.teamCard}>
              <div style={{ position: 'relative', width: '90px', height: '90px' }}>
                 <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#f1f5f9" strokeWidth="3" />

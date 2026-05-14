@@ -45,6 +45,26 @@ export default function EngagementModule() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    // AUTO-FETCH COMMENT COUNTS ON LOAD
+    useEffect(() => {
+        const fetchAllCommentCounts = async () => {
+            if (threads && threads.length > 0) {
+                for (const post of threads) {
+                    // Check if we already have comments for this post to avoid redundant API calls
+                    if (postComments[post.id] === undefined) {
+                        try {
+                            const comments = await fetchComments(post.id);
+                            setPostComments(prev => ({ ...prev, [post.id]: Array.isArray(comments) ? comments : [] }));
+                        } catch (err) {
+                            console.error("Error auto-fetching comments for count:", err);
+                        }
+                    }
+                }
+            }
+        };
+        fetchAllCommentCounts();
+    }, [threads, fetchComments]);
+
     const fetchProfiles = async () => {
         try {
             const resp = await fetch(API_ENDPOINTS.USERS || `${BASE_URL}/api/users`);
@@ -164,7 +184,7 @@ export default function EngagementModule() {
     };
 
     const styles = {
-        container: { minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '20px', padding: winWidth < 768 ? '100px 16px 120px' : '125px 26px 150px', marginTop: 0, width: '100%', maxWidth: '100%', margin: '0', boxSizing: 'border-box' },
+        container: { minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '20px', padding: winWidth < 768 ? '85px 16px 120px' : '100px 26px 150px', marginTop: 0, width: '100%', maxWidth: '100%', margin: '0', boxSizing: 'border-box' },
         card: { backgroundColor: 'white', borderRadius: '40px', padding: winWidth < 768 ? '20px' : '30px', boxShadow: '0 10px 40px rgba(0,0,0,0.04)', border: '1px solid #eef2f6' },
         tagInput: { width: '100%', padding: '12px 20px', borderRadius: '15px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontSize: '14px', fontWeight: '900', color: '#315A9E', outline: 'none', marginBottom: '12px' },
         mainInput: { width: '100%', padding: '20px', borderRadius: '20px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontSize: '16px', fontWeight: '600', color: '#0B1E3F', outline: 'none', resize: 'none', minHeight: '100px' },
@@ -203,6 +223,14 @@ export default function EngagementModule() {
             <AppHeader />
             
             <main style={styles.container}>
+                {/* BACK BUTTON */}
+                <button
+                    onClick={() => navigate(-1)}
+                    style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', marginBottom: '10px', width: 'fit-content' }}
+                >
+                    <ChevronLeft size={20} color="#64748b" />
+                </button>
+
                 {/* CREATE THREAD */}
                 <div style={{ ...styles.card, borderTop: '5px solid #FDB913' }}>
                     <input style={styles.tagInput} placeholder="Add a tagline..." value={tagline} onChange={e => setTagline(e.target.value)} />

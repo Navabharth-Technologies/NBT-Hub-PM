@@ -134,6 +134,12 @@ export default function CourseModule() {
 
   const getFullUrl = (url) => {
     if (!url) return null;
+    // Rewrite any localhost-based absolute URL to use the configured BASE_URL
+    // This fixes PDFs/videos uploaded from the server machine (stored as localhost:PORT)
+    const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/;
+    if (localhostPattern.test(url)) {
+      return url.replace(localhostPattern, BASE_URL);
+    }
     if (url.startsWith('http')) return url;
     return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
   };

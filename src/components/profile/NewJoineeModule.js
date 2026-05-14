@@ -125,7 +125,29 @@ export default function NewJoineeModule() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // VALIDATION: Prevent invalid characters based on field type
+    let filteredValue = value;
+    
+    if (name === 'name') {
+      // Only allow letters and spaces
+      filteredValue = value.replace(/[^a-zA-Z\s]/g, '');
+    } else if (name === 'phone_number') {
+      // Only allow numbers and leading plus
+      filteredValue = value.replace(/[^\d+]/g, '');
+      if (filteredValue.includes('+') && filteredValue.indexOf('+') !== 0) {
+        filteredValue = filteredValue.replace(/\+/g, '');
+        filteredValue = '+' + filteredValue;
+      }
+    } else if (name === 'employee_id') {
+      // Alphanumeric and hyphens only
+      filteredValue = value.replace(/[^a-zA-Z0-9-]/g, '');
+    } else if (name === 'duration_months') {
+      // Only positive integers
+      filteredValue = value.replace(/\D/g, '');
+    }
+    
+    setFormData(prev => ({ ...prev, [name]: filteredValue }));
   };
 
   const handleEdit = (joinee) => {
@@ -160,7 +182,45 @@ export default function NewJoineeModule() {
 
   const handleAddJoinee = async (e) => {
     e.preventDefault();
-    if (!user?.token || !formData.name || !formData.email_id || !formData.role || !formData.joining_date) return;
+    
+    // FINAL VALIDATION BEFORE SUBMISSION
+    if (!formData.name || formData.name.length < 3) {
+      setToastMessage('Please enter a valid full name (min 3 characters)');
+      setToastType('error');
+      setShowSuccessToast(true);
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email_id)) {
+      setToastMessage('Please enter a valid email address');
+      setToastType('error');
+      setShowSuccessToast(true);
+      return;
+    }
+
+    if (!formData.employee_id) {
+      setToastMessage('Employee ID is required');
+      setToastType('error');
+      setShowSuccessToast(true);
+      return;
+    }
+
+    if (formData.phone_number.length < 10) {
+      setToastMessage('Please enter a valid phone number');
+      setToastType('error');
+      setShowSuccessToast(true);
+      return;
+    }
+
+    if (!formData.joining_date) {
+      setToastMessage('Joining date is required');
+      setToastType('error');
+      setShowSuccessToast(true);
+      return;
+    }
+
+    if (!user?.token) return;
     setSaving(true);
     
     const isIntern = formData.is_intern;

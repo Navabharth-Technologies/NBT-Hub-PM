@@ -29,7 +29,7 @@ export default function LeaveManagement() {
   const [showAllLedger, setShowAllLedger] = useState(false);
 
   const [showLeaveEditModal, setShowLeaveEditModal] = useState(false);
-  const [leaveEditData, setLeaveEditData] = useState({ 
+  const [leaveEditData, setLeaveEditData] = useState({
     empId: '', empName: '', cl: 0, lop: 0, month: 4, year: 2026, available: 0, halfDays: 0, remark: ''
   });
 
@@ -202,11 +202,11 @@ export default function LeaveManagement() {
                 leaveRequests.map(req => {
                   const rawStatus = String(req.status || 'PENDING').toUpperCase();
                   const statusMatch = rawStatus.split(',')[0].trim();
-                  
+
                   let sColor = '#f59e0b'; // Orange for Pending
                   let sBg = '#fffbeb';
                   let displayStatus = 'PENDING';
-                  
+
                   if (statusMatch.includes('APPROVED')) {
                     sColor = '#10b981'; // Green for Approved
                     sBg = '#ecfdf5';
@@ -216,7 +216,7 @@ export default function LeaveManagement() {
                     sBg = '#fef2f2';
                     displayStatus = 'REJECTED';
                   }
-                  
+
                   const displayDate = req.start_date ? new Date(req.start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
                   return (
                     <div key={req.id} onClick={() => navigate(`/attendance/leave/${req.id}`)} style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', cursor: 'pointer', transition: '0.2s', display: 'flex', flexDirection: 'column', minHeight: '220px' }}>
@@ -228,8 +228,8 @@ export default function LeaveManagement() {
                               {req.employee_name || req.name || allEmployees.find(e => String(e.id) === String(req.user_id || req.employee_id))?.name || 'Unknown'}
                             </div>
                             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                                <span style={{ fontSize: '10px', fontWeight: '900', color: '#1d4ed8', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px' }}>#{req.user_id || req.id}</span>
-                                <span style={{ fontSize: '10px', fontWeight: '900', color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>{req.leave_type || 'Leave'}</span>
+                              <span style={{ fontSize: '10px', fontWeight: '900', color: '#1d4ed8', background: '#eff6ff', padding: '2px 6px', borderRadius: '4px' }}>#{req.user_id || req.id}</span>
+                              <span style={{ fontSize: '10px', fontWeight: '900', color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>{req.leave_type || 'Leave'}</span>
                             </div>
                           </div>
                         </div>
@@ -241,7 +241,7 @@ export default function LeaveManagement() {
                   );
                 })
               ) : (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}><p style={{ fontWeight: '900', color: '#94a3b8' }}>No leave requests found.</p></div>
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}><p style={{ fontWeight: '900', color: '#94a3b8' }}>Loading.</p></div>
               )}
             </div>
           )}

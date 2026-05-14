@@ -103,5 +103,6 @@ export const API_ENDPOINTS = {
   UNBLOCK_ALL_JOINEES_ALT: `${BASE_URL}/api/new-joinees/unblock-all`,
   NEW_JOINEE_UNBLOCK: (id) => `${BASE_URL}/api/new-joinees/${id}/unblock`,
   NEW_JOINEE_UNBLOCK_ADMIN: (id) => `${BASE_URL}/api/admin/new-joinees/${id}/unblock`,
+  QUIZ_LEADERBOARD: `${BASE_URL}/api/fun-quizzes/leaderboard`,
 };
 

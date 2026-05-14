@@ -227,7 +227,7 @@ const TaskNotification = ({ onOpenTask }) => {
                           if (notif.isBlockedAlert) {
                             navigate('/new-joinees#blocked');
                           } else if (desc.includes('leave') || title.includes('leave')) {
-                            navigate('/attendance');
+                            navigate('/leaves');
                           } else if (desc.includes('resignation') || title.includes('resignation')) {
                             navigate('/resignations');
                           } else if (desc.includes('certificate') || title.includes('certificate')) {

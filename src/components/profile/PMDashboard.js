@@ -198,7 +198,7 @@ export default function PMDashboard() {
           fetch(API_ENDPOINTS.NEW_JOINEES, { headers: { 'Authorization': `Bearer ${user.token}` } }).catch(() => null),
           fetch(API_ENDPOINTS.INTERNS, { headers: { 'Authorization': `Bearer ${user.token}` } }).catch(() => null)
         ]);
-        
+
         let totalActiveJoinees = 0;
         if (joineeRes && joineeRes.ok) {
           const jData = await joineeRes.json();
@@ -220,7 +220,7 @@ export default function PMDashboard() {
         if (leavesRes.ok) {
           const lData = await leavesRes.json();
           const lList = Array.isArray(lData) ? lData : (lData?.data || lData?.all || lData?.leaves || lData?.requests || []);
-          
+
           // Name Resolution for Leave Requests
           const resolvedLeaves = (Array.isArray(lList) ? lList : []).map(req => {
             const uid = String(req.user_id || req.userId || req.empId || '').trim();
@@ -233,7 +233,7 @@ export default function PMDashboard() {
 
           // Derive metrics safely - using includes to handle 'PENDING,PENDING' or varied formats
           // Count all active leaves (Pending + Approved)
-          const onLeaveCount = Array.isArray(lList) ? lList.filter(r => 
+          const onLeaveCount = Array.isArray(lList) ? lList.filter(r =>
             ['PENDING', 'APPROVED'].includes(String(r?.status || '').toUpperCase())
           ).length : 0;
           setAttendanceStats(prev => ({ ...prev, leave: onLeaveCount }));
@@ -249,7 +249,11 @@ export default function PMDashboard() {
           if (Array.isArray(masterLogs)) {
             const todayStr = new Date().toISOString().split('T')[0];
             const todayLogs = masterLogs.filter(l => {
-              const lDate = (l?.punch_date || l?.PunchDate || l?.date || '').split('T')[0];
+              let lDate = (l?.punch_date || l?.PunchDate || l?.date || '').split('T')[0].split(' ')[0];
+              if (lDate.includes('-') && lDate.split('-')[0].length !== 4) {
+                const parts = lDate.split('-');
+                if (parts.length === 3) lDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+              }
               return lDate === todayStr;
             });
             const uniquePresentToday = new Set(todayLogs.map(l => l?.user_id || l?.Empcode || l?.EmpID)).size;
@@ -322,7 +326,7 @@ export default function PMDashboard() {
   // Dynamically calculate metrics from live data
   const dynamicMetrics = [
     { label: 'Total Teams', value: teams?.length || 'View', icon: <Icons.Teams />, color: '#6366f1', trend: 'Live', trendUp: true, path: '/teams' },
-    { label: 'Employees of NBT', value: employeesCount || 'View', icon: <Icons.Employees />, color: '#8b5cf6', trend: 'Live', trendUp: true, path: '/employees' },
+    { label: 'Total Employess', value: employeesCount || 'View', icon: <Icons.Employees />, color: '#8b5cf6', trend: 'Live', trendUp: true, path: '/employees' },
     { label: 'Personal Information', value: 'Manage', icon: <Icons.Employees />, color: '#315A9E', trend: 'Active', trendUp: true, path: '/personal-info' },
 
     { label: 'Assets Management', value: 'Manage', icon: <span>📦</span>, color: '#f59e0b', trend: 'New', trendUp: true, path: '/assets' },
@@ -562,7 +566,7 @@ export default function PMDashboard() {
             }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <h2 className="section-title" style={{ margin: 0, fontSize: '22px' }}>Team Overview</h2>
-                <button style={{ background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer', fontSize: '13px', textAlign: 'left', padding: '4px 0' }} onClick={() => navigate('/teams')}>Manage Hub</button>
+                <button style={{ background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer', fontSize: '13px', textAlign: 'left', padding: '4px 0' }} onClick={() => navigate('/teams')}></button>
               </div>
 
               {winWidth < 768 && (
@@ -610,13 +614,12 @@ export default function PMDashboard() {
                     <div
                       key={team.id}
                       className="team-card"
-                      onClick={() => navigate(`/teams/${team.id}`)}
                       style={{
                         flex: '0 0 100%',
                         width: '100%',
                         boxSizing: 'border-box',
                         padding: '0 5px',
-                        cursor: 'pointer',
+                        cursor: 'default',
                         background: 'white',
                         borderRadius: '24px',
                         margin: '0',
@@ -658,12 +661,9 @@ export default function PMDashboard() {
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '15px',
-                        cursor: 'pointer',
+                        cursor: 'default',
                         transition: '0.3s transform'
                       }}
-                      onClick={() => navigate(`/teams/${team.id}`)}
-                      onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-                      onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -674,13 +674,6 @@ export default function PMDashboard() {
                           </div>
                         </div>
                         <div style={{ padding: '4px 10px', borderRadius: '8px', background: '#eff6ff', color: '#3863a8', fontSize: '10px', fontWeight: '900' }}> {team.id}</div>
-                      </div>
-                      {/* Removed Sprints/Progress stats row as per user request */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ flex: 1, height: '8px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
-                          <div style={{ width: `${team.progress || 0}%`, height: '100%', background: 'linear-gradient(90deg, #3863a8, #1e40af)', borderRadius: '10px' }} />
-                        </div>
-                        <span style={{ fontSize: '12px', color: '#cbd5e1' }}>›</span>
                       </div>
                     </div>
                   ))}
@@ -707,8 +700,7 @@ export default function PMDashboard() {
 
             <div style={{ marginBottom: '20px', flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                <span style={{ fontSize: '11px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Active Unit Sprints</span>
-                <span style={{ fontSize: '10px', fontWeight: '900', color: '#3863a8', backgroundColor: '#eff6ff', padding: '4px 12px', borderRadius: '100px' }}>{recentTasks.length} Active</span>
+                <div style={{ fontSize: '11px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Active Unit Sprints</div>
               </div>
               {recentTasks.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -765,7 +757,7 @@ export default function PMDashboard() {
             marginRight: 'auto',
             boxSizing: 'border-box',
             overflow: 'hidden'
-          }} onClick={() => navigate('/attendance')}>
+          }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',

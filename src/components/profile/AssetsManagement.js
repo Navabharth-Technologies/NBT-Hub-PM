@@ -71,9 +71,9 @@ export default function AssetsManagement() {
         if (assetRes.ok) {
           const assetData = await assetRes.json();
           const list = Array.isArray(assetData) ? assetData : (assetData.recordset || assetData.data || []);
-          list.forEach(a => { 
+          list.forEach(a => {
             const id = a.employee_id || a.EmpID || a.employeeId || a.id;
-            if (id) assetMap[id] = a; 
+            if (id) assetMap[id] = a;
           });
         }
       } catch (e) { console.error('Asset fetch failed:', e); }
@@ -99,7 +99,7 @@ export default function AssetsManagement() {
 
         const combinedCerts = [...certs1, ...certs2];
         console.log('Combined Certificate Data:', combinedCerts);
-        
+
         combinedCerts.forEach(c => {
           const id = c.employee_id || c.EmpID || c.employeeId || c.user_id || c.id;
           if (!id) return;
@@ -176,22 +176,22 @@ export default function AssetsManagement() {
   const handleEdit = (emp, readOnly = false, assetOverride = null) => {
     const empId = emp.id || emp.EmpID;
     const currentAsset = assetOverride || assets[empId] || assets[emp.id] || assets[emp.EmpID] || {};
-    
+
     // Find employee in the full list to get the latest Role/Position
     const fullEmp = employees.find(e => {
       const eId = String(e.id || e.EmpID || '').trim();
       const targetId = String(empId || '').trim();
       return eId === targetId && eId !== '';
     });
-    
+
     console.log('[POSITION DEBUG]', { empId, fullEmp, asset: currentAsset });
-    
+
     // Strictly prioritize the 'Role' column from the employees list as requested
     let position = '';
     if (fullEmp) {
       position = fullEmp.Role || fullEmp.role || fullEmp.Position || fullEmp.designation || '';
     }
-    
+
     // If not found in employee list, only then fall back to asset/emp data
     if (!position) {
       position = currentAsset.designation || currentAsset.role || emp.role || '';
@@ -221,9 +221,9 @@ export default function AssetsManagement() {
       tablet: toYesNo(currentAsset.tablet, currentAsset.tablet_unit)
     });
 
-    setEditModal({ 
-      show: true, 
-      employee: emp, 
+    setEditModal({
+      show: true,
+      employee: emp,
       isReadOnly: readOnly,
       assetId: currentAsset.id || currentAsset.EmpID || currentAsset.employee_id,
       isCertificate: !!currentAsset.is_from_certificate,
@@ -237,11 +237,11 @@ export default function AssetsManagement() {
     try {
       const response = await fetch(API_ENDPOINTS.SERVICE_CERTIFICATE_UPDATE(editModal.certificateData.id), {
         method: 'PUT',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: status,
           admin_remarks: `Processed by PManager on ${new Date().toLocaleDateString()}`
         })
@@ -268,21 +268,21 @@ export default function AssetsManagement() {
       const empId = editModal.employee.id || editModal.employee.EmpID;
       const existingAsset = assets[empId];
       const hasExistingRecord = !!existingAsset;
-      
+
       // Use the DB record's primary key for PUT, fallback to employee ID
       const targetId = editModal.assetId || (existingAsset?.id) || empId;
-      
+
       // POST for brand-new records, PUT for updating existing ones
       const endpoint = hasExistingRecord ? API_ENDPOINTS.ASSET_UPDATE(targetId) : API_ENDPOINTS.ASSETS;
       const method = hasExistingRecord ? 'PUT' : 'POST';
-      
+
       console.log(`[ASSET DECISION] hasExistingRecord=${hasExistingRecord}, targetId=${targetId}, method=${method}`);
 
       // Advanced Date Formatter (Handles both 16-01-2026 and 16/01/2026)
       const toISO = (d) => {
         if (!d || d === 'N/A' || d === '--' || d.includes('YYYY')) return d;
         const normalized = d.replace(/\//g, '-'); // Support slashes/
-        if (normalized.split('-')[0].length === 4) return normalized; 
+        if (normalized.split('-')[0].length === 4) return normalized;
         const [dd, mm, yyyy] = normalized.split('-');
         if (dd && mm && yyyy) {
           return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
@@ -307,7 +307,7 @@ export default function AssetsManagement() {
         assigned_date: isoDate,
         designation: form.designation,
         role: form.designation,
-        
+
         // Massive Redundancy for Joining Date (DOJ)
         joining_date: isoDate,
         doj: isoDate,
@@ -318,7 +318,7 @@ export default function AssetsManagement() {
         JoinDate: isoDate,
         date_of_joining: isoDate,
         joining_day: form.joining_date,
-        
+
         // LWD Super-Set
         last_working_date: isoLwd,
         lwd: isoLwd,
@@ -331,34 +331,34 @@ export default function AssetsManagement() {
         laptop_details: form.laptop_details,
         laptop_unit_details: form.laptop_details,
         laptop: form.laptop_details,
-        
+
         mouse: form.mouse,
         mouse_unit: form.mouse === 'Yes' ? 1 : 0,
         mouse_status: form.mouse,
-        
+
         keyboard: form.keyboard,
         keyboard_unit: form.keyboard === 'Yes' ? 1 : 0,
         keyboard_status: form.keyboard,
-        
+
         laptop_stand: form.laptop_stand,
         stand: form.laptop_stand,
         stand_unit: form.laptop_stand === 'Yes' ? 1 : 0,
-        
+
         ruf_pad: form.ruf_pad,
         rufpad: form.ruf_pad,
         ruf_pad_unit: form.ruf_pad === 'Yes' ? 1 : 0,
-        
+
         pendrive: form.pendrive,
         pendrive_unit: form.pendrive === 'Yes' ? 1 : 0,
-        
+
         mobile: form.mobile,
         mobile_unit: form.mobile === 'Yes' ? 1 : 0,
         mobile_handset: form.mobile,
-        
+
         camera: form.camera,
         webcam: form.camera,
         camera_unit: form.camera === 'Yes' ? 1 : 0,
-        
+
         earphone: form.earphone,
         headphone: form.earphone,
         earphones: form.earphone,
@@ -366,7 +366,7 @@ export default function AssetsManagement() {
         earphone_headphone: form.earphone,
         earphone_unit: form.earphone === 'Yes' ? 1 : 0,
         headphone_unit: form.earphone === 'Yes' ? 1 : 0,
-        
+
         tablet: form.tablet,
         tablet_unit: form.tablet === 'Yes' ? 1 : 0
       };
@@ -375,7 +375,7 @@ export default function AssetsManagement() {
 
       const response = await fetch(endpoint, {
         method: method,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
         },
@@ -421,8 +421,8 @@ export default function AssetsManagement() {
     });
 
     return combined.filter(emp => {
-      const matchesSearch = (emp.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           (String(emp.id || '')).includes(searchTerm);
+      const matchesSearch = (emp.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (String(emp.id || '')).includes(searchTerm);
       const matchesDept = selectedDept === 'All' || (emp.team && emp.team.includes(selectedDept));
       return matchesSearch && matchesDept;
     });
@@ -432,7 +432,7 @@ export default function AssetsManagement() {
     <div className="assets-management-container" style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', fontFamily: "'Outfit', sans-serif" }}>
       <AppHeader />
 
-      <main className="dashboard-content" style={{ 
+      <main className="dashboard-content" style={{
         paddingTop: winWidth < 768 ? '100px' : '120px',
         paddingLeft: winWidth < 768 ? '15px' : '26px',
         paddingRight: winWidth < 768 ? '15px' : '26px',
@@ -441,8 +441,8 @@ export default function AssetsManagement() {
       }}>
         <div style={{ display: 'flex', flexDirection: winWidth < 1024 ? 'column' : 'row', alignItems: winWidth < 1024 ? 'flex-start' : 'center', justifyContent: 'space-between', gap: '25px', width: '100%', marginBottom: '30px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <button 
-              onClick={() => navigate(-1)} 
+            <button
+              onClick={() => navigate(-1)}
               style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <ArrowLeft size={18} color="#64748b" />
@@ -456,7 +456,7 @@ export default function AssetsManagement() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto', flexDirection: winWidth < 480 ? 'column' : 'row' }}>
-            <button 
+            <button
               onClick={() => setAvailableAssetsModal(true)}
               style={{ flex: 1, background: 'white', color: '#3163aa', border: '2px solid #3163aa', padding: '12px 20px', borderRadius: '14px', fontWeight: '800', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all 0.3s' }}
             >
@@ -508,7 +508,7 @@ export default function AssetsManagement() {
         {winWidth < 1024 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {loading ? (
-              <div style={{ textAlign: 'center', padding: '40px', background: 'white', borderRadius: '24px' }}>Establishing neural link...</div>
+              <div style={{ textAlign: 'center', padding: '40px', background: 'white', borderRadius: '24px' }}>Loading...</div>
             ) : filteredEmployees.map((emp, i) => {
               const empId = emp.id || emp.EmpID;
               const asset = assets[empId] || assets[emp.id] || assets[emp.EmpID] || {};
@@ -533,12 +533,12 @@ export default function AssetsManagement() {
                     <div style={{ fontSize: '14px', fontWeight: '800', color: '#334155' }}>{asset.designation || emp.role || 'Unspecified'}</div>
                   </div>
 
-                  <button 
+                  <button
                     onClick={() => handleEdit(emp, hasAsset)}
-                    style={{ 
-                      width: '100%', padding: '12px', borderRadius: '14px', border: 'none', 
-                      background: hasAsset ? '#f1f5f9' : '#3163aa', 
-                      color: hasAsset ? '#475569' : 'white', 
+                    style={{
+                      width: '100%', padding: '12px', borderRadius: '14px', border: 'none',
+                      background: hasAsset ? '#f1f5f9' : '#3163aa',
+                      color: hasAsset ? '#475569' : 'white',
                       fontWeight: '800', fontSize: '13px', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                     }}
@@ -588,14 +588,14 @@ export default function AssetsManagement() {
                         </td>
                         <td style={{ padding: '15px 25px', textAlign: 'center' }}>
                           {hasAsset ? (
-                            <button 
+                            <button
                               onClick={() => handleEdit(emp, true)}
                               style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 12px', color: '#64748b', cursor: 'pointer', transition: '0.2s', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                             >
                               <Package size={14} /> <span style={{ fontSize: '12px', fontWeight: '800' }}>View Details</span>
                             </button>
                           ) : (
-                            <button 
+                            <button
                               onClick={() => handleEdit(emp, false)}
                               style={{ background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: '10px', padding: '8px 12px', color: '#2563eb', cursor: 'pointer', transition: '0.2s', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                             >
@@ -616,19 +616,19 @@ export default function AssetsManagement() {
       {/* Edit Modal */}
       {editModal.show && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="animate-slide-up" style={{ 
-            background: 'white', 
-            width: '100%', 
-            maxWidth: editModal.isCertificate ? '900px' : '800px', 
-            borderRadius: '35px', 
-            maxHeight: '92vh', 
-            overflow: 'hidden', 
-            display: 'flex', 
-            flexDirection: 'column', 
+          <div className="animate-slide-up" style={{
+            background: 'white',
+            width: '100%',
+            maxWidth: editModal.isCertificate ? '900px' : '800px',
+            borderRadius: '35px',
+            maxHeight: '92vh',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
             border: '3px solid #cbd5e1'
           }}>
-            
+
             {/* Header Redesign for Certificate */}
             <div style={{ padding: winWidth < 768 ? '20px' : '30px 40px', background: editModal.isCertificate ? 'white' : '#f8fafc', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '12px' : '20px' }}>
@@ -687,16 +687,16 @@ export default function AssetsManagement() {
                       ].map((item) => {
                         const isSubmitted = form[item.key] === 'Yes';
                         return (
-                          <div key={item.key} style={{ 
-                            background: isSubmitted ? '#f0fdf4' : 'white', 
+                          <div key={item.key} style={{
+                            background: isSubmitted ? '#f0fdf4' : 'white',
                             border: isSubmitted ? '1.5px solid #bbf7d0' : '1.5px solid #e2e8f0',
                             borderRadius: '16px', padding: '12px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
                             transition: '0.2s',
                             boxShadow: isSubmitted ? 'none' : '0 2px 4px rgba(0,0,0,0.02)'
                           }}>
-                            <div style={{ 
-                              width: '28px', height: '28px', borderRadius: '50%', 
-                              background: isSubmitted ? '#22c55e' : '#f1f5f9', 
+                            <div style={{
+                              width: '28px', height: '28px', borderRadius: '50%',
+                              background: isSubmitted ? '#22c55e' : '#f1f5f9',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', color: isSubmitted ? 'white' : '#94a3b8'
                             }}>
                               {isSubmitted ? <Check size={16} /> : item.icon}
@@ -722,22 +722,22 @@ export default function AssetsManagement() {
                     <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '8px', paddingLeft: '4px' }}>EMPLOYEE NAME</label>
-                        <input 
-                          type="text" 
-                          placeholder="Enter Name" 
-                          value={form.employee_name} 
-                          onChange={(e) => setForm({ ...form, employee_name: e.target.value })} 
-                          style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }} 
+                        <input
+                          type="text"
+                          placeholder="Enter Name"
+                          value={form.employee_name}
+                          onChange={(e) => setForm({ ...form, employee_name: e.target.value })}
+                          style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }}
                         />
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#64748b', marginBottom: '8px', paddingLeft: '4px' }}>EMPLOYEE ID</label>
-                        <input 
-                          type="text" 
-                          placeholder="Enter ID" 
-                          value={form.employee_id} 
-                          onChange={(e) => setForm({ ...form, employee_id: e.target.value })} 
-                          style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }} 
+                        <input
+                          type="text"
+                          placeholder="Enter ID"
+                          value={form.employee_id}
+                          onChange={(e) => setForm({ ...form, employee_id: e.target.value })}
+                          style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1px solid #e2e8f0', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }}
                         />
                       </div>
                     </div>
@@ -822,13 +822,13 @@ export default function AssetsManagement() {
                   ) : (
                     <button
                       disabled={true}
-                      style={{ 
-                        flex: 1, padding: '18px', borderRadius: '22px', border: 'none', 
-                        background: '#cbd5e1', 
-                        color: 'white', fontSize: '16px', fontWeight: '900', 
-                        cursor: 'not-allowed', 
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', 
-                        boxShadow: 'none', 
+                      style={{
+                        flex: 1, padding: '18px', borderRadius: '22px', border: 'none',
+                        background: '#cbd5e1',
+                        color: 'white', fontSize: '16px', fontWeight: '900',
+                        cursor: 'not-allowed',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                        boxShadow: 'none',
                         transition: '0.2s',
                         opacity: 0.8
                       }}
@@ -874,7 +874,7 @@ export default function AssetsManagement() {
             padding: '40px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
             maxHeight: '85vh', display: 'flex', flexDirection: 'column'
           }}>
-            <button 
+            <button
               onClick={() => setAvailableAssetsModal(false)}
               style={{ position: 'absolute', top: '25px', right: '25px', background: '#f1f5f9', border: 'none', borderRadius: '50%', padding: '8px', cursor: 'pointer', color: '#64748b', zIndex: 10 }}
             >
@@ -889,10 +889,10 @@ export default function AssetsManagement() {
               <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>List of employees who submitted assets via certificate requests</p>
             </div>
 
-            <div style={{ 
-              display: 'flex', 
+            <div style={{
+              display: 'flex',
               flexDirection: 'row',
-              gap: '20px', 
+              gap: '20px',
               overflowX: 'auto',
               padding: '20px 10px',
               scrollSnapType: 'x mandatory',
@@ -906,7 +906,7 @@ export default function AssetsManagement() {
                   const isAudit = status.toUpperCase().includes('AUDIT');
                   const badgeColor = isAudit ? '#ef4444' : '#f59e0b';
                   const badgeBg = isAudit ? '#fef2f2' : '#fffbeb';
-                  
+
                   // Construct a dummy employee object for handleEdit
                   const empObj = {
                     id: empId,
@@ -916,17 +916,17 @@ export default function AssetsManagement() {
                   };
 
                   return (
-                    <div 
-                      key={i} 
+                    <div
+                      key={i}
                       onClick={() => {
                         setAvailableAssetsModal(false);
                         handleEdit(empObj, true, asset);
                       }}
-                      style={{ 
+                      style={{
                         flex: '0 0 220px',
-                        background: 'white', 
-                        padding: '20px', 
-                        borderRadius: '20px', 
+                        background: 'white',
+                        padding: '20px',
+                        borderRadius: '20px',
                         border: '1px solid #f1f5f9',
                         borderLeft: `5px solid ${badgeColor}`,
                         borderBottom: `2px solid ${badgeColor}20`,
@@ -951,12 +951,12 @@ export default function AssetsManagement() {
                     >
                       {/* Top Bar */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ 
-                          fontSize: '9px', 
-                          fontWeight: '900', 
-                          color: badgeColor, 
-                          background: badgeBg, 
-                          padding: '3px 8px', 
+                        <span style={{
+                          fontSize: '9px',
+                          fontWeight: '900',
+                          color: badgeColor,
+                          background: badgeBg,
+                          padding: '3px 8px',
                           borderRadius: '6px',
                           letterSpacing: '0.5px'
                         }}>
@@ -974,7 +974,7 @@ export default function AssetsManagement() {
                         </div>
                         <div style={{ flex: 1, overflow: 'hidden' }}>
                           <div style={{ fontSize: '11px', fontWeight: '900', color: '#1e293b', marginBottom: '1px' }}>
-                            #{asset.id || (i+1)} Cert
+                            #{asset.id || (i + 1)} Cert
                           </div>
                           <div style={{ fontWeight: '800', fontSize: '12px', color: '#334155', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {empName}
@@ -986,12 +986,12 @@ export default function AssetsManagement() {
                       </div>
 
                       {/* Footer Purpose */}
-                      <div style={{ 
-                        background: '#f8fafc', 
-                        padding: '8px 10px', 
-                        borderRadius: '10px', 
-                        fontSize: '10px', 
-                        color: '#475569', 
+                      <div style={{
+                        background: '#f8fafc',
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        fontSize: '10px',
+                        color: '#475569',
                         fontWeight: '700',
                         textAlign: 'center',
                         border: '1px solid #f1f5f9',

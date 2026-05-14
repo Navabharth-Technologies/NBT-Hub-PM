@@ -374,7 +374,7 @@ export default function TeamManagement() {
                     e.currentTarget.style.boxShadow = 'var(--shadow-md)';
                   }
                 }}
-                onClick={() => !isEditingAlignment && navigate(`/teams/${team.id}`)}
+                onClick={() => !isEditingAlignment && navigate(`/teams/${encodeURIComponent(team.id)}`)}
                 onDragOver={(e) => {
                   if (isEditingAlignment) {
                     e.preventDefault();

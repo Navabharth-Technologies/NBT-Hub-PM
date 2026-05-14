@@ -16,10 +16,6 @@ export default function TeamDetail() {
 
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showFilter, setShowFilter] = useState(false);
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(2026);
-  const [selectedMonth, setSelectedMonth] = useState(2);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editTeamName, setEditTeamName] = useState('');
@@ -41,8 +37,9 @@ export default function TeamDetail() {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
         if (response.ok) {
-          const allTeams = await response.json();
-          const found = allTeams.find(t => t.id.toString() === id);
+          const responseData = await response.json();
+          const allTeams = Array.isArray(responseData) ? responseData : (responseData.data || responseData.teams || []);
+          const found = allTeams.find(t => t && String(t.id || t.ID || '').trim() === String(id).trim());
           if (found) {
             // Fetch users only for role resolution (Tasks removed per request)
             const usersData = await fetch(API_ENDPOINTS.USERS, { 
@@ -55,7 +52,7 @@ export default function TeamDetail() {
               if (u.name) roleMap[u.name.toLowerCase()] = u.role;
             });
 
-            const rawMembers = found.membersList || found.members || [];
+            const rawMembers = Array.isArray(found.membersList) ? found.membersList : (Array.isArray(found.members) ? found.members : []);
             const enrichedMembers = rawMembers.map(m => ({
               ...m,
               role: roleMap[String(m.name || '').toLowerCase()] || m.role || 'Member'
@@ -245,114 +242,21 @@ export default function TeamDetail() {
                 Download report
               </button>
 
-              <div style={{ position: 'relative' }}>
-                <button
-                  className="btn-primary"
-                  onClick={() => setShowFilter(!showFilter)}
-                  style={{
-                    background: 'white',
-                    color: '#64748b',
-                    border: '1px solid #e2e8f0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    flex: winWidth < 768 ? '1' : 'initial',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
-                  Filter
-                </button>
-
-                {showFilter && (
-                  <div className="animate-slide-up" style={{
-                    position: 'absolute', top: '45px', left: '0', width: '220px',
-                    background: 'white', border: '1px solid #e2e8f0', borderRadius: '16px',
-                    boxShadow: '0 15px 35px rgba(0,0,0,0.12)', zIndex: 100, padding: '8px',
-                    display: 'flex', flexDirection: 'column', gap: '4px'
-                  }}>
-                    <div style={{ padding: '8px 12px', fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Filter Options</div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <button
-                        className="add-menu-item"
-                        onClick={() => setShowCalendar(!showCalendar)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', border: 'none', background: 'none', width: '100%', textAlign: 'left', fontWeight: '600', fontSize: '13px', cursor: 'pointer', borderRadius: '10px' }}
-                      >
-                        <span style={{ fontSize: '16px' }}>📅</span> Calendar View
-                      </button>
-
-                      {showCalendar && (
-                        <div style={{ padding: '10px', background: '#f8fafc', borderRadius: '12px', marginTop: '4px', border: '1px solid #eef2f6' }}>
-                          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                            <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '2px 4px' }}>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setSelectedMonth(m => m === 0 ? 11 : m - 1); if (selectedMonth === 0) setSelectedYear(y => y - 1); }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', borderRadius: '4px' }}
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-                              </button>
-                              <span style={{ fontSize: '11px', fontWeight: '900', color: '#3863a8', letterSpacing: '0.5px' }}>{months[selectedMonth]}</span>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setSelectedMonth(m => m === 11 ? 0 : m + 1); if (selectedMonth === 11) setSelectedYear(y => y + 1); }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', borderRadius: '4px' }}
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-                              </button>
-                            </div>
-                            <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '2px 4px' }}>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setSelectedYear(y => y - 1); }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', borderRadius: '4px' }}
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-                              </button>
-                              <span style={{ fontSize: '11px', fontWeight: '900', color: '#3863a8', letterSpacing: '0.5px' }}>{selectedYear}</span>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setSelectedYear(y => y + 1); }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px', borderRadius: '4px' }}
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-                              </button>
-                            </div>
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', textAlign: 'center' }}>
-                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => <div key={d} style={{ fontSize: '8px', fontWeight: '900', color: '#94a3b8' }}>{d}</div>)}
-                            {Array.from({ length: new Date(selectedYear, selectedMonth + 1, 0).getDate() }).map((_, i) => (
-                              <div key={i} style={{
-                                fontSize: '9px', fontWeight: '700', padding: '4px', borderRadius: '4px',
-                                background: (i + 1) === 15 ? '#3863a820' : 'transparent',
-                                color: (i + 1) === 15 ? '#3863a8' : '#1e293b'
-                              }}>
-                                {i + 1}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <button className="add-menu-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', border: 'none', background: 'none', width: '100%', textAlign: 'left', fontWeight: '600', fontSize: '13px', cursor: 'pointer', borderRadius: '10px' }}>
-                      <span style={{ fontSize: '16px' }}>👑</span> Team Lead Only
-                    </button>
-                    <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 8px' }}></div>
-                    <button className="add-menu-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', border: 'none', background: 'none', width: '100%', textAlign: 'left', fontWeight: '600', fontSize: '13px', cursor: 'pointer', borderRadius: '10px', color: '#312e81' }}>
-                      <span style={{ fontSize: '16px' }}>👥</span> Show All Employees
-                    </button>
-                  </div>
-                )}
-              </div>
-
               <button
                 className="btn-primary"
                 onClick={handleEditTeam}
                 style={{
-                  background: 'white',
-                  color: '#312e81',
-                  border: '1px solid #c7d2fe',
-                  fontWeight: '800',
-                  width: winWidth < 768 ? '100%' : 'auto',
-                  marginTop: winWidth < 768 ? '10px' : '0'
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  flex: winWidth < 768 ? '1' : 'initial',
+                  justifyContent: 'center',
+                  minWidth: winWidth < 768 ? '120px' : 'auto'
                 }}
-              >Edit Team</button>
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                Edit Team
+              </button>
             </div>
           </header>
 
