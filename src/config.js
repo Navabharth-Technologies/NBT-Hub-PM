@@ -99,6 +99,7 @@ export const API_ENDPOINTS = {
   SERVICE_CERTIFICATE_MY: `${BASE_URL}/api/service_certificate_requests/my`,
   SERVICE_CERTIFICATE_SINGLE: (id) => `${BASE_URL}/api/service_certificate_requests/${id}`,
   TEAM_RENAME: `${BASE_URL}/api/admin/teams/rename`,
+  TEAM_CREATE: `${BASE_URL}/api/admin/teams/create`,
   PASSWORD_CHANGE: `${BASE_URL}/api/password/change-password`,
   PASSWORD_RESET: `${BASE_URL}/api/password/reset-with-otp`,
   UNBLOCK_ALL_JOINEES: `${BASE_URL}/api/admin/new-joinees/unblock-all`,

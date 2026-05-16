@@ -52,14 +52,19 @@ export default function LeaveRequestDetail() {
 
       // Explicit Role-to-Stage Mapping
       const r = userRole.toUpperCase();
+      const reqRoleStr = (request?.requesterRole || '').toUpperCase();
+      const isHRReqLocal = reqRoleStr === 'HR' || reqRoleStr.includes('HUMAN RESOURCE');
+
       let finalStage = 'L1';
 
-      if (r.includes('PM') || r.includes('CEO') || r.includes('ADMIN') || r.includes('MANAGER')) {
+      if (isHRReqLocal) {
+        finalStage = 'L2'; // For HR requests, CEO acts as L2
+      } else if (r.includes('PM') || r.includes('CEO') || r.includes('ADMIN') || r.includes('MANAGER')) {
         finalStage = 'L3';
       } else if (r.includes('HR')) {
         finalStage = 'L2';
       } else {
-        finalStage = 'L1'; // For Team Leads/Lead Software Engineers
+        finalStage = 'L1';
       }
 
       payload.stage = finalStage;
@@ -91,7 +96,18 @@ export default function LeaveRequestDetail() {
         const willBeL2 = finalStage === 'L2' ? (targetStatus === 'APPROVED') : currentL2;
         const willBeL3 = finalStage === 'L3' ? (targetStatus === 'APPROVED') : currentL3;
 
-        const isFullyApproved = targetStatus === 'APPROVED' && willBeL1 && willBeL2 && willBeL3;
+        const reqRole = (request?.requesterRole || '').toUpperCase();
+        const isHRReq = reqRole === 'HR' || reqRole.includes('HUMAN RESOURCE');
+        const isLeadOrAbove = reqRole.includes('LEAD') || reqRole.includes('MANAGER') || reqRole.includes('CEO') || reqRole.includes('ADMIN') || reqRole.includes('PRINCIPAL') || reqRole.includes('PM') || reqRole.includes('HR');
+
+        const requireL1 = !isLeadOrAbove;
+        const requireL2 = !isHRReq;
+        const requireL3 = !isHRReq; // For HR, only L2 (CEO) is required
+
+        const isFullyApproved = targetStatus === 'APPROVED' && 
+          (!requireL1 || willBeL1) && 
+          (!requireL2 || willBeL2) && 
+          (!requireL3 || willBeL3);
 
         if (isFullyApproved) {
           try {
@@ -271,13 +287,25 @@ export default function LeaveRequestDetail() {
             found.pm_status, found.l3_status
           ].filter(Boolean).join(',');
 
+          const isHRRequester = resolvedRole === 'HR' || resolvedRole.includes('HUMAN RESOURCE');
+          
+          // Resolve CEO name dynamically
+          const ceoUser = Array.isArray(empData) ? empData.find(e => 
+            String(e.role || '').toUpperCase().includes('CEO') || 
+            String(e.name || '').toLowerCase().includes('dinesh') ||
+            String(e.full_name || '').toLowerCase().includes('dinesh')
+          ) : null;
+          const ceoName = ceoUser ? (ceoUser.name || ceoUser.full_name) : 'Dinesh';
+
           // Resolve RM for Project Managers (Dinesh)
           let dynamicPMName = found.l3_name || 'Anish V N';
           const isPMRequester = resolvedRole.includes('PROJECT MANAGER') || resolvedRole === 'PM';
-          if (isPMRequester) {
+          
+          if (isPMRequester || isHRRequester) {
             const rmDinesh = Array.isArray(empData) ? empData.find(e =>
               String(e.name || '').toLowerCase().includes('dinesh') ||
-              String(e.full_name || '').toLowerCase().includes('dinesh')
+              String(e.full_name || '').toLowerCase().includes('dinesh') ||
+              String(e.role || '').toUpperCase().includes('CEO')
             ) : null;
             if (rmDinesh) dynamicPMName = rmDinesh.name || rmDinesh.full_name;
           }
@@ -297,7 +325,7 @@ export default function LeaveRequestDetail() {
             profile_pic: finalPic,
             approvals: {
               l1: { name: dynamicLeadName, status: resolveStatus(pickStatus(found.rm_status, found.l1_status)), stage: 'L1' },
-              l2: { name: found.l2_name || 'Sinchana Hs', status: resolveStatus(pickStatus(found.hr_status, found.l2_status)), stage: 'L2' },
+              l2: { name: isHRRequester ? ceoName : (found.l2_name || 'Sinchana Hs'), status: resolveStatus(pickStatus(found.hr_status, found.l2_status)), stage: 'L2' },
               l3: { name: dynamicPMName, status: resolveStatus(pickStatus(found.pm_status, found.l3_status, found.manager_status)), stage: 'L3' }
             }
           });
@@ -312,12 +340,20 @@ export default function LeaveRequestDetail() {
   if (!request) return <div style={{ textAlign: 'center', padding: '100px' }}>Request Not Found</div>;
 
   const userRoleStr = (user?.role || 'PM').toUpperCase();
+  const rRoleStr = (request?.requesterRole || '').toUpperCase();
+  const isHRReq = rRoleStr === 'HR' || rRoleStr.includes('HUMAN RESOURCE');
+
   let currentUserStage = 'l1';
-  if (userRoleStr.includes('PM') || userRoleStr.includes('CEO') || userRoleStr.includes('ADMIN') || userRoleStr.includes('MANAGER')) {
-    currentUserStage = 'l3';
-  } else if (userRoleStr.includes('HR')) {
-    currentUserStage = 'l2';
+  if (isHRReq) {
+    currentUserStage = 'l2'; // For HR requests, CEO approves at L2 stage
+  } else {
+    if (userRoleStr.includes('PM') || userRoleStr.includes('CEO') || userRoleStr.includes('ADMIN') || userRoleStr.includes('MANAGER')) {
+      currentUserStage = 'l3';
+    } else if (userRoleStr.includes('HR')) {
+      currentUserStage = 'l2';
+    }
   }
+
   const currentUserStatus = request?.approvals?.[currentUserStage]?.status;
   const isCurrentUserApproved = currentUserStatus === 'APPROVED';
   const isCurrentUserRejected = currentUserStatus === 'REJECTED';
@@ -415,25 +451,29 @@ export default function LeaveRequestDetail() {
                   { role: 'HR Approval', ...request.approvals.l2, stage: 'L2' },
                   { role: 'PM Approval', ...request.approvals.l3, stage: 'L3' }
                 ].filter(step => {
+                  if (isHRReq) {
+                    return step.stage === 'L2'; // Only CEO Approval (at L2) for HR requests
+                  }
+
                   const role = (request.requesterRole || '').toUpperCase();
                   const isLeadOrAbove = role.includes('LEAD') || role.includes('MANAGER') || role.includes('CEO') || role.includes('ADMIN') || role.includes('PRINCIPAL') || role.includes('PM') || role.includes('HR');
 
                   if (step.stage === 'L1' && isLeadOrAbove) return false;
                   return true;
                 }).map((app, i) => {
-                  const requesterRole = (request.requesterRole || '').toUpperCase();
-                  const isPMOrHR = requesterRole.includes('PM') || requesterRole.includes('HR');
-
                   let displayRole = app.role;
-                  const rRole = (request.requesterRole || '').toUpperCase();
-                  if (rRole.includes('PROJECT MANAGER') || rRole === 'PM') {
+                  if (isHRReq) {
+                    displayRole = 'CEO Approval';
+                  } else if (rRoleStr.includes('PROJECT MANAGER') || rRoleStr === 'PM') {
                     if (app.stage === 'L2') displayRole = 'HR Verification';
                     if (app.stage === 'L3') displayRole = 'RM Approval';
-                  } else if (rRole.includes('HR')) {
+                  } else if (rRoleStr.includes('HR')) {
                     if (app.stage === 'L2') displayRole = 'HR Verification';
                     if (app.stage === 'L3') displayRole = 'CEO Verification';
-                  } else if (rRole.includes('LEAD') || rRole.includes('MANAGER')) {
+                  } else if (rRoleStr.includes('LEAD')) {
                     if (app.stage === 'L3') displayRole = 'PM Approval';
+                  } else if (rRoleStr.includes('MANAGER')) {
+                    if (app.stage === 'L3') displayRole = 'CEO Verification';
                   }
 
                   const appStatus = resolveStatus(app.status);
@@ -465,35 +505,46 @@ export default function LeaveRequestDetail() {
           </div>
 
           {/* Feedback Section */}
-          <div style={{ marginBottom: '40px' }}>
-            <h3 style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Add Feedback / Comment</h3>
-            <textarea
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              placeholder="Enter your feedback here..."
-              style={{ width: '100%', minHeight: '120px', padding: '24px', borderRadius: '24px', border: '1.5px solid #f1f5f9', fontSize: '14px', fontWeight: '700', outline: 'none', fontFamily: 'inherit', color: '#0f172a' }}
-            />
-          </div>
-
-          {/* Action Buttons */}
-          {(String(user?.employee_id || user?.id || user?.EmpID || '').trim() !== String(request.empCode || '').trim()) && (
-            <div style={{ display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : '1.2fr 2.8fr', gap: '20px', marginBottom: winWidth < 768 ? '40px' : '0' }}>
-              <button
-                onClick={() => handleStatusUpdate('REJECTED')}
-                disabled={isUpdating || isCurrentUserRejected}
-                style={{ padding: '18px', borderRadius: '20px', border: 'none', background: isCurrentUserRejected ? '#f1f5f9' : '#fee2e2', color: isCurrentUserRejected ? '#94a3b8' : '#ef4444', fontSize: '16px', fontWeight: '900', cursor: isCurrentUserRejected ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-              >
-                <XCircle size={20} /> {isCurrentUserRejected ? 'Rejected' : 'Reject'}
-              </button>
-              <button
-                onClick={() => handleStatusUpdate('APPROVED')}
-                disabled={isUpdating || isCurrentUserApproved}
-                style={{ padding: '18px', borderRadius: '20px', border: 'none', background: isCurrentUserApproved ? '#f1f5f9' : '#0f172a', color: isCurrentUserApproved ? '#94a3b8' : 'white', fontSize: '16px', fontWeight: '900', cursor: isCurrentUserApproved ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: isCurrentUserApproved ? 'none' : '0 10px 20px rgba(15, 23, 42, 0.15)' }}
-              >
-                <CheckCircle size={20} /> {isCurrentUserApproved ? 'Approved' : 'Approve Leave'}
-              </button>
+          {!isHRReq && (
+            <div style={{ marginBottom: '40px' }}>
+              <h3 style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Add Feedback / Comment</h3>
+              <textarea
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Enter your feedback here..."
+                style={{ width: '100%', minHeight: '120px', padding: '24px', borderRadius: '24px', border: '1.5px solid #f1f5f9', fontSize: '14px', fontWeight: '700', outline: 'none', fontFamily: 'inherit', color: '#0f172a' }}
+              />
             </div>
           )}
+
+          {/* Action Buttons */}
+          {(String(user?.employee_id || user?.id || user?.EmpID || '').trim() !== String(request.empCode || '').trim()) && (() => {
+            const reqRole = (request?.requesterRole || '').toUpperCase();
+            const isHRReqLocal = reqRole === 'HR' || reqRole.includes('HUMAN RESOURCE');
+            const currentUserRole = (user?.role || '').toUpperCase();
+            const isCEO = currentUserRole.includes('CEO') || currentUserRole.includes('ADMIN') || String(user?.name || user?.full_name || '').toUpperCase().includes('DINESH');
+            
+            if (isHRReqLocal && !isCEO) return null;
+
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : '1.2fr 2.8fr', gap: '20px', marginBottom: winWidth < 768 ? '40px' : '0' }}>
+                <button
+                  onClick={() => handleStatusUpdate('REJECTED')}
+                  disabled={isUpdating || isCurrentUserRejected}
+                  style={{ padding: '18px', borderRadius: '20px', border: 'none', background: isCurrentUserRejected ? '#f1f5f9' : '#fee2e2', color: isCurrentUserRejected ? '#94a3b8' : '#ef4444', fontSize: '16px', fontWeight: '900', cursor: isCurrentUserRejected ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                >
+                  <XCircle size={20} /> {isCurrentUserRejected ? 'Rejected' : 'Reject'}
+                </button>
+                <button
+                  onClick={() => handleStatusUpdate('APPROVED')}
+                  disabled={isUpdating || isCurrentUserApproved}
+                  style={{ padding: '18px', borderRadius: '20px', border: 'none', background: isCurrentUserApproved ? '#f1f5f9' : '#0f172a', color: isCurrentUserApproved ? '#94a3b8' : 'white', fontSize: '16px', fontWeight: '900', cursor: isCurrentUserApproved ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: isCurrentUserApproved ? 'none' : '0 10px 20px rgba(15, 23, 42, 0.15)' }}
+                >
+                  <CheckCircle size={20} /> {isCurrentUserApproved ? 'Approved' : 'Approve Leave'}
+                </button>
+              </div>
+            );
+          })()}
 
         </div>
       </main>

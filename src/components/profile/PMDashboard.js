@@ -441,6 +441,58 @@ export default function PMDashboard() {
     }
   };
 
+  const handleCreateTeam = async () => {
+    if (!newTeam.teamName) {
+      setToastMessage('Required: Mission name is needed! ⚠️');
+      setToastType('error');
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 3000);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(API_ENDPOINTS.TEAM_CREATE, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token}`
+        },
+        body: JSON.stringify({
+          teamName: newTeam.teamName,
+          lead_id: parseInt(newTeam.leadId || user?.id || '0'),
+          member_ids: newTeam.memberIds.filter(m => String(m).trim() !== '')
+        })
+      });
+
+      if (response.ok) {
+        setToastMessage('Unit Established Successfully! ✅');
+        setToastType('success');
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 3000);
+        setShowCreateTeam(false);
+        setNewTeam({ teamName: '', leadId: '', memberIds: ['', '', '', ''] });
+        
+        // Refresh teams
+        const teamRes = await fetch(API_ENDPOINTS.TEAMS, {
+          headers: { 'Authorization': `Bearer ${user.token}` }
+        });
+        if (teamRes.ok) setTeams(await teamRes.json());
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        setToastMessage(`Establishment Failed: ${errData.error || 'Request rejected'}`);
+        setToastType('error');
+        setShowSuccessToast(true);
+      }
+    } catch (err) {
+      setToastMessage(`Error: ${err.message}`);
+      setToastType('error');
+      setShowSuccessToast(true);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="pm-dashboard-container">
       <AppHeader />
@@ -957,34 +1009,23 @@ export default function PMDashboard() {
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', opacity: 0.7 }}>UNIT MISSION NAME</label>
                   <input type="text" placeholder="e.g. Backend Sigma Hub" value={newTeam.teamName} onChange={(e) => setNewTeam({ ...newTeam, teamName: e.target.value })} style={{ width: '100%', padding: '10px 16px', borderRadius: '10px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontWeight: '700', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', opacity: 0.7 }}>ASSIGN UNIT LEAD</label>
-                  <select value={newTeam.leadId} onChange={(e) => setNewTeam({ ...newTeam, leadId: e.target.value })} style={{ width: '100%', padding: '10px 16px', borderRadius: '10px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontWeight: '700', fontSize: '13px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}>
-                    <option value="">Select Leadership...</option>
-                    {usersList.filter(u => String(u?.role || '').toUpperCase().includes('LEAD') || String(u?.role || '').toUpperCase().includes('MANAGER')).map(u => (
-                      <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', opacity: 0.7 }}>UNIT MEMBERS (4-10 REQUIRED)</label>
-                  {newTeam.memberIds.map((memberId, index) => (
-                    <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <input type="text" placeholder={`Enter Member Name ${index + 1}...`} value={memberId} onChange={(e) => updateMember(index, e.target.value)} style={{ flex: 1, width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontWeight: '600', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }} />
-                      {newTeam.memberIds.length > 4 && (
-                        <button onClick={() => removeMemberRow(index)} style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: '#fee2e2', color: '#b91c1c', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>✕</button>
-                      )}
-                    </div>
-                  ))}
-                  {newTeam.memberIds.length < 10 && (
-                    <button onClick={addMemberRow} style={{ padding: '8px', borderRadius: '10px', border: '1.5px dashed #3863a8', background: 'transparent', color: '#3863a8', fontWeight: '700', cursor: 'pointer', fontSize: '11px', marginTop: '2px' }}>+ Add Member</button>
-                  )}
-                </div>
               </div>
             </div>
             <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowCreateTeam(false)} style={{ flex: 1, padding: '12px', borderRadius: '50px', border: '1.5px solid #eef2f6', background: 'white', color: '#64748b', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => { alert('Unit Established! ✅'); setShowCreateTeam(false); }} style={{ flex: 2, padding: '12px', borderRadius: '50px', border: 'none', background: '#3863a8', color: 'white', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: '0 8px 12px rgba(56,99,168,0.2)' }}>Confirm Unit</button>
+              <button 
+                onClick={handleCreateTeam} 
+                disabled={isSubmitting}
+                style={{ 
+                  flex: 2, padding: '12px', borderRadius: '50px', border: 'none', 
+                  background: isSubmitting ? '#94a3b8' : '#3863a8', 
+                  color: 'white', fontWeight: '800', fontSize: '13px', 
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer', 
+                  boxShadow: '0 8px 12px rgba(56,99,168,0.2)' 
+                }}
+              >
+                {isSubmitting ? 'Establishing...' : 'Confirm Unit'}
+              </button>
             </div>
           </div>
         </div>

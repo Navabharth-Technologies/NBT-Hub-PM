@@ -35,6 +35,7 @@ export default function TeamManagement() {
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(null);
+  const [talentSearch, setTalentSearch] = useState('');
 
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -105,6 +106,48 @@ export default function TeamManagement() {
     fetchUsers();
   }, [user]);
 
+  const handleCreateTeam = async () => {
+    if (!newTeam.teamName) {
+      alert('Required: Mission name is needed! ⚠️');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch(API_ENDPOINTS.TEAM_CREATE, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token}`
+        },
+        body: JSON.stringify({
+          teamName: newTeam.teamName,
+          lead_id: parseInt(newTeam.leadId || user?.id || '0'),
+          member_ids: newTeam.memberIds.filter(m => String(m).trim() !== '')
+        })
+      });
+
+      if (response.ok) {
+        setSuccess('Unit Established Successfully! ✅');
+        setShowCreateModal(false);
+        setNewTeam({ teamName: '', leadId: '', memberIds: ['', '', '', ''] });
+        
+        // Refresh teams
+        const teamRes = await fetch(API_ENDPOINTS.TEAMS, {
+          headers: { 'Authorization': `Bearer ${user.token}` }
+        });
+        if (teamRes.ok) setTeamsData(await teamRes.json());
+      } else {
+        const errData = await response.json().catch(() => ({}));
+        alert(`Establishment Failed: ${errData.error || 'Request rejected'}`);
+      }
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   useEffect(() => {
     // Check if user has opted out of the demo
     const isHidden = localStorage.getItem('hideAlignmentDemo') === 'true';
@@ -133,6 +176,109 @@ export default function TeamManagement() {
     setShowVisualOnboarding(false);
   };
 
+  const getUnassignedUsers = () => {
+    const assignedIds = new Set();
+    const assignedNames = new Set();
+    
+    teamsData.forEach(t => {
+      // Collect Leads
+      if (t.lead_id) assignedIds.add(String(t.lead_id));
+      if (t.lead) assignedNames.add(t.lead.toLowerCase().trim());
+      
+      // Collect Members
+      (t.membersList || []).forEach(m => {
+        const mId = m.id || m.userid || m.employee_id || m.employeeId;
+        if (mId) assignedIds.add(String(mId));
+        if (m.name) assignedNames.add(m.name.toLowerCase().trim());
+      });
+    });
+
+    return usersList.filter(u => {
+      const uId = String(u.id || u.userId || u.employee_id || '');
+      const uName = (u.name || '').toLowerCase().trim();
+      
+      const isAssigned = (uId && assignedIds.has(uId)) || (uName && assignedNames.has(uName));
+      
+      if (isAssigned) return false;
+      
+      // Apply search filter if active
+      if (talentSearch) {
+        const search = talentSearch.toLowerCase().trim();
+        return uName.includes(search) || uId.includes(search);
+      }
+      
+      return true;
+    });
+  };
+
+  const unassignedPool = getUnassignedUsers();
+
+  const handleDropToPool = (e) => {
+    e.preventDefault();
+    const dragDataJSON = e.dataTransfer.getData('application/json');
+    if (!dragDataJSON) return;
+    
+    const dragData = JSON.parse(dragDataJSON);
+    if (dragData.type !== 'member' && dragData.type !== 'lead') return; 
+    
+    setTeamsData(prev => {
+      const newTeams = [...prev];
+      const sourceTeamIdx = newTeams.findIndex(t => t.id === dragData.teamId);
+      if (sourceTeamIdx === -1) return prev;
+      const sourceTeam = {...newTeams[sourceTeamIdx]};
+      
+      if (dragData.type === 'member') {
+        sourceTeam.membersList = (sourceTeam.membersList || []).filter((_, i) => i !== dragData.memberIdx);
+        sourceTeam.members = sourceTeam.membersList.length;
+      } else if (dragData.type === 'lead') {
+        sourceTeam.lead = 'Manager'; // Default label
+        sourceTeam.leadRole = 'Team Manager';
+        sourceTeam.lead_id = null;
+      }
+      
+      newTeams[sourceTeamIdx] = sourceTeam;
+      return newTeams;
+    });
+  };
+
+  const handleDropFromPool = (e, targetTeamId) => {
+    e.preventDefault();
+    const dragDataJSON = e.dataTransfer.getData('application/json');
+    if (!dragDataJSON) return;
+    
+    const dragData = JSON.parse(dragDataJSON);
+    if (dragData.type !== 'unassigned') {
+      handleDrop(e, targetTeamId);
+      return;
+    }
+    
+    setTeamsData(prev => {
+      const newTeams = [...prev];
+      const targetTeamIdx = newTeams.findIndex(t => t.id === targetTeamId);
+      if (targetTeamIdx === -1) return prev;
+      const targetTeam = {...newTeams[targetTeamIdx]};
+      
+      const user = unassignedPool.find(u => String(u.id) === String(dragData.userId));
+      if (user) {
+        if (dragData.isTargetingLead) {
+          targetTeam.lead = user.name;
+          targetTeam.lead_id = user.id;
+          targetTeam.leadRole = user.role || user.designation || 'Team Leader';
+        } else {
+          targetTeam.membersList = [...(targetTeam.membersList || []), {
+            id: user.id,
+            name: user.name,
+            role: user.role || user.designation || 'Member'
+          }];
+          targetTeam.members = targetTeam.membersList.length;
+        }
+      }
+      
+      newTeams[targetTeamIdx] = targetTeam;
+      return newTeams;
+    });
+  };
+
   const handleDragStart = (e, dragData) => {
     e.dataTransfer.setData('application/json', JSON.stringify(dragData));
   };
@@ -143,12 +289,14 @@ export default function TeamManagement() {
     if (!dragDataJSON) return;
     
     const dragData = JSON.parse(dragDataJSON);
-    if (dragData.teamId === targetTeamId) return; // Dropped on the same team
+    if (dragData.teamId === targetTeamId) return; 
     
     setTeamsData(prev => {
       const newTeams = [...prev];
       const sourceTeamIdx = newTeams.findIndex(t => t.id === dragData.teamId);
       const targetTeamIdx = newTeams.findIndex(t => t.id === targetTeamId);
+      
+      if (sourceTeamIdx === -1 || targetTeamIdx === -1) return prev;
       
       const sourceTeam = {...newTeams[sourceTeamIdx]};
       const targetTeam = {...newTeams[targetTeamIdx]};
@@ -290,7 +438,7 @@ export default function TeamManagement() {
       <AppHeader />
       
       <main className="dashboard-content" style={{paddingBottom: '100px', paddingLeft: winWidth < 768 ? '16px' : '26px', paddingRight: winWidth < 768 ? '16px' : '26px', paddingTop: winWidth < 768 ? '100px' : '120px', width: '100%', boxSizing: 'border-box', margin: '0' }}>
-        <header className="section-header" style={{ marginBottom: '10px' }}>
+        <header className="section-header" style={{ marginBottom: '20px' }}>
           <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
             <button 
               onClick={() => navigate(-1)} 
@@ -303,7 +451,7 @@ export default function TeamManagement() {
               <p style={{color: '#64748b', margin: '2px 0 0 0'}}>Centralized control for all {teamsData.length} active project teams</p>
             </div>
           </div>
-          <div className="team-header-actions">
+          <div className="team-header-actions" style={{ display: 'flex', gap: '12px' }}>
             {!isAnyFilter && (
               <button 
                 onClick={() => isEditingAlignment ? handleSaveAlignment() : setIsEditingAlignment(true)} 
@@ -313,14 +461,10 @@ export default function TeamManagement() {
                   color: isEditingAlignment ? '#3863a8' : '#3863a8', 
                   border: isEditingAlignment ? '2px solid #3863a8' : '1px solid #cbd5e1', 
                   transition: '0.2s background',
-                  fontWeight: '800'
+                  fontWeight: '800',
+                  padding: '10px 20px',
+                  borderRadius: '12px'
                 }} 
-                onMouseOver={(e) => {
-                  if (!isEditingAlignment) e.currentTarget.style.backgroundColor = '#f1f5f9';
-                }} 
-                onMouseOut={(e) => {
-                  if (!isEditingAlignment) e.currentTarget.style.backgroundColor = 'white';
-                }}
               >
                 {saving ? 'Saving...' : (isEditingAlignment ? 'Save Allignment' : 'Edit Team Allignment')}
               </button>
@@ -328,19 +472,20 @@ export default function TeamManagement() {
             <button 
               onClick={() => setShowCreateModal(true)}
               className="btn-primary" 
-              style={{backgroundColor: '#e0e7ff', color: '#312e81', border: '1px solid #c7d2fe', cursor: 'pointer'}}
+              style={{backgroundColor: '#e0e7ff', color: '#312e81', border: '1px solid #c7d2fe', cursor: 'pointer', padding: '10px 20px', borderRadius: '12px', fontWeight: '800'}}
             >
               + Create New Team
             </button>
           </div>
         </header>
 
-        <section className="dashboard-section animate-fade-in">
-          <div className="team-grid" style={{
-            gridTemplateColumns: `repeat(auto-fit, minmax(${winWidth < 480 ? '280px' : '320px'}, 1fr))`, 
-            gap: winWidth < 480 ? '16px' : '24px', 
-            justifyContent: 'center'
-          }}>
+        <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', flexWrap: winWidth < 1200 ? 'wrap' : 'nowrap' }}>
+          <section className="dashboard-section animate-fade-in" style={{ flex: 1, minWidth: winWidth < 768 ? '100%' : '0' }}>
+            <div className="team-grid" style={{
+              display: 'grid',
+              gridTemplateColumns: winWidth < 768 ? '1fr' : (winWidth < 1400 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)'), 
+              gap: '24px'
+            }}>
             {teamsData
               .filter(filterTeams)
               .map((team, idx) => (
@@ -392,7 +537,7 @@ export default function TeamManagement() {
                   if (isEditingAlignment) {
                     e.currentTarget.style.outline = '2px dashed transparent';
                     e.currentTarget.style.backgroundColor = 'white';
-                    handleDrop(e, team.id);
+                    handleDropFromPool(e, team.id);
                   }
                 }}
               >
@@ -453,7 +598,87 @@ export default function TeamManagement() {
                 </div>
                 {isEditingAlignment ? (
                   <div className="alignment-view animate-fade-in" style={{marginTop: '16px'}}>
-                    <div style={{background: '#f8fafc', padding: '12px', borderRadius: '12px', marginBottom: '16px', border: '1px solid #e2e8f0'}}>
+                    <div 
+                      style={{background: '#f8fafc', padding: '12px', borderRadius: '12px', marginBottom: '16px', border: '1px solid #e2e8f0'}}
+                      onDragOver={(e) => {
+                        if (isEditingAlignment) {
+                          e.preventDefault();
+                          e.currentTarget.style.backgroundColor = '#eff6ff';
+                          e.currentTarget.style.borderColor = '#3863a8';
+                        }
+                      }}
+                      onDragLeave={(e) => {
+                        if (isEditingAlignment) {
+                          e.currentTarget.style.backgroundColor = '#f8fafc';
+                          e.currentTarget.style.borderColor = '#e2e8f0';
+                        }
+                      }}
+                      onDrop={(e) => {
+                        if (isEditingAlignment) {
+                          e.preventDefault();
+                          e.currentTarget.style.backgroundColor = '#f8fafc';
+                          e.currentTarget.style.borderColor = '#e2e8f0';
+                          
+                          const dragDataJSON = e.dataTransfer.getData('application/json');
+                          if (dragDataJSON) {
+                            const dragData = JSON.parse(dragDataJSON);
+                            dragData.isTargetingLead = true;
+                            
+                            if (dragData.type === 'unassigned') {
+                              handleDropFromPool({ ...e, dataTransfer: { getData: () => JSON.stringify(dragData) } }, team.id);
+                            } else if (dragData.type === 'member' || dragData.type === 'lead') {
+                              // Handle member -> lead promotion or lead swap
+                              setTeamsData(prev => {
+                                const newTeams = [...prev];
+                                const sourceIdx = newTeams.findIndex(t => t.id === dragData.teamId);
+                                const targetIdx = newTeams.findIndex(t => t.id === team.id);
+                                if (sourceIdx === -1 || targetIdx === -1) return prev;
+                                
+                                const source = {...newTeams[sourceIdx]};
+                                const target = {...newTeams[targetIdx]};
+                                
+                                if (dragData.type === 'member') {
+                                  const member = (source.membersList || [])[dragData.memberIdx];
+                                  source.membersList = (source.membersList || []).filter((_, i) => i !== dragData.memberIdx);
+                                  source.members = source.membersList.length;
+                                  
+                                  const oldLead = target.lead;
+                                  const oldLeadRole = target.leadRole;
+                                  const oldLeadId = target.lead_id;
+                                  
+                                  target.lead = member.name;
+                                  target.lead_id = member.id;
+                                  target.leadRole = member.role;
+                                  
+                                  // Push old lead to members if it wasn't just "Manager" placeholder
+                                  if (oldLead && oldLead !== 'Manager') {
+                                    target.membersList = [...(target.membersList || []), { id: oldLeadId, name: oldLead, role: oldLeadRole }];
+                                    target.members = target.membersList.length;
+                                  }
+                                } else {
+                                  // Lead swap
+                                  const tempLead = source.lead;
+                                  const tempRole = source.leadRole;
+                                  const tempId = source.lead_id;
+                                  
+                                  source.lead = target.lead;
+                                  source.leadRole = target.leadRole;
+                                  source.lead_id = target.lead_id;
+                                  
+                                  target.lead = tempLead;
+                                  target.leadRole = tempRole;
+                                  target.lead_id = tempId;
+                                }
+                                
+                                newTeams[sourceIdx] = source;
+                                newTeams[targetIdx] = target;
+                                return newTeams;
+                              });
+                            }
+                          }
+                        }
+                      }}
+                    >
                       <div style={{fontSize: '11px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px'}}>Team Lead</div>
                       <div 
                         draggable={isEditingAlignment}
@@ -584,6 +809,117 @@ export default function TeamManagement() {
             ))}
           </div>
         </section>
+
+        {/* UNASSIGNED TALENT POOL SIDEBAR */}
+        {isEditingAlignment && (
+          <aside style={{
+            width: winWidth < 1200 ? '100%' : '320px',
+            position: winWidth < 1200 ? 'static' : 'sticky',
+            top: '120px',
+            background: 'white',
+            borderRadius: '24px',
+            padding: '24px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.05)',
+            border: '1.5px solid #f1f5f9',
+            maxHeight: winWidth < 1200 ? 'auto' : 'calc(100vh - 160px)',
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'slideInRight 0.5s ease'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Talent Pool</h2>
+              <div style={{ background: '#3863a8', color: 'white', fontSize: '11px', fontWeight: '900', padding: '4px 10px', borderRadius: '50px' }}>
+                {unassignedPool.length} FREE
+              </div>
+            </div>
+            <p style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '15px', lineHeight: '1.5' }}>
+              Drag people from here into teams, or drop team members here to unassign them.
+            </p>
+
+            <div style={{ position: 'relative', marginBottom: '15px' }}>
+              <input 
+                type="text"
+                placeholder="Search by name or ID..."
+                value={talentSearch}
+                onChange={(e) => setTalentSearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px 10px 35px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #eef2f6',
+                  background: '#f8fafc',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', opacity: 0.5 }}>🔍</span>
+              {talentSearch && (
+                <button 
+                  onClick={() => setTalentSearch('')}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold' }}
+                >✕</button>
+              )}
+            </div>
+
+            <div 
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDropToPool}
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                padding: '10px',
+                background: '#f8fafc',
+                borderRadius: '16px',
+                border: '2px dashed #e2e8f0',
+                minHeight: '200px'
+              }}
+            >
+              {unassignedPool.length > 0 ? unassignedPool.map((u, idx) => (
+                <div 
+                  key={u.id || idx}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, { type: 'unassigned', userId: u.id })}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px',
+                    background: 'white',
+                    borderRadius: '12px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                    cursor: 'grab',
+                    border: '1px solid #f1f5f9'
+                  }}
+                  className="pulse-edit-mode wiggle-animation"
+                >
+                  <div style={{
+                    width: '32px', height: '32px', borderRadius: '10px',
+                    background: '#f1f5f9', color: '#3863a8',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '13px', fontWeight: '900'
+                  }}>{u.name?.charAt(0) || '?'}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b' }}>{u.name}</div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{u.role || u.designation || 'Member'}</div>
+                  </div>
+                  <Icons.DragHandle />
+                </div>
+              )) : (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
+                  <div style={{ fontSize: '24px', marginBottom: '10px' }}>✨</div>
+                  <div style={{ fontSize: '13px', fontWeight: '700' }}>All clear!</div>
+                  <div style={{ fontSize: '11px' }}>Everyone is assigned.</div>
+                </div>
+              )}
+            </div>
+          </aside>
+        )}
+      </div>
       </main>
       
       {/* ONBOARDING DEMO MODAL */}
@@ -682,7 +1018,6 @@ export default function TeamManagement() {
 
             <div style={{ paddingRight: '4px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* Team Name */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', opacity: 0.7 }}>UNIT MISSION NAME</label>
                   <input 
@@ -692,66 +1027,26 @@ export default function TeamManagement() {
                     style={{ width: '100%', padding: '10px 16px', borderRadius: '10px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontWeight: '700', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
-
-                {/* Team Lead */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', opacity: 0.7 }}>ASSIGN UNIT LEAD</label>
-                  <select 
-                    value={newTeam.leadId}
-                    onChange={(e) => setNewTeam({...newTeam, leadId: e.target.value})}
-                    style={{ width: '100%', padding: '10px 16px', borderRadius: '10px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontWeight: '700', fontSize: '13px', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}
-                  >
-                    <option value="">Select Leadership...</option>
-                    {usersList
-                      .filter(u => (u.role || '').toUpperCase().includes('LEAD') || (u.role || '').toUpperCase().includes('MANAGER'))
-                      .map(u => (
-                        <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* Team Members */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                   <label style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', opacity: 0.7 }}>UNIT MEMBERS (4-10 REQUIRED)</label>
-                   {newTeam.memberIds.map((memberId, index) => (
-                     <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                       <div style={{ flex: 1 }}>
-                         <input 
-                           type="text"
-                           placeholder={`Enter Member Name ${index + 1}...`}
-                           value={memberId}
-                           onChange={(e) => updateMember(index, e.target.value)}
-                           style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontWeight: '600', fontSize: '12px', outline: 'none', boxSizing: 'border-box' }}
-                         />
-                       </div>
-                       {newTeam.memberIds.length > 4 && (
-                         <button 
-                           onClick={() => removeMemberRow(index)}
-                           style={{ width: '28px', height: '28px', borderRadius: '8px', border: 'none', background: '#fee2e2', color: '#b91c1c', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}
-                         >✕</button>
-                       )}
-                     </div>
-                   ))}
-                   
-                   {newTeam.memberIds.length < 10 && (
-                     <button 
-                       onClick={addMemberRow}
-                       style={{ padding: '8px', borderRadius: '10px', border: '1.5px dashed #3863a8', background: 'transparent', color: '#3863a8', fontWeight: '700', cursor: 'pointer', fontSize: '11px', marginTop: '2px' }}
-                     >+ Add Member</button>
-                   )}
-                </div>
               </div>
             </div>
-
             <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
               <button 
                 onClick={() => setShowCreateModal(false)}
                 style={{ flex: 1, padding: '12px', borderRadius: '50px', border: '1.5px solid #eef2f6', background: 'white', color: '#64748b', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
               >Cancel</button>
               <button 
-                onClick={() => { setSuccess('Unit Established! ✅'); setShowCreateModal(false); }}
-                style={{ flex: 2, padding: '12px', borderRadius: '50px', border: 'none', background: '#3863a8', color: 'white', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: '0 8px 12px rgba(56,99,168,0.2)' }}
-              >Confirm Unit</button>
+                onClick={handleCreateTeam}
+                disabled={saving}
+                style={{ 
+                  flex: 2, padding: '12px', borderRadius: '50px', border: 'none', 
+                  background: saving ? '#94a3b8' : '#3863a8', 
+                  color: 'white', fontWeight: '800', fontSize: '13px', 
+                  cursor: saving ? 'not-allowed' : 'pointer', 
+                  boxShadow: '0 8px 12px rgba(56,99,168,0.2)' 
+                }}
+              >
+                {saving ? 'Establishing...' : 'Confirm Unit'}
+              </button>
             </div>
           </div>
         </div>

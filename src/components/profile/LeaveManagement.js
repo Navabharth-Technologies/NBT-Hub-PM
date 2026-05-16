@@ -30,10 +30,13 @@ export default function LeaveManagement() {
 
   const [showLeaveEditModal, setShowLeaveEditModal] = useState(false);
   const [leaveEditData, setLeaveEditData] = useState({
-    empId: '', empName: '', cl: 0, lop: 0, month: 4, year: 2026, available: 0, halfDays: 0, remark: ''
+    empId: '', empName: '', cl: 0, lop: 0, month: new Date().getMonth() + 1, year: new Date().getFullYear(), available: 0, halfDays: 0, remark: ''
   });
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
 
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -58,16 +61,21 @@ export default function LeaveManagement() {
         headers: { 'Authorization': `Bearer ${user.token}` }
       })
         .then(res => res.json())
-        .then(data => { 
+        .then(data => {
           const list = Array.isArray(data) ? data : (data.data || []);
-          if (Array.isArray(list)) setAllEmployees(list); 
+          if (Array.isArray(list)) setAllEmployees(list);
         })
         .catch(err => console.error("Error fetching master employees:", err));
 
       fetchLeaves();
-      fetchLeaveStats();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user?.token) {
+      fetchLeaveStats();
+    }
+  }, [selectedMonth, selectedYear, user]);
 
   const fetchLeaves = async () => {
     try {
@@ -83,13 +91,28 @@ export default function LeaveManagement() {
 
   const fetchLeaveStats = async () => {
     try {
-      const res = await fetch(`${API_ENDPOINTS.ADMIN_LEAVE_STATS}?month=4&year=2026`, {
-        headers: { 'Authorization': `Bearer ${user.token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAllLeaveStats(Array.isArray(data) ? data : (data.stats || data.data || []));
+      const endpointsToTry = [
+        `${BASE_URL}/api/leave_stats?month=${selectedMonth}&year=${selectedYear}`,
+        `${BASE_URL}/api/admin/leave_stats?month=${selectedMonth}&year=${selectedYear}`,
+        `${BASE_URL}/api/leave-stats?month=${selectedMonth}&year=${selectedYear}`,
+        `${API_ENDPOINTS.ADMIN_LEAVE_STATS}?month=${selectedMonth}&year=${selectedYear}`
+      ];
+
+      let bestStats = [];
+      for (const ep of endpointsToTry) {
+        try {
+          const res = await fetch(ep, { headers: { 'Authorization': `Bearer ${user?.token || localStorage.getItem('token')}` } });
+          if (res.ok) {
+            const data = await res.json();
+            const list = Array.isArray(data) ? data : (data.stats || data.data || []);
+            if (list.length > 0) {
+              bestStats = list;
+              break; // Found data for this month/year
+            }
+          }
+        } catch (err) { }
       }
+      setAllLeaveStats(bestStats);
     } catch (err) { console.error("Error fetching stats:", err); }
   };
 
@@ -157,8 +180,29 @@ export default function LeaveManagement() {
                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '950', color: '#0f172a' }}>Employee Leave Ledger</h3>
                   <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>Comprehensive summary of all employee leave balances.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <button onClick={() => setShowAllLedger(!showAllLedger)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', background: showAllLedger ? '#f1f5f9' : '#0f172a', color: showAllLedger ? '#475569' : 'white', border: 'none', fontWeight: '800', fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexDirection: winWidth < 768 ? 'column' : 'row' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '0 12px', height: '40px' }}>
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                      style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '800', color: '#1e293b', cursor: 'pointer', padding: '4px 0' }}
+                    >
+                      {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => (
+                        <option key={i} value={i + 1}>{m}</option>
+                      ))}
+                    </select>
+                    <div style={{ width: '1.5px', height: '14px', background: '#e2e8f0', margin: '0 8px' }}></div>
+                    <select
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                      style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '800', color: '#1e293b', cursor: 'pointer', padding: '4px 0' }}
+                    >
+                      {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button onClick={() => setShowAllLedger(!showAllLedger)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', background: showAllLedger ? '#f1f5f9' : '#0f172a', color: showAllLedger ? '#475569' : 'white', border: 'none', fontWeight: '800', fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', height: '40px' }}>
                     {showAllLedger ? 'View Less' : 'View All'}
                   </button>
                 </div>
@@ -185,11 +229,21 @@ export default function LeaveManagement() {
                               <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '950', overflow: 'hidden' }}>
                                 {(() => {
                                   const pic = emp.profile_picture || emp.profile_pic || emp.photo || emp.ProfilePic || emp.Profile_Picture;
-                                  if (pic) {
-                                    const src = pic.startsWith('http') || pic.startsWith('data:') ? pic : `${BASE_URL}${pic.startsWith('/') ? '' : '/'}${pic}`;
-                                    return <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
-                                  }
-                                  return String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase();
+                                  const photoUrl = pic ? (pic.startsWith('http') || pic.startsWith('data:') ? pic : `${BASE_URL}${pic.startsWith('/') ? '' : '/'}${pic}`) : `${BASE_URL}/api/users/${emp.id}/photo`;
+
+                                  return (
+                                    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                      <img
+                                        src={photoUrl}
+                                        alt=""
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                      />
+                                      <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#eef2ff', color: '#4f46e5' }}>
+                                        {String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}
+                                      </div>
+                                    </div>
+                                  );
                                 })()}
                               </div>
                               {emp.name || emp.user_name}
@@ -200,7 +254,7 @@ export default function LeaveManagement() {
                           <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{stats?.LOP || 0}</td>
                           <td style={{ padding: '12px 16px', fontWeight: '950', color: '#16a34a' }}>{stats?.leaves_available || 0} Days</td>
                           <td style={{ padding: '12px 16px' }}>
-                            <button onClick={() => { setLeaveEditData({ empId: emp.id, empName: emp.name || emp.user_name, cl: stats?.leaves_taken || 0, lop: stats?.LOP || 0, month: 4, year: 2026, available: stats?.leaves_available || 0, halfDays: stats?.half_day || 0, remark: '' }); setShowLeaveEditModal(true); }} style={{ background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '900', color: '#475569', cursor: 'pointer' }}>Edit</button>
+                            <button onClick={() => { setLeaveEditData({ empId: emp.id, empName: emp.name || emp.user_name, cl: stats?.leaves_taken || 0, lop: stats?.LOP || 0, month: new Date().getMonth() + 1, year: new Date().getFullYear(), available: stats?.leaves_available || 0, halfDays: stats?.half_day || 0, remark: '' }); setShowLeaveEditModal(true); }} style={{ background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '900', color: '#475569', cursor: 'pointer' }}>Edit</button>
                           </td>
                         </tr>
                       );
@@ -236,34 +290,34 @@ export default function LeaveManagement() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                           <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#f8fafc', border: '1.5px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', overflow: 'hidden', flexShrink: 0 }}>
-                              {(() => {
-                                const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
-                                const empId = cleanId(req.user_id || req.emp_id || req.employee_id || req.id);
-                                const emp = allEmployees.find(e => {
-                                  const eid = cleanId(e.id || e.EmpID || e.employee_id || e.userId || e.emp_id);
-                                  if (eid && empId && eid === empId) return true;
-                                  const eName = String(e.name || e.user_name || '').toLowerCase().trim();
-                                  const rName = String(req.employee_name || req.name || req.full_name || '').toLowerCase().trim();
-                                  return eName && rName && eName === rName;
-                                });
-                                
-                                const rawPic = emp?.profile_picture || emp?.profile_pic || emp?.ProfilePic || emp?.Profile_Picture || emp?.photo || req.profile_pic || req.profilePic;
-                                const photoUrl = rawPic ? (rawPic.startsWith('http') || rawPic.startsWith('data:') ? rawPic : `${BASE_URL}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : `${BASE_URL}/api/users/${empId}/photo`;
-                                
-                                return (
-                                  <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                                    <img 
-                                      src={photoUrl} 
-                                      alt="" 
-                                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '14px' }}
-                                      onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                                    />
-                                    <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                                      <User size={20} />
-                                    </div>
+                            {(() => {
+                              const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
+                              const empId = cleanId(req.user_id || req.emp_id || req.employee_id || req.id);
+                              const emp = allEmployees.find(e => {
+                                const eid = cleanId(e.id || e.EmpID || e.employee_id || e.userId || e.emp_id);
+                                if (eid && empId && eid === empId) return true;
+                                const eName = String(e.name || e.user_name || '').toLowerCase().trim();
+                                const rName = String(req.employee_name || req.name || req.full_name || '').toLowerCase().trim();
+                                return eName && rName && eName === rName;
+                              });
+
+                              const rawPic = emp?.profile_picture || emp?.profile_pic || emp?.ProfilePic || emp?.Profile_Picture || emp?.photo || req.profile_pic || req.profilePic;
+                              const photoUrl = rawPic ? (rawPic.startsWith('http') || rawPic.startsWith('data:') ? rawPic : `${BASE_URL}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : `${BASE_URL}/api/users/${empId}/photo`;
+
+                              return (
+                                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                  <img
+                                    src={photoUrl}
+                                    alt=""
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '14px' }}
+                                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                  />
+                                  <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                                    <User size={20} />
                                   </div>
-                                );
-                              })()}
+                                </div>
+                              );
+                            })()}
                           </div>
                           <div>
                             <div style={{ fontSize: '16px', fontWeight: '950', color: '#1e293b' }}>
@@ -283,7 +337,7 @@ export default function LeaveManagement() {
                   );
                 })
               ) : (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}><p style={{ fontWeight: '900', color: '#94a3b8' }}>Loading.</p></div>
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px' }}><p style={{ fontWeight: '900', color: '#94a3b8' }}>No Leaves Available.</p></div>
               )}
             </div>
           )}

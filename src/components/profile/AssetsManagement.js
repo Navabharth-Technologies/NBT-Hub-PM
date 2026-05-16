@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
-import { API_ENDPOINTS } from '../../config';
+import { API_ENDPOINTS, BASE_URL } from '../../config';
 import {
   Package, Search, Filter, Edit3, Save, X, Plus, ChevronRight,
   Laptop, MousePointer, Keyboard, Smartphone,
@@ -526,8 +526,25 @@ export default function AssetsManagement() {
               return (
                 <div key={i} style={{ background: 'white', borderRadius: '24px', padding: '26px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3163aa', fontWeight: '900', fontSize: '16px' }}>
-                      {emp.name.charAt(0)}
+                    <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3163aa', fontWeight: '900', fontSize: '16px', overflow: 'hidden' }}>
+                      {(() => {
+                        const empId = emp.id || emp.EmpID;
+                        const pic = emp.profile_picture || emp.profile_pic || emp.photo;
+                        const photoUrl = pic ? (pic.startsWith('http') || pic.startsWith('data:') ? pic : `${BASE_URL}${pic.startsWith('/') ? '' : '/'}${pic}`) : `${BASE_URL}/api/users/${empId}/photo`;
+                        return (
+                          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                            <img 
+                              src={photoUrl} 
+                              alt="" 
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                            />
+                            <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#eff6ff', color: '#3163aa' }}>
+                              {emp.name.charAt(0)}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: '900', fontSize: '15px', color: '#1e293b' }}>{emp.name}</div>
@@ -584,8 +601,25 @@ export default function AssetsManagement() {
                       <tr key={i} style={{ borderBottom: '1px solid #f1f5f9', transition: '0.2s', backgroundColor: i % 2 === 0 ? 'transparent' : '#fcfdfe' }}>
                         <td style={{ padding: '15px 25px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3163aa', fontWeight: '900', fontSize: '14px' }}>
-                              {emp.name.charAt(0)}
+                            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3163aa', fontWeight: '900', fontSize: '14px', overflow: 'hidden' }}>
+                              {(() => {
+                                const empId = emp.id || emp.EmpID;
+                                const pic = emp.profile_picture || emp.profile_pic || emp.photo;
+                                const photoUrl = pic ? (pic.startsWith('http') || pic.startsWith('data:') ? pic : `${BASE_URL}${pic.startsWith('/') ? '' : '/'}${pic}`) : `${BASE_URL}/api/users/${empId}/photo`;
+                                return (
+                                  <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                    <img 
+                                      src={photoUrl} 
+                                      alt="" 
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                      onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                    />
+                                    <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#eff6ff', color: '#3163aa' }}>
+                                      {emp.name.charAt(0)}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                             <div style={{ overflow: 'hidden' }}>
                               <div style={{ fontWeight: '800', fontSize: '14px', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.name}</div>
@@ -642,8 +676,26 @@ export default function AssetsManagement() {
             {/* Header Redesign for Certificate */}
             <div style={{ padding: winWidth < 768 ? '20px' : '30px 40px', background: editModal.isCertificate ? 'white' : '#f8fafc', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '12px' : '20px' }}>
-                <div style={{ width: winWidth < 768 ? '45px' : '60px', height: winWidth < 768 ? '45px' : '60px', borderRadius: '18px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(49, 99, 170, 0.08)' }}>
-                  <Package size={winWidth < 768 ? 22 : 28} color="#3163aa" />
+                <div style={{ width: winWidth < 768 ? '45px' : '60px', height: winWidth < 768 ? '45px' : '60px', borderRadius: '18px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(49, 99, 170, 0.08)', overflow: 'hidden' }}>
+                  {(() => {
+                    const emp = editModal.employee;
+                    const empId = emp.id || emp.EmpID;
+                    const pic = emp.profile_picture || emp.profile_pic || emp.photo;
+                    const photoUrl = pic ? (pic.startsWith('http') || pic.startsWith('data:') ? pic : `${BASE_URL}${pic.startsWith('/') ? '' : '/'}${pic}`) : `${BASE_URL}/api/users/${empId}/photo`;
+                    return (
+                      <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                        <img 
+                          src={photoUrl} 
+                          alt="" 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                        />
+                        <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#eff6ff', color: '#3163aa' }}>
+                          <Package size={winWidth < 768 ? 22 : 28} color="#3163aa" />
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div>
                   <h2 style={{ fontSize: winWidth < 768 ? '18px' : '26px', fontWeight: '950', color: '#1e293b', margin: 0, letterSpacing: '-0.5px' }}>
