@@ -5,14 +5,14 @@ import {
   ArrowLeft, Save, Building2,
   AlertCircle, CheckCircle2, User, Landmark, RefreshCw,
   MapPin, GraduationCap, History,
-  FileCheck, Users, Trash2, Pencil, Upload, ChevronDown
+  FileCheck, Users, Trash2, Pencil, Upload, ChevronDown, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { BASE_URL, API_ENDPOINTS } from '../../config';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 
-const LOCKED_FIELDS = ['gross_salary_a', 'salary', 'pt', 'bgv_status', 'approved_by_ceo'];
+const LOCKED_FIELDS = ['gross_salary_a', 'salary', 'pt', 'bgv_status', 'approved_by_ceo', 'age'];
 
 const SECTIONS = [
   {
@@ -21,20 +21,20 @@ const SECTIONS = [
     icon: <User size={20} />,
     color: '#3b82f6',
     fields: [
-      { key: 'emp_name', label: 'Employee Name', placeholder: 'Full Name', type: 'text' },
-      { key: 'gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Other'] },
-      { key: 'dob', label: 'Date of Birth', type: 'text', placeholder: 'DD-MM-YYYY' },
+      { key: 'emp_name', label: 'Employee Name', placeholder: 'Full Name', type: 'text', required: true },
+      { key: 'gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Other'], required: true },
+      { key: 'dob', label: 'Date of Birth', type: 'text', placeholder: 'DD/MM/YYYY', required: true },
       { key: 'age', label: 'Age', type: 'text', placeholder: 'Years' },
       { key: 'religion', label: 'Religion', type: 'text' },
-      { key: 'blood_group', label: 'Blood Group', type: 'text' },
+      { key: 'blood_group', label: 'Blood Group', type: 'text', required: true },
       { key: 'marital_status', label: 'Marital Status', type: 'select', options: ['Single', 'Married', 'Divorced', 'Widowed'] },
-      { key: 'nationality', label: 'Nationality', type: 'text', placeholder: 'e.g. Indian' },
+      { key: 'nationality', label: 'Nationality', type: 'text', placeholder: 'e.g. Indian', required: true },
       { key: 'father_husband_name', label: "Father/Husband's Name", type: 'text' },
       { key: 'category', label: 'Category', type: 'select', options: ['General', 'OBC', 'SC', 'ST', 'Other'] },
-      { key: 'pan_number', label: 'PAN Number', type: 'text', placeholder: 'ABCDE1234F' },
-      { key: 'pancard_photo', label: 'PAN Card Proof', type: 'file' },
-      { key: 'aadhar_number', label: 'Aadhar Number', type: 'text', placeholder: '1234 5678 9012' },
-      { key: 'adharcard_photo', label: 'Aadhar Card Proof', type: 'file' },
+      { key: 'pan_number', label: 'PAN Number', type: 'text', placeholder: 'ABCDE1234F', required: true },
+      { key: 'pancard_photo', label: 'PAN Card Proof', type: 'file', required: true },
+      { key: 'aadhar_number', label: 'Aadhar Number', type: 'text', placeholder: '1234 5678 9012', required: true },
+      { key: 'adharcard_photo', label: 'Aadhar Card Proof', type: 'file', required: true },
       { key: 'voter_id', label: 'Voter ID Number', type: 'text' },
       { key: 'voter_id_photo', label: 'Voter ID', type: 'file' },
       { key: 'passport_no', label: 'Passport No', type: 'text' },
@@ -47,17 +47,17 @@ const SECTIONS = [
     icon: <Building2 size={20} />,
     color: '#8b5cf6',
     fields: [
-      { key: 'designation', label: 'Designation', type: 'text' },
-      { key: 'department', label: 'Department', type: 'text' },
+      { key: 'designation', label: 'Designation', type: 'text', required: true },
+      { key: 'department', label: 'Department', type: 'text', required: true },
       { key: 'process', label: 'Process', type: 'text' },
       { key: 'supervisor_l1', label: 'Supervisor L1 (Reporting Person)', type: 'text' },
       { key: 'supervisor_l2', label: 'Supervisor L2', type: 'text' },
-      { key: 'doj', label: 'Date of Joining', type: 'text', placeholder: 'DD-MM-YYYY' },
+      { key: 'doj', label: 'Date of Joining', type: 'text', placeholder: 'DD-MM-YYYY', required: true },
       { key: 'ft_pt', label: 'FT/PT', type: 'select', options: ['Full Time', 'Part Time', 'Contract'] },
       { key: 'status', label: 'Status', type: 'select', options: ['Active', 'On Bench', 'Notice Period', 'Terminated'] },
       { key: 'place', label: 'Work Location', type: 'text' },
       { key: 'moved', label: 'Moved (Project/Dept)', type: 'text' },
-      { key: 'official_email', label: 'Official Email ID', type: 'text' },
+      { key: 'official_email', label: 'Official Email ID', type: 'text', required: true },
     ]
   },
   {
@@ -66,11 +66,11 @@ const SECTIONS = [
     icon: <MapPin size={20} />,
     color: '#10b981',
     fields: [
-      { key: 'contact_no', label: 'Contact No', type: 'text' },
-      { key: 'emergency_contact_no', label: 'Emergency Contact No', type: 'text' },
-      { key: 'personal_email', label: 'Personal Email ID', type: 'text' },
-      { key: 'present_address', label: 'Present Address', type: 'text' },
-      { key: 'permanent_address', label: 'Permanent Address', type: 'text' },
+      { key: 'contact_no', label: 'Contact No', type: 'text', required: true },
+      { key: 'emergency_contact_no', label: 'Emergency Contact No', type: 'text', required: true },
+      { key: 'personal_email', label: 'Personal Email ID', type: 'text', required: true },
+      { key: 'present_address', label: 'Present Address', type: 'text', required: true },
+      { key: 'permanent_address', label: 'Permanent Address', type: 'text', required: true },
       { key: 'state', label: 'State', type: 'text' },
     ]
   },
@@ -80,16 +80,16 @@ const SECTIONS = [
     icon: <GraduationCap size={20} />,
     color: '#f59e0b',
     fields: [
-      { key: 'sslc_percentage', label: 'SSLC Percentage', type: 'text' },
-      { key: 'sslc_markscard', label: 'SSLC Marks Card', type: 'file' },
-      { key: 'puc_percentage', label: 'PUC Percentage', type: 'text' },
-      { key: 'puc_markscard', label: 'PUC Marks Card', type: 'file' },
-      { key: 'ug_pg_percentage', label: 'Degree Percentage', type: 'text' },
-      { key: 'ug_pg_markscard', label: 'Degree Marks Card', type: 'file' },
-      { key: 'qualification', label: 'Qualification', type: 'text' },
-      { key: 'edu_completion_year', label: 'EDU Completion Year', type: 'text' },
-      { key: 'college', label: 'College', type: 'text' },
-      { key: 'university', label: 'University', type: 'text' },
+      { key: 'sslc_percentage', label: 'SSLC Percentage', type: 'text', required: true },
+      { key: 'sslc_markscard', label: 'SSLC Marks Card', type: 'file', required: true },
+      { key: 'puc_percentage', label: 'PUC Percentage', type: 'text', required: true },
+      { key: 'puc_markscard', label: 'PUC Marks Card', type: 'file', required: true },
+      { key: 'ug_pg_percentage', label: 'Degree Percentage', type: 'text', required: true },
+      { key: 'ug_pg_markscard', label: 'Degree Marks Card', type: 'file', required: true },
+      { key: 'qualification', label: 'Qualification', type: 'text', required: true },
+      { key: 'edu_completion_year', label: 'EDU Completion Year', type: 'text', required: true },
+      { key: 'college', label: 'College', type: 'text', required: true },
+      { key: 'university', label: 'University', type: 'text', required: true },
       { key: 'previous_org', label: 'Previous Organization', type: 'text' },
       { key: 'experience_letter_photo', label: 'Previous Experience', type: 'file' },
       { key: 'source', label: 'Source', type: 'text' },
@@ -116,14 +116,14 @@ const SECTIONS = [
     icon: <Landmark size={20} />,
     color: '#315A9E',
     fields: [
-      { key: 'bank_name', label: 'Bank Name', type: 'text' },
-      { key: 'bank_account_no', label: 'Bank Account No.', type: 'text' },
-      { key: 'ifsc_code', label: 'IFSC Code', type: 'text' },
-      { key: 'bank_branch', label: 'Bank Branch', type: 'text' },
+      { key: 'bank_name', label: 'Bank Name', type: 'text', required: true },
+      { key: 'bank_account_no', label: 'Bank Account No.', type: 'text', required: true },
+      { key: 'ifsc_code', label: 'IFSC Code', type: 'text', required: true },
+      { key: 'bank_branch', label: 'Bank Branch', type: 'text', required: true },
       { key: 'gross_salary_a', label: 'Gross Salary (A)', type: 'text' },
       { key: 'salary', label: 'Net Salary', type: 'text' },
       { key: 'pt', label: 'Professional Tax (PT)', type: 'text' },
-      { key: 'passbook_photo', label: 'Bank Passbook', type: 'file' },
+      { key: 'passbook_photo', label: 'Bank Passbook', type: 'file', required: true },
     ]
   },
   {
@@ -166,39 +166,25 @@ export default function PersonalInfo({ onBack }) {
   const [previewDoc, setPreviewDoc] = useState(null);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const isMobile = winWidth < 768;
-  const [activeSection, setActiveSection] = useState('primary');
+  const [activeSection, setActiveSection] = useState(() => {
+    return localStorage.getItem('personal_info_active_section') || 'primary';
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [selectedEmpId, setSelectedEmpId] = useState('');
 
   useEffect(() => {
-    const savedId = localStorage.getItem('last_selected_emp_id');
-    const currentUserId = user?.employee_id || user?.id || user?.email || user?.EmpID;
-
-    if (savedId && employees.some(e => String(e.employee_id || e.id) === String(savedId))) {
-      setSelectedEmpId(savedId);
-    } else if (currentUserId) {
-      setSelectedEmpId(currentUserId);
-    }
-  }, [user, employees]);
+    localStorage.setItem('personal_info_active_section', activeSection);
+  }, [activeSection]);
 
   useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`${BASE_URL}/api/employees`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setEmployees(Array.isArray(data) ? data : []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch employees:", err);
-      }
-    };
-    fetchEmployees();
+    const currentUserId = user?.employee_id || user?.id || user?.email || user?.EmpID;
+    if (currentUserId) {
+      setSelectedEmpId(currentUserId);
+    }
   }, [user]);
+
+
 
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -260,14 +246,39 @@ export default function PersonalInfo({ onBack }) {
             if (lowerKey.includes('previous_company_payslip') || lowerKey.includes('previous_payslip') || lowerKey.includes('payslip')) targetKey = 'previous_company_payslip';
             if (lowerKey === 'profile_picture' || lowerKey === 'profile_pic') targetKey = 'profile_pic';
 
-            // Format date fields from ISO to DD-MM-YYYY
-            if ((targetKey === 'dob' || targetKey === 'separation' || targetKey === 'doj') && normalizedVal && String(normalizedVal).includes('T')) {
-              const d = new Date(normalizedVal);
-              if (!isNaN(d.getTime())) {
+            // Format date fields to DD-MM-YYYY
+            if ((targetKey === 'dob' || targetKey === 'separation' || targetKey === 'doj') && normalizedVal) {
+              const dateStr = String(normalizedVal);
+              let d;
+              if (dateStr.includes('T')) {
+                d = new Date(dateStr);
+              } else if (dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                  // Check if it's YYYY/MM/DD or DD/MM/YYYY
+                  if (parts[0].length === 4) {
+                    d = new Date(parts[0], parseInt(parts[1]) - 1, parts[2]);
+                  } else {
+                    d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+                  }
+                }
+              } else if (dateStr.includes('-')) {
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                  // Check if it's YYYY-MM-DD or DD-MM-YYYY
+                  if (parts[0].length === 4) {
+                    d = new Date(parts[0], parseInt(parts[1]) - 1, parts[2]);
+                  } else {
+                    d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+                  }
+                }
+              }
+
+              if (d && !isNaN(d.getTime())) {
                 const day = String(d.getDate()).padStart(2, '0');
                 const month = String(d.getMonth() + 1).padStart(2, '0');
                 const year = d.getFullYear();
-                normalizedVal = `${day}-${month}-${year}`;
+                normalizedVal = targetKey === 'dob' ? `${day}/${month}/${year}` : `${day}-${month}-${year}`;
               }
             }
 
@@ -335,24 +346,34 @@ export default function PersonalInfo({ onBack }) {
         let docType = key;
         if (key === 'pancard_photo') docType = 'pan_card';
         if (key === 'adharcard_photo') docType = 'aadhar_card';
-        if (key === 'voter_card') docType = 'voter_id_proof';
-        if (key === 'passport') docType = 'passport_proof';
-        if (key === 'sslc_markscard') docType = 'other';
-        if (key === 'puc_markscard') docType = 'other';
-        if (key === 'ug_pg_markscard') docType = 'other';
-        if (key === 'passbook_photo') docType = 'other';
+        if (key === 'voter_id_photo') docType = 'voter_id_proof';
+        if (key === 'passport_photo') docType = 'passport_proof';
+        if (key === 'sslc_markscard') docType = 'sslc_markscard';
+        if (key === 'puc_markscard') docType = 'puc_markscard';
+        if (key === 'ug_pg_markscard') docType = 'ug_pg_markscard';
+        if (key === 'passbook_photo') docType = 'bank_passbook';
         if (key === 'experience_letter') docType = 'experience_letter';
         if (key === 'previous_company_payslip') docType = 'previous_payslip';
 
         formData.append('docType', docType);
         formData.append('type', key);
         formData.append('employee_id', selectedEmpId);
+        formData.append('id', selectedEmpId);
 
-        const res = await fetch(API_ENDPOINTS.PROFILE_UPLOAD_DOCUMENT, {
+        let res = await fetch(API_ENDPOINTS.PROFILE_UPLOAD_DOCUMENT, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${user?.token || token}` },
           body: formData
         });
+
+        if (!res.ok) {
+          // Fallback to alt endpoint if 500/404
+          res = await fetch(API_ENDPOINTS.PROFILE_UPLOAD_DOCUMENT_ALT, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${user?.token || token}` },
+            body: formData
+          });
+        }
 
         if (res.ok) {
           const data = await res.json();
@@ -396,23 +417,43 @@ export default function PersonalInfo({ onBack }) {
 
     // Strict validation logic
     const alphaFields = [
-      'emp_name', 'religion', 'nationality', 'father_husband_name', 'designation', 
-      'department', 'process', 'supervisor_l1', 'supervisor_l2', 'place', 'moved', 
-      'state', 'qualification', 'college', 'university', 'previous_org', 'source', 
+      'emp_name', 'religion', 'nationality', 'father_husband_name', 'designation',
+      'department', 'process', 'supervisor_l1', 'supervisor_l2', 'place', 'moved',
+      'state', 'qualification', 'college', 'university', 'previous_org', 'source',
       'bank_name', 'bank_branch', 'languages_known', 'blood_group'
     ];
-    
+
     const numericFields = [
-      'age', 'edu_completion_year', 'gross_salary_a', 'salary', 'pt', 
+      'age', 'edu_completion_year', 'gross_salary_a', 'salary', 'pt',
       'contact_no', 'emergency_contact_no', 'bank_account_no', 'aadhar_number'
     ];
 
     const percentageFields = ['sslc_percentage', 'puc_percentage', 'ug_pg_percentage'];
 
     if (alphaFields.includes(key)) {
-      sanitizedValue = value.replace(/[^a-zA-Z\s.]/g, '');
+      if (key === 'blood_group') {
+        sanitizedValue = value.replace(/[^a-zA-Z0-9+\-\s]/g, '').toUpperCase();
+      } else {
+        sanitizedValue = value.replace(/[^a-zA-Z\s.]/g, '');
+      }
     } else if (numericFields.includes(key)) {
       sanitizedValue = value.replace(/\D/g, '');
+      // Max length constraints
+      if ((key === 'contact_no' || key === 'emergency_contact_no') && sanitizedValue.length > 10) {
+        sanitizedValue = sanitizedValue.substring(0, 10);
+      }
+      if (key === 'aadhar_number' && sanitizedValue.length > 12) {
+        sanitizedValue = sanitizedValue.substring(0, 12);
+      }
+    } else if (key === 'pan_number') {
+      sanitizedValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      if (sanitizedValue.length > 10) sanitizedValue = sanitizedValue.substring(0, 10);
+    } else if (key === 'ifsc_code') {
+      sanitizedValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      if (sanitizedValue.length > 11) sanitizedValue = sanitizedValue.substring(0, 11);
+    } else if (key === 'voter_id') {
+      sanitizedValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      if (sanitizedValue.length > 10) sanitizedValue = sanitizedValue.substring(0, 10);
     } else if (percentageFields.includes(key)) {
       sanitizedValue = value.replace(/[^0-9.]/g, '');
       const parts = sanitizedValue.split('.');
@@ -420,18 +461,29 @@ export default function PersonalInfo({ onBack }) {
     }
 
     let updates = { [key]: sanitizedValue };
+
+    // Auto-calculate Age from DOB
     if (key === 'dob' && sanitizedValue && sanitizedValue.length === 10) {
-      const parts = sanitizedValue.split('-');
+      // Support both DD-MM-YYYY and DD/MM/YYYY
+      const parts = sanitizedValue.includes('-') ? sanitizedValue.split('-') : sanitizedValue.split('/');
       if (parts.length === 3) {
         const day = parseInt(parts[0], 10);
         const month = parseInt(parts[1], 10) - 1;
         const year = parseInt(parts[2], 10);
-        const birthDate = new Date(year, month, day);
-        if (!isNaN(birthDate.getTime())) {
-          const today = new Date();
-          let age = today.getFullYear() - birthDate.getFullYear();
-          if (today.getMonth() < birthDate.getMonth() || (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) age--;
-          if (age >= 0) updates.age = String(age);
+
+        if (!isNaN(day) && !isNaN(month) && !isNaN(year) && year > 1900) {
+          const birthDate = new Date(year, month, day);
+          if (!isNaN(birthDate.getTime())) {
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+              age--;
+            }
+            if (age >= 0) {
+              updates.age = String(age);
+            }
+          }
         }
       }
     }
@@ -439,14 +491,139 @@ export default function PersonalInfo({ onBack }) {
   };
 
   const handleSave = async () => {
+    // Mandatory Field Validation
+    const mandatoryFields = [
+      { key: 'emp_name', label: 'Employee Name' },
+      { key: 'gender', label: 'Gender' },
+      { key: 'dob', label: 'Date of Birth' },
+      { key: 'blood_group', label: 'Blood Group' },
+      { key: 'nationality', label: 'Nationality' },
+      { key: 'pan_number', label: 'PAN Number' },
+      { key: 'aadhar_number', label: 'Aadhar Number' },
+      { key: 'pancard_photo', label: 'PAN Card Proof' },
+      { key: 'adharcard_photo', label: 'Aadhar Card Proof' },
+      { key: 'designation', label: 'Designation' },
+      { key: 'department', label: 'Department' },
+      { key: 'doj', label: 'Date of Joining' },
+      { key: 'official_email', label: 'Official Email ID' },
+      { key: 'contact_no', label: 'Contact No' },
+      { key: 'emergency_contact_no', label: 'Emergency Contact No' },
+      { key: 'personal_email', label: 'Personal Email ID' },
+      { key: 'present_address', label: 'Present Address' },
+      { key: 'permanent_address', label: 'Permanent Address' },
+      { key: 'sslc_percentage', label: 'SSLC Percentage' },
+      { key: 'sslc_markscard', label: 'SSLC Marks Card' },
+      { key: 'puc_percentage', label: 'PUC Percentage' },
+      { key: 'puc_markscard', label: 'PUC Marks Card' },
+      { key: 'ug_pg_percentage', label: 'Degree Percentage' },
+      { key: 'ug_pg_markscard', label: 'Degree Marks Card' },
+      { key: 'qualification', label: 'Qualification' },
+      { key: 'edu_completion_year', label: 'Completion Year' },
+      { key: 'college', label: 'College' },
+      { key: 'university', label: 'University' },
+      { key: 'bank_name', label: 'Bank Name' },
+      { key: 'bank_account_no', label: 'Bank Account No.' },
+      { key: 'ifsc_code', label: 'IFSC Code' },
+      { key: 'bank_branch', label: 'Bank Branch' },
+      { key: 'passbook_photo', label: 'Passbook' }
+    ];
+
+    const activeSectionFields = SECTIONS.find(s => s.id === activeSection)?.fields.map(f => f.key) || [];
+
+    for (const f of mandatoryFields) {
+      if (activeSectionFields.includes(f.key)) {
+        if (!form[f.key] || String(form[f.key]).trim() === '') {
+          const section = SECTIONS.find(s => s.fields.some(field => field.key === f.key));
+          const sectionLabel = section ? ` (${section.label} section)` : '';
+          setToast({ type: 'error', msg: `${f.label} is a mandatory field${sectionLabel}` });
+          return;
+        }
+      }
+    }
+
+    // Validation before save
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    const getSection = (key) => {
+      const s = SECTIONS.find(sec => sec.fields.some(field => field.key === key));
+      return s ? ` (${s.label} section)` : '';
+    };
+
+    if (activeSectionFields.includes('dob') && form.dob) {
+      if (!/^\d{2}\/\d{2}\/\d{4}$/.test(form.dob) && !/^\d{2}-\d{2}-\d{4}$/.test(form.dob)) {
+        setToast({ type: 'error', msg: `Please enter a complete Date of Birth (DD/MM/YYYY)${getSection('dob')}` });
+        return;
+      }
+    }
+
+    if (activeSectionFields.includes('personal_email') && form.personal_email && !emailRegex.test(form.personal_email)) {
+      setToast({ type: 'error', msg: `Invalid Personal Email format${getSection('personal_email')}` });
+      return;
+    }
+    if (activeSectionFields.includes('official_email') && form.official_email && !emailRegex.test(form.official_email)) {
+      setToast({ type: 'error', msg: `Invalid Official Email format${getSection('official_email')}` });
+      return;
+    }
+    if (activeSectionFields.includes('contact_no') && form.contact_no && form.contact_no.length !== 10) {
+      setToast({ type: 'error', msg: `Contact No must be 10 digits${getSection('contact_no')}` });
+      return;
+    }
+    if (activeSectionFields.includes('aadhar_number') && form.aadhar_number && form.aadhar_number.length !== 12) {
+      setToast({ type: 'error', msg: `Aadhar Number must be 12 digits${getSection('aadhar_number')}` });
+      return;
+    }
+    if (activeSectionFields.includes('pan_number') && form.pan_number && form.pan_number.length !== 10) {
+      setToast({ type: 'error', msg: `PAN Number must be 10 characters${getSection('pan_number')}` });
+      return;
+    }
+    if (activeSectionFields.includes('ifsc_code') && form.ifsc_code && form.ifsc_code.length !== 11) {
+      setToast({ type: 'error', msg: `IFSC Code must be 11 characters${getSection('ifsc_code')}` });
+      return;
+    }
+    if (activeSectionFields.includes('voter_id') && form.voter_id && form.voter_id.length !== 10) {
+      setToast({ type: 'error', msg: `Voter ID must be 10 characters${getSection('voter_id')}` });
+      return;
+    }
+
+    if (!navigator.onLine) {
+      setToast({ type: 'error', msg: 'Submission Failed: No Internet Connection! ❌' });
+      return;
+    }
+
     setSaving(true);
     try {
       const uid = selectedEmpId;
       const token = localStorage.getItem('token');
+
+      // Format dates to YYYY-MM-DD and only include fields from the active section
+      const payload = { employee_id: uid, id: uid };
+      activeSectionFields.forEach(k => {
+        let val = form[k];
+        if (k === 'dob' && val) {
+          if (val.includes('/')) {
+            const parts = val.split('/');
+            if (parts.length === 3 && parts[0].length === 2) {
+              val = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+          } else if (val.includes('-')) {
+            const parts = val.split('-');
+            if (parts.length === 3 && parts[0].length === 2) {
+              val = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+          }
+        } else if (['doj', 'separation'].includes(k) && val && val.includes('-')) {
+          const parts = val.split('-');
+          if (parts.length === 3 && parts[0].length === 2) {
+            val = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+        }
+        payload[k] = val;
+      });
+
       const res = await fetch(API_ENDPOINTS.EMPLOYEE_PROFILE_UPDATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ ...form, employee_id: uid, id: uid })
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         setToast({ type: 'success', msg: 'Profile Info updated successfully!' });
@@ -594,31 +771,14 @@ export default function PersonalInfo({ onBack }) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexDirection: isMobile ? 'column' : 'row' }}>
-            <div style={{ position: 'relative', minWidth: isMobile ? '100%' : '240px' }}>
-              <Users size={16} color="#64748b" style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', zIndex: 1 }} />
-              <select
-                value={selectedEmpId}
-                onChange={(e) => {
-                  const newId = e.target.value;
-                  setSelectedEmpId(newId);
-                  localStorage.setItem('last_selected_emp_id', newId);
-                  setIsEditing(false);
-                }}
-                style={{
-                  width: '100%', padding: '12px 16px 12px 40px', borderRadius: '16px', border: '1.5px solid #e2e8f0',
-                  backgroundColor: 'white', color: '#0B1E3F', fontSize: '14px', fontWeight: '800', outline: 'none', appearance: 'none'
-                }}
-              >
-                <option value={user?.employee_id || user?.id || user?.email || user?.EmpID}>
-                  My Profile ({user?.name || 'Self'})
-                </option>
-                {employees.filter(emp => (emp.employee_id || emp.id) !== (user?.employee_id || user?.id)).map(emp => (
-                  <option key={emp.employee_id || emp.id} value={emp.employee_id || emp.id}>
-                    {emp.name || emp.emp_name} ({emp.employee_id || emp.id})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} color="#64748b" style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+            <div style={{
+              minWidth: isMobile ? '100%' : '240px',
+              padding: '12px 20px', borderRadius: '16px', border: '1.5px solid #e2e8f0',
+              backgroundColor: '#f8fafc', color: '#0B1E3F', fontSize: '14px', fontWeight: '800',
+              display: 'flex', alignItems: 'center', gap: '10px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+            }}>
+              <User size={16} color="#315A9E" />
+              My Profile ({user?.name || 'Self'})
             </div>
 
             <motion.button
@@ -639,50 +799,86 @@ export default function PersonalInfo({ onBack }) {
 
         <div style={{ display: isMobile ? 'flex' : 'grid', flexDirection: isMobile ? 'column' : 'row', gridTemplateColumns: isMobile ? 'none' : '280px 1fr', gap: isMobile ? '20px' : '24px', alignItems: 'start', width: '100%', boxSizing: 'border-box' }}>
           <div style={{ width: '100%', margin: '0', boxSizing: 'border-box', flexShrink: 0 }}>
-            <div style={{
-              display: 'flex',
-              flexDirection: isMobile ? 'row' : 'column',
-              gap: '10px',
-              overflowX: isMobile ? 'auto' : 'visible',
-              paddingBottom: isMobile ? '15px' : '0',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-              WebkitOverflowScrolling: 'touch',
-              scrollSnapType: isMobile ? 'x mandatory' : 'none'
-            }}>
-              {SECTIONS.map(sec => {
-                const isActive = activeSection === sec.id;
-                return (
-                  <motion.button
-                    key={sec.id}
-                    whileHover={!isMobile ? { x: 4 } : {}}
-                    onClick={() => setActiveSection(sec.id)}
-                    style={{
-                      padding: isMobile ? '10px 18px' : '16px 20px',
-                      borderRadius: isMobile ? '12px' : '18px',
-                      cursor: 'pointer',
-                      backgroundColor: isActive ? '#0B1E3F' : 'white',
-                      color: isActive ? 'white' : '#475569',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: isMobile ? '10px' : '14px',
-                      fontWeight: '800',
-                      fontSize: isMobile ? '12px' : '15px',
-                      textAlign: 'left',
-                      border: `3px solid ${isActive ? '#0B1E3F' : '#cbd5e1'}`,
-                      transition: 'all 0.2s',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                      scrollSnapAlign: isMobile ? 'start' : 'none',
-                      fontFamily: 'inherit'
-                    }}
-                  >
-                    <div style={{ color: isActive ? 'white' : sec.color }}>{cloneElement(sec.icon, { size: isMobile ? 16 : 20 })}</div>
-                    <div>{sec.label}</div>
-                  </motion.button>
-                );
-              })}
-            </div>
+            {isMobile ? (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '16px 20px', borderRadius: '20px', backgroundColor: '#0B1E3F',
+                color: 'white', marginBottom: '10px', boxShadow: '0 10px 15px -3px rgba(11, 30, 63, 0.2)',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}>
+                <motion.button 
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => {
+                    const idx = SECTIONS.findIndex(s => s.id === activeSection);
+                    const prevIdx = (idx - 1 + SECTIONS.length) % SECTIONS.length;
+                    setActiveSection(SECTIONS[prevIdx].id);
+                  }}
+                  style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '10px', borderRadius: '12px', cursor: 'pointer' }}
+                >
+                  <ChevronLeft size={20} />
+                </motion.button>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '10px', opacity: 0.6, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px' }}>Section {SECTIONS.findIndex(s => s.id === activeSection) + 1} of {SECTIONS.length}</div>
+                  <div style={{ fontWeight: '900', fontSize: '14px', letterSpacing: '-0.2px' }}>{SECTIONS.find(s => s.id === activeSection)?.label}</div>
+                </div>
+                <motion.button 
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => {
+                    const idx = SECTIONS.findIndex(s => s.id === activeSection);
+                    const nextIdx = (idx + 1) % SECTIONS.length;
+                    setActiveSection(SECTIONS[nextIdx].id);
+                  }}
+                  style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '10px', borderRadius: '12px', cursor: 'pointer' }}
+                >
+                  <ChevronRight size={20} />
+                </motion.button>
+              </div>
+            ) : (
+              <div style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'row' : 'column',
+                gap: '10px',
+                overflowX: isMobile ? 'auto' : 'visible',
+                paddingBottom: isMobile ? '15px' : '0',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                WebkitOverflowScrolling: 'touch',
+                scrollSnapType: isMobile ? 'x mandatory' : 'none'
+              }}>
+                {SECTIONS.map(sec => {
+                  const isActive = activeSection === sec.id;
+                  return (
+                    <motion.button
+                      key={sec.id}
+                      whileHover={!isMobile ? { x: 4 } : {}}
+                      onClick={() => setActiveSection(sec.id)}
+                      style={{
+                        padding: isMobile ? '10px 18px' : '16px 20px',
+                        borderRadius: isMobile ? '12px' : '18px',
+                        cursor: 'pointer',
+                        backgroundColor: isActive ? '#0B1E3F' : 'white',
+                        color: isActive ? 'white' : '#475569',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: isMobile ? '10px' : '14px',
+                        fontWeight: '800',
+                        fontSize: isMobile ? '12px' : '15px',
+                        textAlign: 'left',
+                        border: `3px solid ${isActive ? '#0B1E3F' : '#cbd5e1'}`,
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        scrollSnapAlign: isMobile ? 'start' : 'none',
+                        fontFamily: 'inherit'
+                      }}
+                    >
+                      <div style={{ color: isActive ? 'white' : sec.color }}>{cloneElement(sec.icon, { size: isMobile ? 16 : 20 })}</div>
+                      <div>{sec.label}</div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <motion.div
@@ -708,7 +904,9 @@ export default function PersonalInfo({ onBack }) {
                 const isDisabled = !isEditing || (LOCKED_FIELDS.includes(field.key) && !isAdmin);
                 return (
                   <div key={field.key} style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
-                    <label style={{ fontSize: '13px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase' }}>{field.label}</label>
+                    <label style={{ fontSize: '13px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase' }}>
+                      {field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
+                    </label>
                     {field.type === 'file' ? (
                       <div
                         style={{

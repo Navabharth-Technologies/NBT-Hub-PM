@@ -23,6 +23,9 @@ export default function AssetsManagement() {
   const [availableAssetsModal, setAvailableAssetsModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
 
   // Asset Form State
   const [form, setForm] = useState({
@@ -173,7 +176,7 @@ export default function AssetsManagement() {
     return dateStr;
   };
 
-  const handleEdit = (emp, readOnly = false, assetOverride = null) => {
+  const handleEdit = (emp, isReadOnlyMode = false, assetOverride = null) => {
     const empId = emp.id || emp.EmpID;
     const currentAsset = assetOverride || assets[empId] || assets[emp.id] || assets[emp.EmpID] || {};
 
@@ -224,7 +227,7 @@ export default function AssetsManagement() {
     setEditModal({
       show: true,
       employee: emp,
-      isReadOnly: readOnly,
+      isReadOnly: false, // Allow editing for all by default as requested
       assetId: currentAsset.id || currentAsset.EmpID || currentAsset.employee_id,
       isCertificate: !!currentAsset.is_from_certificate,
       certificateData: currentAsset.is_from_certificate ? currentAsset : null
@@ -385,12 +388,19 @@ export default function AssetsManagement() {
       const result = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        alert(`Database Entry Synced! ✅\nServer Info: ${result.message || 'Stored Successfully'}`);
+        setToastMessage(`Updated Successfully! ✅`);
+        setToastType('success');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+        
         setEditModal({ show: false, employee: null, isReadOnly: false });
         // Force a brief delay before re-fetching to allow DB indexing
         setTimeout(() => fetchData(), 500);
       } else {
-        alert(`Storage Error: ${result.message || result.error || 'Server rejected the entry'}`);
+        setToastMessage(`Storage Error: ${result.message || result.error || 'Server rejected the entry'}`);
+        setToastType('error');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
       }
     } catch (err) {
       console.error('Fatal Asset Sync Error:', err);
@@ -846,15 +856,13 @@ export default function AssetsManagement() {
                   >
                     Discard Changes
                   </button>
-                  {!editModal.isReadOnly && (
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      style={{ flex: 2, padding: '16px', borderRadius: '50px', border: 'none', background: '#3163aa', color: 'white', fontSize: '14px', fontWeight: '800', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 10px 15px -3px rgba(49, 99, 170, 0.2)' }}
-                    >
-                      {saving ? 'Syncing...' : <><Save size={18} /> Submit details</>}
-                    </button>
-                  )}
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    style={{ flex: 2, padding: '16px', borderRadius: '50px', border: 'none', background: '#3163aa', color: 'white', fontSize: '14px', fontWeight: '800', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 10px 15px -3px rgba(49, 99, 170, 0.2)' }}
+                  >
+                    {saving ? 'Syncing...' : <><Save size={18} /> {assets[editModal.employee?.id || editModal.employee?.EmpID] ? 'Save Changes' : 'Submit details'}</>}
+                  </button>
                 </>
               )}
             </div>
@@ -1021,6 +1029,16 @@ export default function AssetsManagement() {
         </div>
       )}
 
+      {showToast && (
+        <div style={{
+          position: 'fixed', top: '40px', left: '50%', transform: 'translateX(-50%)',
+          background: toastType === 'error' ? '#ef4444' : '#312e81',
+          color: 'white', padding: '16px 32px', borderRadius: '16px', fontWeight: '800', zIndex: 20000,
+          boxShadow: '0 10px 25px rgba(0,0,0,0.2)', minWidth: '300px', textAlign: 'center'
+        }}>
+          {toastMessage}
+        </div>
+      )}
       <AppFooter />
     </div>
   );

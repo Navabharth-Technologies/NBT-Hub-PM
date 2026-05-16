@@ -82,7 +82,69 @@ export default function LeaveRequestDetail() {
       });
 
       if (response.ok) {
-        alert(`Leave ${targetStatus === 'APPROVED' ? 'Approved!' : 'Rejected.'}`);
+        // --- Auto Update Leave Ledger Logic ---
+        const currentL1 = request?.approvals?.l1?.status === 'APPROVED';
+        const currentL2 = request?.approvals?.l2?.status === 'APPROVED';
+        const currentL3 = request?.approvals?.l3?.status === 'APPROVED';
+
+        const willBeL1 = finalStage === 'L1' ? (targetStatus === 'APPROVED') : currentL1;
+        const willBeL2 = finalStage === 'L2' ? (targetStatus === 'APPROVED') : currentL2;
+        const willBeL3 = finalStage === 'L3' ? (targetStatus === 'APPROVED') : currentL3;
+
+        const isFullyApproved = targetStatus === 'APPROVED' && willBeL1 && willBeL2 && willBeL3;
+
+        if (isFullyApproved) {
+          try {
+            const leaveDate = new Date(request?.startDate);
+            const month = isNaN(leaveDate.getTime()) ? 4 : leaveDate.getMonth() + 1;
+            const year = isNaN(leaveDate.getTime()) ? 2026 : leaveDate.getFullYear();
+            
+            const statsRes = await fetch(`${API_ENDPOINTS.ADMIN_LEAVE_STATS}?month=${month}&year=${year}`, {
+              headers: { 'Authorization': `Bearer ${user?.token || localStorage.getItem('token')}` }
+            });
+            
+            if (statsRes.ok) {
+              const statsData = await statsRes.json();
+              const allStats = Array.isArray(statsData) ? statsData : (statsData.stats || statsData.data || []);
+              const empStat = allStats.find(s => String(s.employee_id || s.user_id) === String(request?.empCode));
+              
+              let cl = parseFloat(empStat?.leaves_taken || 0);
+              let lop = parseFloat(empStat?.LOP || 0);
+              let available = parseFloat(empStat?.leaves_available || 0);
+              const duration = parseFloat(request?.duration || 0);
+
+              const leaveTypeUpper = String(request?.leaveType || '').toUpperCase();
+              if (leaveTypeUpper.includes('CASUAL')) {
+                cl += duration;
+                available -= duration;
+              } else if (leaveTypeUpper.includes('LOP') || leaveTypeUpper.includes('LOSS')) {
+                lop += duration;
+              }
+
+              await fetch(API_ENDPOINTS.ADMIN_LEAVE_STATS_UPDATE, {
+                method: 'PUT',
+                headers: { 
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${user?.token || localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                  employeeId: request?.empCode,
+                  leaves_taken: cl,
+                  LOP: lop,
+                  leaves_available: available,
+                  month,
+                  year,
+                  remarks: 'Auto-updated from fully approved leave request'
+                })
+              });
+            }
+          } catch (e) {
+            console.error("Auto-update ledger failed", e);
+          }
+        }
+        // --- End Auto Update Logic ---
+
+        window.confirm(`Leave ${targetStatus === 'APPROVED' ? 'Approved!' : 'Rejected.'}`);
         navigate(-1);
       } else {
         const resData = await response.json().catch(() => ({}));
@@ -157,9 +219,35 @@ export default function LeaveRequestDetail() {
         };
 
         if (found) {
-          const empId = found.user_id || found.emp_id || found.employee_id;
-          const masterEmp = Array.isArray(empData) ? empData.find(e => String(e.id || e.EmpID || e.employee_id) === String(empId)) : null;
-          const resolvedRole = (masterEmp?.role || masterEmp?.designation || found.user_role || found.designation || found.role || 'Employee').toUpperCase();
+          const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
+          const targetId = cleanId(found.user_id || found.emp_id || found.employee_id || found.id);
+          const masterEmp = Array.isArray(empData) ? empData.find(e => {
+            const eid = cleanId(e.id || e.EmpID || e.employee_id || e.userId || e.emp_id);
+            if (eid && targetId && eid === targetId) return true;
+            
+            // Fallback to name matching if IDs don't match exactly
+            const eName = String(e.name || e.user_name || '').toLowerCase().trim();
+            const fName = String(found.employee_name || found.name || found.full_name || '').toLowerCase().trim();
+            return eName && fName && eName === fName;
+          }) : null;
+          
+          // Attempt to fetch fresh profile data for the most accurate photo
+          let freshProfile = null;
+          try {
+            const profileRes = await fetch(`${BASE_URL}/api/employee-profile/${targetId}`, {
+              headers: { 'Authorization': `Bearer ${user?.token || localStorage.getItem('token')}` }
+            });
+            if (profileRes.ok) {
+              const pData = await profileRes.json();
+              freshProfile = Array.isArray(pData) ? pData[0] : (pData.data || pData);
+            }
+          } catch (e) {}
+
+          const finalPic = freshProfile?.profile_picture || freshProfile?.profile_pic || freshProfile?.ProfilePic || 
+                          masterEmp?.profile_picture || masterEmp?.profile_pic || masterEmp?.ProfilePic || 
+                          found.profile_pic || found.profilePic || found.profile_picture;
+
+          const resolvedRole = (freshProfile?.designation || freshProfile?.role || masterEmp?.role || masterEmp?.designation || found.user_role || found.designation || found.role || 'Employee').toUpperCase();
           const isLeadRequester = resolvedRole.includes('LEAD') || resolvedRole.includes('MANAGER') || resolvedRole.includes('CEO') || resolvedRole.includes('ADMIN');
 
           const empTeam = masterEmp?.team || found.team || '';
@@ -206,7 +294,7 @@ export default function LeaveRequestDetail() {
             appliedOn: (found.created_at || found.date) ? formatDate(found.created_at || found.date) : 'N/A',
             status: resolveStatus(allStatusFields),
             requesterRole: resolvedRole,
-            profile_pic: masterEmp?.profile_picture || masterEmp?.profile_pic || masterEmp?.ProfilePic || masterEmp?.photo || masterEmp?.image || found.profile_pic || found.profilePic,
+            profile_pic: finalPic,
             approvals: {
               l1: { name: dynamicLeadName, status: resolveStatus(pickStatus(found.rm_status, found.l1_status)), stage: 'L1' },
               l2: { name: found.l2_name || 'Sinchana Hs', status: resolveStatus(pickStatus(found.hr_status, found.l2_status)), stage: 'L2' },
@@ -222,6 +310,17 @@ export default function LeaveRequestDetail() {
 
   if (loading) return <div style={{ textAlign: 'center', padding: '110px' }}>Loading...</div>;
   if (!request) return <div style={{ textAlign: 'center', padding: '100px' }}>Request Not Found</div>;
+
+  const userRoleStr = (user?.role || 'PM').toUpperCase();
+  let currentUserStage = 'l1';
+  if (userRoleStr.includes('PM') || userRoleStr.includes('CEO') || userRoleStr.includes('ADMIN') || userRoleStr.includes('MANAGER')) {
+    currentUserStage = 'l3';
+  } else if (userRoleStr.includes('HR')) {
+    currentUserStage = 'l2';
+  }
+  const currentUserStatus = request?.approvals?.[currentUserStage]?.status;
+  const isCurrentUserApproved = currentUserStatus === 'APPROVED';
+  const isCurrentUserRejected = currentUserStatus === 'REJECTED';
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
@@ -240,15 +339,25 @@ export default function LeaveRequestDetail() {
           <div style={{ display: 'flex', flexDirection: winWidth < 600 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 600 ? 'center' : 'flex-start', marginBottom: '40px', gap: '20px' }}>
             <div style={{ display: 'flex', flexDirection: winWidth < 480 ? 'column' : 'row', gap: '20px', alignItems: 'center', textAlign: winWidth < 480 ? 'center' : 'left' }}>
               <div style={{ width: winWidth < 768 ? '60px' : '80px', height: winWidth < 768 ? '60px' : '80px', borderRadius: '24px', background: '#0f172a', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '950', flexShrink: 0, overflow: 'hidden' }}>
-                {request.profile_pic ? (
-                  <img 
-                    src={request.profile_pic.startsWith('http') || request.profile_pic.startsWith('data:') ? request.profile_pic : `${BASE_URL}${request.profile_pic.startsWith('/') ? '' : '/'}${request.profile_pic}`}
-                    alt="Profile"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  request.employeeName?.charAt(0)
-                )}
+                  {(() => {
+                    const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
+                    const empId = cleanId(request.user_id || request.emp_id || request.employee_id || request.id);
+                    const photoUrl = request.profile_pic ? (request.profile_pic.startsWith('http') || request.profile_pic.startsWith('data:') ? request.profile_pic : `${BASE_URL}${request.profile_pic.startsWith('/') ? '' : '/'}${request.profile_pic}`) : `${BASE_URL}/api/users/${empId}/photo`;
+                    
+                    return (
+                      <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                        <img 
+                          src={photoUrl} 
+                          alt={request.employeeName} 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '20px' }}
+                          onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                        />
+                        <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', fontSize: '32px', fontWeight: '900', borderRadius: '20px' }}>
+                          {request.employeeName ? request.employeeName.charAt(0).toUpperCase() : 'A'}
+                        </div>
+                      </div>
+                    );
+                  })()}
               </div>
               <div>
                 <h1 style={{ fontSize: winWidth < 768 ? '20px' : '24px', fontWeight: '950', color: '#0f172a', margin: 0 }}>{request.employeeName}</h1>
@@ -371,17 +480,17 @@ export default function LeaveRequestDetail() {
             <div style={{ display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : '1.2fr 2.8fr', gap: '20px', marginBottom: winWidth < 768 ? '40px' : '0' }}>
               <button
                 onClick={() => handleStatusUpdate('REJECTED')}
-                disabled={isUpdating}
-                style={{ padding: '18px', borderRadius: '20px', border: 'none', background: '#fee2e2', color: '#ef4444', fontSize: '16px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                disabled={isUpdating || isCurrentUserRejected}
+                style={{ padding: '18px', borderRadius: '20px', border: 'none', background: isCurrentUserRejected ? '#f1f5f9' : '#fee2e2', color: isCurrentUserRejected ? '#94a3b8' : '#ef4444', fontSize: '16px', fontWeight: '900', cursor: isCurrentUserRejected ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
               >
-                <XCircle size={20} /> Reject
+                <XCircle size={20} /> {isCurrentUserRejected ? 'Rejected' : 'Reject'}
               </button>
               <button
                 onClick={() => handleStatusUpdate('APPROVED')}
-                disabled={isUpdating}
-                style={{ padding: '18px', borderRadius: '20px', border: 'none', background: '#0f172a', color: 'white', fontSize: '16px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 10px 20px rgba(15, 23, 42, 0.15)' }}
+                disabled={isUpdating || isCurrentUserApproved}
+                style={{ padding: '18px', borderRadius: '20px', border: 'none', background: isCurrentUserApproved ? '#f1f5f9' : '#0f172a', color: isCurrentUserApproved ? '#94a3b8' : 'white', fontSize: '16px', fontWeight: '900', cursor: isCurrentUserApproved ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: isCurrentUserApproved ? 'none' : '0 10px 20px rgba(15, 23, 42, 0.15)' }}
               >
-                <CheckCircle size={20} /> Approve Leave
+                <CheckCircle size={20} /> {isCurrentUserApproved ? 'Approved' : 'Approve Leave'}
               </button>
             </div>
           )}

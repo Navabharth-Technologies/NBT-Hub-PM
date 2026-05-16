@@ -345,6 +345,14 @@ export default function PMDashboard() {
   };
 
   const handleAssignTask = async (taskData) => {
+    if (!navigator.onLine) {
+      setToastMessage('Submission failed: Network disconnected ❌');
+      setToastType('error');
+      setShowSuccessToast(true);
+      // No timeout - stays until user takes action or reconnects
+      return;
+    }
+
     if (!taskData.assigneeId) {
       setToastMessage('Selection Required: Please choose an assignee! ⚠️');
       setToastType('error');
@@ -717,7 +725,6 @@ export default function PMDashboard() {
                           <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{task.assignee_name || 'Staff'} • {task.status || 'Active'}</div>
                         </div>
                       </div>
-                      <span style={{ fontSize: '14px', color: '#94a3b8', fontWeight: '800', flexShrink: 0, marginLeft: '8px' }}>›</span>
                     </div>
                   ))}
                 </div>

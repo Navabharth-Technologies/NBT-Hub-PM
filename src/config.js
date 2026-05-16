@@ -11,7 +11,8 @@ export const API_ENDPOINTS = {
   PROFILE_ABOUT: `${BASE_URL}/api/profile/about`,
   PROFILE_MANAGER: `${BASE_URL}/api/profile/manager`,
   PROFILE_UPLOAD_DOC: `${BASE_URL}/api/profile/upload-doc`,
-  PROFILE_UPLOAD_DOCUMENT: `${BASE_URL}/api/profile/upload-document`,
+  PROFILE_UPLOAD_DOCUMENT: `${BASE_URL}/api/upload-document`,
+  PROFILE_UPLOAD_DOCUMENT_ALT: `${BASE_URL}/api/profile/upload-document`,
   PROFILE_UPLOAD_DIRECT: `${BASE_URL}/api/profile/upload-direct`,
   MANAGER_UPLOAD_IMAGE: `${BASE_URL}/api/managers/upload-image`,
   EMPLOYEE_PROFILE_GET: (id) => `${BASE_URL}/api/employee-profile/${id}`,
@@ -34,6 +35,7 @@ export const API_ENDPOINTS = {
   EMPLOYEES: `${BASE_URL}/api/employees`,
   HOLIDAYS: `${BASE_URL}/api/holidays`,
   COURSES: `${BASE_URL}/api/courses`,
+  COURSES_DELETE: (id) => `${BASE_URL}/api/courses/${id}`,
   SUGGESTIONS: `${BASE_URL}/api/suggestions`,
   ASSIGN_TASK: `${BASE_URL}/api/assign-task`,
   ASSIGN_TASK_REVIEW: `${BASE_URL}/api/assign-task/review`,
@@ -104,5 +106,7 @@ export const API_ENDPOINTS = {
   NEW_JOINEE_UNBLOCK: (id) => `${BASE_URL}/api/new-joinees/${id}/unblock`,
   NEW_JOINEE_UNBLOCK_ADMIN: (id) => `${BASE_URL}/api/admin/new-joinees/${id}/unblock`,
   QUIZ_LEADERBOARD: `${BASE_URL}/api/fun-quizzes/leaderboard`,
+  ONBOARDING_REMINDERS: `${BASE_URL}/api/admin/onboarding/reminders`,
+  ONBOARDING_PROMOTE: `${BASE_URL}/api/admin/onboarding/promote`,
 };
 

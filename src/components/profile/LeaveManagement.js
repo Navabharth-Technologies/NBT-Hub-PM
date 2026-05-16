@@ -6,7 +6,7 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../../context/AuthContext';
 
-import { API_ENDPOINTS } from '../../config';
+import { API_ENDPOINTS, BASE_URL } from '../../config';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import './PMDashboard.css';
@@ -53,12 +53,16 @@ export default function LeaveManagement() {
 
   useEffect(() => {
     if (user?.token) {
-      fetch(API_ENDPOINTS.USERS, {
+      // Fetch master employee profiles for complete data including photos
+      fetch(API_ENDPOINTS.EMPLOYEES || `${BASE_URL}/api/employee-profile`, {
         headers: { 'Authorization': `Bearer ${user.token}` }
       })
         .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setAllEmployees(data); })
-        .catch(err => console.error("Error fetching users:", err));
+        .then(data => { 
+          const list = Array.isArray(data) ? data : (data.data || []);
+          if (Array.isArray(list)) setAllEmployees(list); 
+        })
+        .catch(err => console.error("Error fetching master employees:", err));
 
       fetchLeaves();
       fetchLeaveStats();
@@ -178,7 +182,16 @@ export default function LeaveManagement() {
                         <tr key={idx} style={{ borderBottom: '1px solid #f8fafc', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
                           <td style={{ padding: '12px 16px', fontWeight: '800', color: '#1e293b' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '950' }}>{String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}</div>
+                              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '950', overflow: 'hidden' }}>
+                                {(() => {
+                                  const pic = emp.profile_picture || emp.profile_pic || emp.photo || emp.ProfilePic || emp.Profile_Picture;
+                                  if (pic) {
+                                    const src = pic.startsWith('http') || pic.startsWith('data:') ? pic : `${BASE_URL}${pic.startsWith('/') ? '' : '/'}${pic}`;
+                                    return <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+                                  }
+                                  return String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase();
+                                })()}
+                              </div>
                               {emp.name || emp.user_name}
                             </div>
                           </td>
@@ -222,7 +235,36 @@ export default function LeaveManagement() {
                     <div key={req.id} onClick={() => navigate(`/attendance/leave/${req.id}`)} style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', cursor: 'pointer', transition: '0.2s', display: 'flex', flexDirection: 'column', minHeight: '220px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#f8fafc', border: '1.5px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}><User size={20} /></div>
+                          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#f8fafc', border: '1.5px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', overflow: 'hidden', flexShrink: 0 }}>
+                              {(() => {
+                                const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
+                                const empId = cleanId(req.user_id || req.emp_id || req.employee_id || req.id);
+                                const emp = allEmployees.find(e => {
+                                  const eid = cleanId(e.id || e.EmpID || e.employee_id || e.userId || e.emp_id);
+                                  if (eid && empId && eid === empId) return true;
+                                  const eName = String(e.name || e.user_name || '').toLowerCase().trim();
+                                  const rName = String(req.employee_name || req.name || req.full_name || '').toLowerCase().trim();
+                                  return eName && rName && eName === rName;
+                                });
+                                
+                                const rawPic = emp?.profile_picture || emp?.profile_pic || emp?.ProfilePic || emp?.Profile_Picture || emp?.photo || req.profile_pic || req.profilePic;
+                                const photoUrl = rawPic ? (rawPic.startsWith('http') || rawPic.startsWith('data:') ? rawPic : `${BASE_URL}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : `${BASE_URL}/api/users/${empId}/photo`;
+                                
+                                return (
+                                  <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                    <img 
+                                      src={photoUrl} 
+                                      alt="" 
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '14px' }}
+                                      onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                    />
+                                    <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                                      <User size={20} />
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                          </div>
                           <div>
                             <div style={{ fontSize: '16px', fontWeight: '950', color: '#1e293b' }}>
                               {req.employee_name || req.name || allEmployees.find(e => String(e.id) === String(req.user_id || req.employee_id))?.name || 'Unknown'}

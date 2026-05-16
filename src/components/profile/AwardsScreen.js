@@ -4,7 +4,7 @@ import { Trophy, Star, Award, Zap, ArrowLeft, ShieldCheck, UserCheck, Flame, Edi
 import { useAuth } from '../../context/AuthContext';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
-import { API_ENDPOINTS } from '../../config';
+import { API_ENDPOINTS, BASE_URL } from '../../config';
 
 export default function AwardsScreen() {
     const navigate = useNavigate();
@@ -82,18 +82,19 @@ export default function AwardsScreen() {
             setEmployees(unique);
 
             // Fetch Quiz Scores to aggregate
+            let qList = [];
             try {
                 const uid = user?.employee_id || user?.userId || user?.id;
                 const qRes = await fetch(`${API_ENDPOINTS.QUIZ_LEADERBOARD}?employee_id=${uid}`, { headers: { 'Authorization': `Bearer ${user.token}` } });
                 if (qRes.ok) {
                     const qData = await qRes.json();
-                    const qList = Array.isArray(qData) ? qData : (qData.data || []);
+                    qList = Array.isArray(qData) ? qData : (qData.data || []);
                     setQuizScores(qList);
                 }
             } catch (e) {}
 
-            // Fetch Leaderboard for Banner (Top Recognition)
-            await fetchLeaderboard();
+            // Fetch Leaderboard for Banner (Top Recognition) - Pass fresh quiz scores to avoid state lag
+            await fetchLeaderboard(qList);
 
         } catch (err) { 
             console.error(err);
@@ -136,8 +137,9 @@ export default function AwardsScreen() {
         return emp ? (emp.name || emp.employee_name || 'Anonymous Member') : 'Anonymous Member';
     };
 
-    const fetchLeaderboard = async () => {
+    const fetchLeaderboard = async (overrideQuizScores = null) => {
         if (!user?.token) return;
+        const activeQuizScores = overrideQuizScores || quizScores;
         try {
             const params = new URLSearchParams();
             if (startDate) params.append('startDate', startDate);
@@ -163,7 +165,7 @@ export default function AwardsScreen() {
                 });
                 
                 // Then add quiz points
-                quizScores.forEach(q => {
+                activeQuizScores.forEach(q => {
                     const id = String(q.employee_id || q.id || q.userId);
                     const score = Number(q.total_score || q.points || q.score || 0);
                     if (mergedMap.has(id)) {
@@ -221,11 +223,13 @@ export default function AwardsScreen() {
         const stats = Array.from(new Set(combinedRewards.map(r => r.employee_id))).map(id => {
             const userRewards = combinedRewards.filter(r => String(r.employee_id) === String(id));
             const totalRep = userRewards.reduce((sum, r) => sum + (Number(r.points) || 0), 0);
+            const emp = employees.find(e => String(e.id) === String(id) || String(e.employee_id) === String(id) || String(e.userId) === String(id));
             return { 
                 id, 
                 name: resolveEmployeeName(id), 
                 total_points: totalRep,
-                role: employees.find(e => String(e.id) === String(id) || String(e.employee_id) === String(id))?.role || 'Team Member'
+                role: emp?.role || 'Team Member',
+                profile_picture: emp?.profile_picture || emp?.profile_pic || emp?.photo
             };
         }).sort((a, b) => b.total_points - a.total_points);
         
@@ -542,18 +546,26 @@ export default function AwardsScreen() {
                                             e.currentTarget.style.boxShadow = item.id === 0 ? '0 10px 15px -3px rgba(250, 204, 21, 0.1)' : 'none';
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '12px' : (idx < 3 ? '20px' : '15px') }}>
-                                                <div style={{ 
-                                                    width: winWidth < 768 ? '30px' : (idx < 3 ? '40px' : '30px'), 
-                                                    height: winWidth < 768 ? '30px' : (idx < 3 ? '40px' : '30px'), 
-                                                    borderRadius: idx < 3 ? '12px' : '8px', 
-                                                    background: idx === 0 ? '#facc15' : idx === 1 ? '#cbd5e1' : idx === 2 ? '#ed8936' : 'transparent',
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    color: idx < 3 ? 'white' : '#94a3b8', 
-                                                    fontWeight: '1000', 
-                                                    fontSize: winWidth < 768 ? '13px' : (idx < 3 ? '18px' : '13px'),
-                                                    boxShadow: idx < 3 ? '0 4px 6px rgba(0,0,0,0.1)' : 'none'
-                                                }}>
-                                                    #{idx+1}
+                                                <div style={{ width: idx < 3 ? '45px' : '35px', height: idx < 3 ? '45px' : '35px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', overflow: 'hidden', flexShrink: 0 }}>
+                                                    {(() => {
+                                                        const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
+                                                        const empId = cleanId(item.employee_id || item.id || item.userId);
+                                                        const rawPic = item.profile_picture || item.profile_pic || item.photo;
+                                                        const photoUrl = rawPic ? (rawPic.startsWith('http') || rawPic.startsWith('data:') ? rawPic : `${BASE_URL}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : `${BASE_URL}/api/users/${empId}/photo`;
+                                                        return (
+                                                            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                                                <img 
+                                                                    src={photoUrl} 
+                                                                    alt="" 
+                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }}
+                                                                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                                                />
+                                                                <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', color: '#64748b', fontSize: '14px', fontWeight: '900' }}>
+                                                                    {item.name?.charAt(0)}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </div>
                                                 <div>
                                                     <div style={{ fontSize: winWidth < 768 ? '13px' : (idx < 3 ? '15px' : '13px'), fontWeight: '1000', color: idx < 3 ? '#0f172a' : '#334155' }}>{item.name}</div>
@@ -609,8 +621,26 @@ export default function AwardsScreen() {
                                         <div style={{ background: 'rgba(255,255,255,0.05)', padding: '25px', borderRadius: '24px', border: '1.5px solid rgba(255,255,255,0.1)', marginBottom: '40px' }}>
                                             <div style={{ fontSize: '11px', fontWeight: '900', color: '#facc15', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '15px' }}>Top Contributor</div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                                <div style={{ width: '55px', height: '55px', borderRadius: '18px', background: '#facc15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: '1000', color: '#0f172a' }}>
-                                                    {topContributor.name.charAt(0)}
+                                                <div style={{ width: '55px', height: '55px', borderRadius: '18px', background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                                    {(() => {
+                                                        const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
+                                                        const empId = cleanId(topContributor.id || topContributor.employee_id);
+                                                        const rawPic = topContributor.profile_picture;
+                                                        const photoUrl = rawPic ? (rawPic.startsWith('http') || rawPic.startsWith('data:') ? rawPic : `${BASE_URL}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : `${BASE_URL}/api/users/${empId}/photo`;
+                                                        return (
+                                                            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                                                <img 
+                                                                    src={photoUrl} 
+                                                                    alt="" 
+                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '18px' }}
+                                                                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                                                />
+                                                                <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#facc15', color: '#0f172a', fontSize: '22px', fontWeight: '1000' }}>
+                                                                    {topContributor.name.charAt(0)}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </div>
                                                 <div>
                                                     <div style={{ fontSize: '17px', fontWeight: '900', color: '#ffffff' }}>{topContributor.name}</div>

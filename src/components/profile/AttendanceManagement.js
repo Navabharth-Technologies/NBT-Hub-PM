@@ -22,6 +22,7 @@ export default function AttendanceManagement() {
   const [elapsedTime, setElapsedTime] = useState('00:00:00');
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('summary'); // 'summary' or 'raw'
 
   const [allEmployees, setAllEmployees] = useState([]);
   const [userLocation, setUserLocation] = useState(localStorage.getItem('savedUserLocation') || 'Fetching location...');
@@ -868,7 +869,12 @@ export default function AttendanceManagement() {
           )}
 
           <div style={{ display: 'flex', gap: winWidth < 600 ? '12px' : '24px', borderBottom: '1.5px solid #e2e8f0', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px' }}>
-            <button style={{ padding: '0 0 12px 0', background: 'transparent', border: 'none', borderBottom: '3px solid #1d4ed8', color: '#1d4ed8', fontWeight: '800', fontSize: winWidth < 600 ? '12px' : '14px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }} > Attendance Log </button>
+            <button 
+              onClick={() => setViewMode('summary')}
+              style={{ padding: '0 0 12px 0', background: 'transparent', border: 'none', borderBottom: '3px solid #1d4ed8', color: '#1d4ed8', fontWeight: '800', fontSize: winWidth < 600 ? '12px' : '14px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
+            > 
+              Daily Summary 
+            </button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: winWidth < 1024 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 1024 ? 'stretch' : 'center', marginBottom: '24px', gap: '16px' }}>
@@ -884,7 +890,7 @@ export default function AttendanceManagement() {
                 {displayedEmployees.length > 0 ? (
                   displayedEmployees.map((emp, idx) => {
                     const todayStr = new Date().toISOString().split('T')[0];
-                    const log = (attendanceLogs || [])
+                    const dayLogsForEmp = (attendanceLogs || [])
                       .filter(l => {
                         if (!l) return false;
                         const logUserId = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
@@ -892,16 +898,13 @@ export default function AttendanceManagement() {
                         return empId && logUserId && (logUserId === empId);
                       })
                       .sort((a, b) => {
-                        const getD = x => {
-                          let dStr = (x?.punch_date || x?.date || x?.created_at || '').split('T')[0].split(' ')[0];
-                          if (dStr.includes('-') && dStr.split('-')[0].length !== 4) {
-                            const p = dStr.split('-');
-                            if (p.length === 3) dStr = `${p[2]}-${p[1]}-${p[0]}`;
-                          }
-                          return new Date(dStr || 0).getTime();
-                        };
-                        return getD(b) - getD(a);
-                      })[0];
+                        const getT = x => new Date(x?.created_at || x?.punch_time || 0).getTime();
+                        return getT(b) - getT(a);
+                      });
+                    
+                    const log = dayLogsForEmp[0]; // Latest log for basic info
+                    const firstLogForDay = dayLogsForEmp[dayLogsForEmp.length - 1];
+                    const lastLogForDay = dayLogsForEmp.length > 1 ? dayLogsForEmp[0] : null;
 
                     const todayLog = (attendanceLogs || []).find(l => {
                       if (!l) return false;
@@ -927,9 +930,25 @@ export default function AttendanceManagement() {
                       return empId && logUserId && (logUserId === empId) && (logDate === todayStr);
                     }).length > 1;
 
-                    const punchIn = log?.in_time || log?.INTime || log?.PunchIn || log?.punch_time || '----';
-                    const punchOut = isMultiLog ? (log?.out_time || log?.OUTTime || log?.PunchOut || '----') : '----';
-                    const workHrs = isMultiLog ? (log?.work_time || log?.work_hrs || log?.WorkTime || '00:00') : '00:00';
+                    const punchIn = firstLogForDay?.in_time || firstLogForDay?.INTime || firstLogForDay?.PunchIn || firstLogForDay?.punch_time || '----';
+                    const punchOut = (todayLog || (isMultiLog && lastLogForDay)) ? (lastLogForDay?.out_time || lastLogForDay?.OUTTime || lastLog?.PunchOut || lastLogForDay?.punch_time || lastLogForDay?.PunchIn || lastLogForDay?.in_time || '----') : '----';
+                    
+                    // Manual work time calculation if missing
+                    let workHrs = log?.work_time || log?.work_hrs || log?.WorkTime;
+                    if ((!workHrs || workHrs === '00:00') && punchIn !== '----' && punchOut !== '----') {
+                      const parse = (t) => {
+                        const s = String(t).replace(/[^\d:]/g, '');
+                        const [h, m] = s.split(':').map(Number);
+                        return (isNaN(h) || isNaN(m)) ? null : h * 60 + m;
+                      };
+                      const start = parse(punchIn);
+                      const end = parse(punchOut);
+                      if (start !== null && end !== null && end > start) {
+                        const diff = end - start;
+                        workHrs = `${String(Math.floor(diff / 60)).padStart(2, '0')}:${String(diff % 60).padStart(2, '0')}`;
+                      }
+                    }
+                    if (!workHrs) workHrs = '00:00';
                     const pDate = log?.punch_date || log?.date || log?.created_at;
 
                     return (
@@ -1090,26 +1109,42 @@ export default function AttendanceManagement() {
                         ...firstLog,
                         punch_date: latestDate,
                         in_time: firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time || '----',
-                        out_time: (latestDate === todayStr && sortedDayLogs.length === 1) ? '----' : (lastLog?.out_time || lastLog?.OUTTime || lastLog?.PunchOut || '----'),
+                        out_time: (latestDate === todayStr && sortedDayLogs.length === 1) ? '----' : (lastLog?.out_time || lastLog?.OUTTime || lastLog?.PunchOut || lastLog?.punch_time || lastLog?.PunchIn || lastLog?.in_time || '----'),
                         in_location: firstLog?.punchin_location || firstLog?.in_location || '----',
-                        out_location: (latestDate === todayStr && sortedDayLogs.length === 1) ? '----' : (lastLog?.punchout_location || lastLog?.out_location || '----'),
+                        out_location: (latestDate === todayStr && sortedDayLogs.length === 1) ? '----' : (lastLog?.punchout_location || lastLog?.out_location || lastLog?.in_location || lastLog?.location || '----'),
                         work_hrs: (latestDate === todayStr && sortedDayLogs.length === 1) ? '00:00' : (lastLog?.work_hrs || firstLog?.work_hrs || '00:00')
                       } : null;
 
                       const getCleanAttendance = (record) => {
                         if (!record) return { displayInTime: '----', displayOutTime: '----', displayWorkTime: '00:00' };
-                        const today = new Date().toLocaleDateString('en-CA');
-                        const rawDate = record?.punch_date || record?.date || record?.created_at || '';
-                        const recordDate = rawDate ? String(rawDate).split('T')[0].split(' ')[0] : '';
+                        const today = new Date().toISOString().split('T')[0];
+                        const recordDate = record?.punch_date || '';
                         const isToday = recordDate === today;
                         const isMissing = (t) => !t || t === '--:--' || t === '00:00' || t === 'null' || t === '----';
-                        const rawIn = record?.in_time || record?.INTime;
-                        const rawOut = record?.out_time || record?.OUTTime || record?.PunchOut;
-                        const rawWork = record?.work_time || record?.work_hrs;
+                        
+                        const rawIn = record?.in_time;
+                        const rawOut = record?.out_time;
+                        let rawWork = record?.work_hrs;
+
+                        // Manual calculation fallback for work hours
+                        if ((!rawWork || rawWork === '00:00') && !isMissing(rawIn) && !isMissing(rawOut)) {
+                          const parse = (t) => {
+                            const s = String(t).replace(/[^\d:]/g, '');
+                            const [h, m] = s.split(':').map(Number);
+                            return (isNaN(h) || isNaN(m)) ? null : h * 60 + m;
+                          };
+                          const start = parse(rawIn);
+                          const end = parse(rawOut);
+                          if (start !== null && end !== null && end > start) {
+                            const diff = end - start;
+                            rawWork = `${String(Math.floor(diff / 60)).padStart(2, '0')}:${String(diff % 60).padStart(2, '0')}`;
+                          }
+                        }
+
                         return {
                           displayInTime: isMissing(rawIn) ? '----' : rawIn,
-                          displayOutTime: (isToday && logsForEmp.length < 2) || isMissing(rawOut) ? '----' : rawOut,
-                          displayWorkTime: (isToday && logsForEmp.length < 2) || isMissing(rawWork) ? '00:00' : rawWork
+                          displayOutTime: (isToday && sortedDayLogs.length < 2) || isMissing(rawOut) ? '----' : rawOut,
+                          displayWorkTime: (isToday && sortedDayLogs.length < 2) || isMissing(rawWork) ? '00:00' : (rawWork || '00:00')
                         };
                       };
                       const cleanLog = getCleanAttendance(log);

@@ -166,7 +166,7 @@ export default function CourseModule() {
     setActiveCourses(prev => prev.filter(c => c.id !== id && c._id !== id));
     
     try {
-      const res = await fetch(`${API_ENDPOINTS.COURSES}/${id}`, {
+      const res = await fetch(API_ENDPOINTS.COURSES_DELETE(id), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${user.token}` }
       });

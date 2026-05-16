@@ -24,6 +24,7 @@ export default function TaskManagement() {
   const [reviewTask, setReviewTask] = useState(null);
   const [reviewText, setReviewText] = useState('');
   const [success, setSuccess] = useState(null);
+  const [error, setError] = useState(null);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [selectedAssignee, setSelectedAssignee] = useState(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -213,6 +214,11 @@ export default function TaskManagement() {
   };
 
   const handleVerifyChange = async (taskId, newStatus) => {
+    if (!navigator.onLine) {
+      setError('Submission Failed: Network disconnected ❌');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
     try {
       const targetId = String(taskId);
       
@@ -273,6 +279,11 @@ export default function TaskManagement() {
   };
 
   const handleStatusChange = async (taskId, newStatus) => {
+    if (!navigator.onLine) {
+      setError('Submission Failed: Network disconnected ❌');
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
     try {
       const targetId = String(taskId);
       
@@ -764,6 +775,13 @@ export default function TaskManagement() {
           </div>
         </div>
       )}
+      {/* ERROR MODAL */}
+      {error && (
+        <div style={{ position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)', background: '#ef4444', color: 'white', padding: '16px 30px', borderRadius: '18px', zIndex: 10000, fontWeight: '900', boxShadow: '0 20px 40px rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', gap: '12px', border: '2px solid rgba(255,255,255,0.2)' }} className="animate-slide-up">
+           <XCircle size={20} />
+           {error}
+        </div>
+      )}
       {/* REVIEW MODAL */}
       {reviewTask && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -799,6 +817,12 @@ export default function TaskManagement() {
               <button 
                 disabled={!reviewText.trim()}
                 onClick={async () => {
+                  if (!navigator.onLine) {
+                    setError('Submission Failed: Network disconnected ❌');
+                    setReviewTask(null);
+                    setTimeout(() => setError(null), 3000);
+                    return;
+                  }
                   try {
                     const vStatus = reviewTask.verify_status || 'Pending';
                     const statusCode = vStatus === 'Approve' ? 1 : vStatus === 'Reject' ? 2 : 0;

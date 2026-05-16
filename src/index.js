@@ -26,6 +26,9 @@ window.fetch = async (...args) => {
     }
     return response;
   } catch (error) {
+    if (error.name === 'TypeError' || error.message?.includes('Failed to fetch')) {
+      window.dispatchEvent(new Event('offline'));
+    }
     return Promise.reject(error);
   }
 };

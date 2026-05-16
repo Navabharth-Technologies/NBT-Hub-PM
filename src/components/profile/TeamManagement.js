@@ -559,7 +559,7 @@ export default function TeamManagement() {
                     
                     {/* CONDITIONAL METRICS GRID (Only for teams with members) */}
                     {team.members > 0 && (
-                      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: winWidth < 480 ? '8px' : '12px', marginBottom: winWidth < 480 ? '16px' : '20px'}}>
+                      <div style={{display: 'grid', gridTemplateColumns: '1fr', gap: winWidth < 480 ? '8px' : '12px', marginBottom: winWidth < 480 ? '16px' : '20px'}}>
                         <div style={{
                           padding: winWidth < 480 ? '10px 12px' : '12px 16px', 
                           background: '#f8fafc', 
@@ -570,30 +570,12 @@ export default function TeamManagement() {
                           <div style={{fontSize: winWidth < 480 ? '16px' : '20px', fontWeight: '950', color: '#1e293b'}}>{team.members}</div>
                           <div style={{fontSize: winWidth < 480 ? '8px' : '9px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px'}}>Members</div>
                         </div>
-                        <div style={{
-                          padding: winWidth < 480 ? '10px 12px' : '12px 16px', 
-                          background: '#f8fafc', 
-                          borderRadius: '16px', 
-                          textAlign: 'center',
-                          border: '1px solid #f1f5f9'
-                        }}>
-                          <div style={{fontSize: winWidth < 480 ? '16px' : '20px', fontWeight: '950', color: '#1e293b'}}>{team.pending}</div>
-                          <div style={{fontSize: winWidth < 480 ? '8px' : '9px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px'}}>Tasks</div>
-                        </div>
                       </div>
                     )}
 
-                    <div style={{marginBottom: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px'}}>
-                      <span style={{color: '#94a3b8'}}>Overall Progress</span>
-                      <span style={{color: '#3863a8'}}>{team.progress}%</span>
-                    </div>
-                    <div className="progress-bar-container" style={{height: winWidth < 480 ? '8px' : '12px', borderRadius: '50px', background: '#f1f5f9', marginBottom: winWidth < 480 ? '16px' : '24px', padding: '2px'}}>
-                      <div className="progress-bar-fill" style={{width: `${team.progress}%`, borderRadius: '50px', background: 'linear-gradient(to right, #3863a8, #60a5fa)', boxShadow: '0 2px 5px rgba(56,99,168,0.3)'}}></div>
-                    </div>
-
                     <div style={{marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingTop: winWidth < 480 ? '10px' : '15px', borderTop: '1px solid #f8fafc'}}>
                       <span style={{color: '#3863a8', fontWeight: '800', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: '0.2s transform'}} onMouseOver={(e) => e.currentTarget.style.transform = 'translateX(5px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(0)'}>
-                        View Team Roster <Icons.Arrow />
+                         <Icons.Arrow />
                       </span>
                     </div>
                   </div>

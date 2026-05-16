@@ -191,15 +191,22 @@ export default function AppHeader() {
           onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
           onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
         >
-          {user?.profile_pic || user?.profile_picture ? (
-            <img
-              src={(user.profile_pic || user.profile_picture).startsWith('http') || (user.profile_pic || user.profile_picture).startsWith('data:') ? (user.profile_pic || user.profile_picture) : `${BASE_URL}${(user.profile_pic || user.profile_picture).startsWith('/') ? '' : '/'}${user.profile_pic || user.profile_picture}`}
-              alt="Profile"
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          ) : (
-            <svg width={winWidth < 768 ? "18" : "22"} height={winWidth < 768 ? "18" : "22"} viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-          )}
+          {(() => {
+            const empId = user?.employee_id || user?.id || user?.empId;
+            const rawPic = user?.profile_pic || user?.profile_picture;
+            const photoUrl = rawPic ? (rawPic.startsWith('http') || rawPic.startsWith('data:') ? rawPic : `${BASE_URL}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : `${BASE_URL}/api/users/${empId}/photo`;
+            return (
+              <>
+                <img
+                  src={photoUrl}
+                  alt="Profile"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }}
+                  onError={(e) => e.target.style.display = 'none'}
+                />
+                <svg width={winWidth < 768 ? "18" : "22"} height={winWidth < 768 ? "18" : "22"} viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'relative', zIndex: -1 }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+              </>
+            );
+          })()}
 
           <div
             onClick={(e) => {
