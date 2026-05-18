@@ -174,7 +174,15 @@ export default function PMDashboard() {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
         if (teamRes.ok) {
-          setTeams(await teamRes.json());
+          const rawTeams = await teamRes.json();
+          const normalizedTeams = (Array.isArray(rawTeams) ? rawTeams : []).map(t => {
+            if (!t) return t;
+            return {
+              ...t,
+              name: t.name || t.team_name || t.teamName || 'Unnamed Team'
+            };
+          });
+          setTeams(normalizedTeams);
         }
 
         // Fetch Team Activity (Task Updates)
@@ -460,7 +468,7 @@ export default function PMDashboard() {
         },
         body: JSON.stringify({
           teamName: newTeam.teamName,
-          lead_id: parseInt(newTeam.leadId || user?.id || '0'),
+          lead_id: newTeam.leadId ? parseInt(newTeam.leadId) : null,
           member_ids: newTeam.memberIds.filter(m => String(m).trim() !== '')
         })
       });
@@ -477,7 +485,17 @@ export default function PMDashboard() {
         const teamRes = await fetch(API_ENDPOINTS.TEAMS, {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
-        if (teamRes.ok) setTeams(await teamRes.json());
+        if (teamRes.ok) {
+          const rawTeams = await teamRes.json();
+          const normalizedTeams = (Array.isArray(rawTeams) ? rawTeams : []).map(t => {
+            if (!t) return t;
+            return {
+              ...t,
+              name: t.name || t.team_name || t.teamName || 'Unnamed Team'
+            };
+          });
+          setTeams(normalizedTeams);
+        }
       } else {
         const errData = await response.json().catch(() => ({}));
         setToastMessage(`Establishment Failed: ${errData.error || 'Request rejected'}`);

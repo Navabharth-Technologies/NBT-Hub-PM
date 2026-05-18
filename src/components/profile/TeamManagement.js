@@ -78,7 +78,14 @@ export default function TeamManagement() {
         });
         if (response.ok) {
           const data = await response.json();
-          setTeamsData(data);
+          const normalizedTeams = (Array.isArray(data) ? data : []).map(t => {
+            if (!t) return t;
+            return {
+              ...t,
+              name: t.name || t.team_name || t.teamName || 'Unnamed Team'
+            };
+          });
+          setTeamsData(normalizedTeams);
         }
       } catch (err) {
         console.error('Teams fetch error:', err);
@@ -122,7 +129,7 @@ export default function TeamManagement() {
         },
         body: JSON.stringify({
           teamName: newTeam.teamName,
-          lead_id: parseInt(newTeam.leadId || user?.id || '0'),
+          lead_id: newTeam.leadId ? parseInt(newTeam.leadId) : null,
           member_ids: newTeam.memberIds.filter(m => String(m).trim() !== '')
         })
       });
@@ -136,7 +143,17 @@ export default function TeamManagement() {
         const teamRes = await fetch(API_ENDPOINTS.TEAMS, {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
-        if (teamRes.ok) setTeamsData(await teamRes.json());
+        if (teamRes.ok) {
+          const rawTeams = await teamRes.json();
+          const normalizedTeams = (Array.isArray(rawTeams) ? rawTeams : []).map(t => {
+            if (!t) return t;
+            return {
+              ...t,
+              name: t.name || t.team_name || t.teamName || 'Unnamed Team'
+            };
+          });
+          setTeamsData(normalizedTeams);
+        }
       } else {
         const errData = await response.json().catch(() => ({}));
         alert(`Establishment Failed: ${errData.error || 'Request rejected'}`);
@@ -311,12 +328,15 @@ export default function TeamManagement() {
       } else if (dragData.type === 'lead') {
         const tempLead = sourceTeam.lead;
         const tempLeadRole = sourceTeam.leadRole;
+        const tempLeadId = sourceTeam.lead_id;
         
         sourceTeam.lead = targetTeam.lead;
         sourceTeam.leadRole = targetTeam.leadRole;
+        sourceTeam.lead_id = targetTeam.lead_id;
         
         targetTeam.lead = tempLead;
         targetTeam.leadRole = tempLeadRole;
+        targetTeam.lead_id = tempLeadId;
       }
       
       newTeams[sourceTeamIdx] = sourceTeam;
@@ -480,11 +500,11 @@ export default function TeamManagement() {
         </header>
 
         <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', flexWrap: winWidth < 1200 ? 'wrap' : 'nowrap' }}>
-          <section className="dashboard-section animate-fade-in" style={{ flex: 1, minWidth: winWidth < 768 ? '100%' : '0' }}>
+          <section className="dashboard-section animate-fade-in" style={{ flex: 1, minWidth: winWidth < 768 ? '100%' : '0', border: '1.5px solid var(--primary-color)' }}>
             <div className="team-grid" style={{
               display: 'grid',
-              gridTemplateColumns: winWidth < 768 ? '1fr' : (winWidth < 1400 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)'), 
-              gap: '24px'
+              gridTemplateColumns: winWidth < 576 ? '1fr' : (winWidth < 992 ? 'repeat(2, 1fr)' : (winWidth < 1400 ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)')), 
+              gap: '16px'
             }}>
             {teamsData
               .filter(filterTeams)
@@ -495,14 +515,16 @@ export default function TeamManagement() {
                 style={{
                   animationDelay: `${idx * 0.1}s`, 
                   background: 'white', 
-                  padding: winWidth < 480 ? '16px' : '24px', 
-                  borderRadius: '24px', 
+                  padding: winWidth < 480 ? '12px' : '16px', 
+                  borderRadius: '16px', 
                   boxShadow: 'var(--shadow-md)', 
                   border: 'none',
                   display: 'flex',
                   flexDirection: 'column',
                   height: '100%',
-                  minHeight: team.members > 0 ? (winWidth < 480 ? '260px' : '420px') : (winWidth < 480 ? '200px' : '300px'),
+                  minHeight: isEditingAlignment 
+                    ? (team.members > 0 ? (winWidth < 480 ? '240px' : '340px') : (winWidth < 480 ? '180px' : '240px'))
+                    : (team.members > 0 ? (winWidth < 480 ? '180px' : '260px') : (winWidth < 480 ? '140px' : '190px')),
                   justifyContent: 'flex-start',
                   position: 'relative',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -543,18 +565,18 @@ export default function TeamManagement() {
               >
                 <div style={{display: 'flex', flexDirection: 'column'}}>
                   {/* FIXED HEIGHT HEADER CONTAINER */}
-                  <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: winWidth < 480 ? '12px' : '16px', alignItems: 'center', gap: '15px', minHeight: winWidth < 480 ? '36px' : '48px'}}>
-                    <h3 style={{fontWeight: '800', fontSize: winWidth < 480 ? '16px' : '18px', lineHeight: '1.2', color: '#1e293b', flex: 1, margin: 0}}>{team.name}</h3>
+                  <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: winWidth < 480 ? '8px' : '12px', alignItems: 'center', gap: '15px', minHeight: winWidth < 480 ? '30px' : '36px'}}>
+                    <h3 style={{fontWeight: '800', fontSize: winWidth < 480 ? '15px' : '16px', lineHeight: '1.2', color: '#1e293b', flex: 1, margin: 0}}>{team.name}</h3>
                     <div style={{
-                      fontSize: '10px', 
+                      fontSize: '9px', 
                       fontWeight: '900', 
                       textTransform: 'uppercase',
                       color: team.risk === 'high' ? '#dc2626' : team.risk === 'medium' ? '#ea580c' : '#0369a1',
                       letterSpacing: '0.8px',
                       whiteSpace: 'nowrap',
                       background: team.risk === 'high' ? '#fee2e2' : team.risk === 'medium' ? '#ffedd5' : '#e0f2fe',
-                      padding: '5px 12px',
-                      borderRadius: '10px',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
                       flexShrink: 0,
                       boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                     }}>
@@ -566,33 +588,33 @@ export default function TeamManagement() {
                   {!isEditingAlignment && (
                     <div style={{
                       background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', 
-                      margin: winWidth < 480 ? '8px -16px 12px -16px' : '12px -24px 16px -24px', 
-                      padding: winWidth < 480 ? '8px 16px' : '12px 24px',
+                      margin: winWidth < 480 ? '6px -12px 10px -12px' : '10px -16px 12px -16px', 
+                      padding: winWidth < 480 ? '6px 12px' : '8px 16px',
                       borderTop: '1px solid #bae6fd',
                       borderBottom: '1px solid #bae6fd',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      minHeight: winWidth < 480 ? '48px' : '62px' // LOCK HEIGHT
+                      minHeight: winWidth < 480 ? '40px' : '50px' // LOCK HEIGHT
                     }}>
-                      <div style={{display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden', flex: 1}}>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flex: 1}}>
                         <div style={{position: 'relative', flexShrink: 0}}>
-                          <div style={{width: '32px', height: '32px', borderRadius: '10px', background: '#3863a8', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '900', boxShadow: '0 4px 8px rgba(56,99,168,0.1)'}}>
+                          <div style={{width: '28px', height: '28px', borderRadius: '8px', background: '#3863a8', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '900', boxShadow: '0 4px 8px rgba(56,99,168,0.1)'}}>
                             {(team.lead || 'M').charAt(0)}
                           </div>
-                          <div style={{position: 'absolute', top: '-4px', right: '-4px', fontSize: '10px'}}>🏆</div>
+                          <div style={{position: 'absolute', top: '-4px', right: '-4px', fontSize: '9px'}}>🏆</div>
                         </div>
                         <div style={{overflow: 'hidden'}}>
                           <div style={{
-                            fontSize: '13px', fontWeight: '800', color: '#1e293b', 
+                            fontSize: '12px', fontWeight: '800', color: '#1e293b', 
                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
                           }} title={team.lead || 'Manager'}>
                             {team.lead || 'Manager'}
                           </div>
-                          <div style={{fontSize: '10px', color: '#0369a1', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px'}}>Team Leader</div>
+                          <div style={{fontSize: '9px', color: '#0369a1', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px'}}>Team Leader</div>
                         </div>
                       </div>
-                      <div style={{padding: '4px 8px', background: 'white', borderRadius: '8px', fontSize: '10px', fontWeight: '900', color: '#3863a8', border: '1px solid #bae6fd', flexShrink: 0, marginLeft: '8px'}}>ACTIVE</div>
+                      <div style={{padding: '3px 6px', background: 'white', borderRadius: '6px', fontSize: '9px', fontWeight: '900', color: '#3863a8', border: '1px solid #bae6fd', flexShrink: 0, marginLeft: '8px'}}>ACTIVE</div>
                     </div>
                   )}
                 </div>
@@ -616,6 +638,7 @@ export default function TeamManagement() {
                       onDrop={(e) => {
                         if (isEditingAlignment) {
                           e.preventDefault();
+                          e.stopPropagation();
                           e.currentTarget.style.backgroundColor = '#f8fafc';
                           e.currentTarget.style.borderColor = '#e2e8f0';
                           
@@ -766,40 +789,40 @@ export default function TeamManagement() {
                     </div>
                   </div>
                 ) : (
-                  <div className="normal-view animate-fade-in" style={{marginTop: '12px', display: 'flex', flexDirection: 'column', flex: 1}}>
+                  <div className="normal-view animate-fade-in" style={{marginTop: '8px', display: 'flex', flexDirection: 'column', flex: 1}}>
                     {/* FIXED HEIGHT DESCRIPTION */}
                     <p style={{
-                      fontSize: '13px', 
+                      fontSize: '12px', 
                       color: '#64748b', 
-                      marginBottom: winWidth < 480 ? '12px' : '24px', 
-                      lineHeight: '1.6',
+                      marginBottom: winWidth < 480 ? '8px' : '12px', 
+                      lineHeight: '1.5',
                       display: winWidth < 480 ? 'none' : '-webkit-box', // Hide on small mobile to save vertical space
-                      WebkitLineClamp: '3',
+                      WebkitLineClamp: '2',
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
-                      minHeight: winWidth < 480 ? '0' : '62px' 
+                      minHeight: winWidth < 480 ? '0' : '38px' 
                     }} title={team.description}>
                       {team.description || 'Active operations and management for this specific team unit.'}
                     </p>
                     
                     {/* CONDITIONAL METRICS GRID (Only for teams with members) */}
                     {team.members > 0 && (
-                      <div style={{display: 'grid', gridTemplateColumns: '1fr', gap: winWidth < 480 ? '8px' : '12px', marginBottom: winWidth < 480 ? '16px' : '20px'}}>
+                      <div style={{display: 'grid', gridTemplateColumns: '1fr', gap: winWidth < 480 ? '4px' : '6px', marginBottom: winWidth < 480 ? '10px' : '12px'}}>
                         <div style={{
-                          padding: winWidth < 480 ? '10px 12px' : '12px 16px', 
+                          padding: winWidth < 480 ? '6px 8px' : '8px 12px', 
                           background: '#f8fafc', 
-                          borderRadius: '16px', 
+                          borderRadius: '12px', 
                           textAlign: 'center',
                           border: '1px solid #f1f5f9'
                         }}>
-                          <div style={{fontSize: winWidth < 480 ? '16px' : '20px', fontWeight: '950', color: '#1e293b'}}>{team.members}</div>
-                          <div style={{fontSize: winWidth < 480 ? '8px' : '9px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px'}}>Members</div>
+                          <div style={{fontSize: winWidth < 480 ? '14px' : '16px', fontWeight: '950', color: '#1e293b'}}>{team.members}</div>
+                          <div style={{fontSize: '8px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px'}}>Members</div>
                         </div>
                       </div>
                     )}
 
-                    <div style={{marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingTop: winWidth < 480 ? '10px' : '15px', borderTop: '1px solid #f8fafc'}}>
-                      <span style={{color: '#3863a8', fontWeight: '800', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: '0.2s transform'}} onMouseOver={(e) => e.currentTarget.style.transform = 'translateX(5px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(0)'}>
+                    <div style={{marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingTop: winWidth < 480 ? '8px' : '10px', borderTop: '1px solid #f8fafc'}}>
+                      <span style={{color: '#3863a8', fontWeight: '800', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: '0.2s transform'}} onMouseOver={(e) => e.currentTarget.style.transform = 'translateX(5px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(0)'}>
                          <Icons.Arrow />
                       </span>
                     </div>

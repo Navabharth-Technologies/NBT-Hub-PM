@@ -21,6 +21,8 @@ export default function TeamDetail() {
   const [editTeamName, setEditTeamName] = useState('');
   const [editTeamLead, setEditTeamLead] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   useEffect(() => {
@@ -60,6 +62,7 @@ export default function TeamDetail() {
 
             setTeam({
               ...found,
+              name: found.name || found.team_name || found.teamName || 'Unnamed Team',
               members: enrichedMembers,
               tasks: found.tasks || []
             });
@@ -173,6 +176,94 @@ export default function TeamDetail() {
     }
   };
 
+  const handleDeleteTeam = async () => {
+    if (!user?.token) return;
+    setIsDeleting(true);
+    try {
+      console.log('DEBUG: Starting team deletion for:', team.name);
+
+      // Attempt 1: DELETE to /api/admin/teams/:teamName (supports team name as path parameter)
+      const encodedTeamName = encodeURIComponent(team.name);
+      const url1 = `${BASE_URL}/api/admin/teams/${encodedTeamName}`;
+      console.log('DEBUG: Attempt 1 - DELETE to:', url1);
+      let response = await fetch(url1, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      let responseText = await response.text();
+      console.log('DEBUG: Attempt 1 Response Status:', response.status);
+      console.log('DEBUG: Attempt 1 Response Text:', responseText);
+
+      // Attempt 2: If path parameter fails, try DELETE to /api/admin/teams/delete (supports team name in JSON body)
+      if (!response.ok) {
+        const url2 = `${BASE_URL}/api/admin/teams/delete`;
+        console.log('DEBUG: Attempt 2 - DELETE to:', url2);
+        response = await fetch(url2, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user.token}`
+          },
+          body: JSON.stringify({ 
+            teamName: team.name,
+            team_name: team.name,
+            name: team.name,
+            oldName: team.name
+          })
+        });
+        responseText = await response.text();
+        console.log('DEBUG: Attempt 2 Response Status:', response.status);
+        console.log('DEBUG: Attempt 2 Response Text:', responseText);
+      }
+
+      // Attempt 3: Try POST to /api/admin/teams/delete in case the server handles deletion via POST method
+      if (!response.ok) {
+        const url3 = `${BASE_URL}/api/admin/teams/delete`;
+        console.log('DEBUG: Attempt 3 - POST to:', url3);
+        response = await fetch(url3, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user.token}`
+          },
+          body: JSON.stringify({ 
+            teamName: team.name,
+            team_name: team.name,
+            name: team.name,
+            oldName: team.name
+          })
+        });
+        responseText = await response.text();
+        console.log('DEBUG: Attempt 3 Response Status:', response.status);
+        console.log('DEBUG: Attempt 3 Response Text:', responseText);
+      }
+
+      if (response.ok) {
+        setShowDeleteModal(false);
+        navigate('/teams');
+      } else {
+        console.error('DEBUG: All deletion attempts failed.');
+        let errorMessage = 'Failed to delete team.';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          if (responseText && responseText.length < 100) {
+            errorMessage = responseText;
+          }
+        }
+        alert(errorMessage + ' Please try again.');
+      }
+    } catch (err) {
+      console.error('Delete team error:', err);
+      alert('An error occurred while deleting the team.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="pm-dashboard-container">
@@ -256,6 +347,38 @@ export default function TeamDetail() {
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                 Edit Team
+              </button>
+
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: '#fee2e2',
+                  color: '#ef4444',
+                  border: '1.5px solid #fecaca',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  transition: 'all 0.2s',
+                  flex: winWidth < 768 ? '1' : 'initial',
+                  justifyContent: 'center',
+                  minWidth: winWidth < 768 ? '120px' : 'auto'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fecaca';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fee2e2';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                Delete Team
               </button>
             </div>
           </header>
@@ -522,6 +645,56 @@ export default function TeamDetail() {
                   {isSaving ? 'Saving Changes...' : 'Save Updates'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE TEAM MODAL */}
+      {showDeleteModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div className="animate-slide-up" style={{
+            background: 'white', width: '100%', maxWidth: '450px', borderRadius: '32px',
+            padding: '40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            border: '1px solid #e2e8f0', textAlign: 'center'
+          }}>
+            <div style={{
+              width: '64px', height: '64px', borderRadius: '50%',
+              background: '#fee2e2', color: '#ef4444',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px', fontSize: '28px'
+            }}>⚠️</div>
+            <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', margin: '0 0 10px 0' }}>Delete Team</h2>
+            <p style={{ fontSize: '15px', color: '#64748b', marginBottom: '30px', lineHeight: '1.5' }}>
+              Are you sure to delete <strong style={{color: '#1e293b'}}>{team.name}</strong>?
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                style={{
+                  flex: 1, padding: '16px', borderRadius: '16px', background: 'white',
+                  color: '#64748b', border: '1px solid #e2e8f0', fontWeight: '800',
+                  cursor: 'pointer', transition: 'all 0.2s'
+                }}
+              >Cancel</button>
+              <button
+                onClick={handleDeleteTeam}
+                disabled={isDeleting}
+                style={{
+                  flex: 2, padding: '16px', borderRadius: '16px', background: '#ef4444',
+                  color: 'white', border: 'none', fontWeight: '800',
+                  cursor: isDeleting ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
+                  boxShadow: '0 10px 15px -3px rgba(239,68,68,0.3)',
+                  opacity: isDeleting ? 0.7 : 1
+                }}
+              >
+                {isDeleting ? 'Deleting...' : 'Ok, Delete'}
+              </button>
             </div>
           </div>
         </div>
