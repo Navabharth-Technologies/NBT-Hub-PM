@@ -40,6 +40,7 @@ export default function NewJoineeModule() {
   const [showAddDropdown, setShowAddDropdown] = useState(false);
   const [toastType, setToastType] = useState('success');
   const [leads, setLeads] = useState([]);
+  const [deleteConfirmJoinee, setDeleteConfirmJoinee] = useState(null);
 
   const [viewBlocked, setViewBlocked] = useState(false);
   const [unblocking, setUnblocking] = useState(false);
@@ -95,13 +96,27 @@ export default function NewJoineeModule() {
       }
 
       // Normalize intern data
-      const normalizedInterns = (Array.isArray(internData) ? internData : internData.data || []).map(i => ({
-        ...i,
-        role: i.role || 'Intern',
-        is_intern: true
-      }));
+      const normalizedInterns = (Array.isArray(internData) ? internData : internData.data || []).map(i => {
+        const email = i.email_id || i.emailId || i.email || '';
+        const storedId = email ? localStorage.getItem('joinee_empid_' + email.toLowerCase().trim()) : '';
+        return {
+          ...i,
+          role: i.role || 'Intern',
+          is_intern: true,
+          employee_id: storedId || i.employee_id || i.intern_id || i.employeeId || i.internId || i.emp_id || i.EmpID || ''
+        };
+      });
 
-      const allJoinees = [...(Array.isArray(joineeData) ? joineeData : []), ...normalizedInterns];
+      const normalizedJoinees = (Array.isArray(joineeData) ? joineeData : []).map(j => {
+        const email = j.email_id || j.emailId || j.email || '';
+        const storedId = email ? localStorage.getItem('joinee_empid_' + email.toLowerCase().trim()) : '';
+        return {
+          ...j,
+          employee_id: storedId || j.employee_id || j.employeeId || j.intern_id || j.internId || j.emp_id || j.EmpID || ''
+        };
+      });
+
+      const allJoinees = [...normalizedJoinees, ...normalizedInterns];
       setJoinees(allJoinees);
     } catch (err) {
       console.error('Global fetch error:', err);
@@ -192,12 +207,16 @@ export default function NewJoineeModule() {
       return (leadId !== '' && leadId === dbIdMatch) || (leadName !== '' && leadName === dbName);
     });
 
+    const email = joinee.email_id || joinee.emailId || joinee.email || '';
+    const storedId = email ? localStorage.getItem('joinee_empid_' + email.toLowerCase().trim()) : '';
+    const empId = storedId || joinee.employee_id || joinee.employeeId || joinee.intern_id || joinee.internId || joinee.emp_id || joinee.EmpID || joinee.id || '';
+
     setFormData({
       name: joinee.name || '',
       email_id: joinee.email_id || joinee.emailId || joinee.email || '',
       role: joinee.role || joinee.Designation || '',
       joining_date: joinee.joining_date || joinee.joiningDate ? new Date(joinee.joining_date || joinee.joiningDate).toISOString().split('T')[0] : '',
-      employee_id: joinee.employee_id || joinee.intern_id || joinee.emp_id || joinee.id || '',
+      employee_id: empId,
       reporting_manager: existingManager ? (existingManager.employee_id || existingManager.name) : (joinee.Reporting_manager_id || joinee.reporting_manager_id || joinee.Reporting_manager || joinee.reporting_manager || joinee.manager || ''),
       phone_number: joinee.phone_number || joinee.phone || joinee.contact_no || '',
       duration: joinee.duration || joinee.duration || '',
@@ -226,13 +245,6 @@ export default function NewJoineeModule() {
       return;
     }
 
-    if (!formData.employee_id) {
-      setToastMessage('Employee ID is required');
-      setToastType('error');
-      setShowSuccessToast(true);
-      return;
-    }
-
     if (formData.phone_number.length !== 10) {
       setToastMessage('Phone number must be exactly 10 digits');
       setToastType('error');
@@ -252,6 +264,7 @@ export default function NewJoineeModule() {
     setSaving(true);
 
     const isIntern = formData.is_intern;
+    const generatedEmpId = formData.employee_id || (isIntern ? ('INT-' + Math.floor(1000 + Math.random() * 9000)) : ('NBT-' + Math.floor(1000 + Math.random() * 9000)));
     const originalJoinee = editingId ? joinees.find(j => (j.id || j._id || j.id_intern) === editingId) : null;
 
     const endpoint = editingId
@@ -270,12 +283,16 @@ export default function NewJoineeModule() {
       email: formData.email_id,
       email_id: formData.email_id,
       emailId: formData.email_id,
-      password: 'Intern@' + (formData.employee_id || '123'),
+      password: 'Intern@' + (generatedEmpId || '123'),
       role: formData.role,
       joining_date: formData.joining_date,
       joiningDate: formData.joining_date,
-      intern_id: formData.employee_id,
-      employee_id: formData.employee_id,
+      intern_id: generatedEmpId,
+      internId: generatedEmpId,
+      employee_id: generatedEmpId,
+      employeeId: generatedEmpId,
+      emp_id: generatedEmpId,
+      EmpID: generatedEmpId,
       reporting_manager_id: selectedLead?.id || selectedLead?.employee_id || originalJoinee?.Reporting_manager_id || originalJoinee?.reporting_manager_id,
       reporting_manager: selectedLead?.name || formData.reporting_manager,
       stipend: 0,
@@ -290,7 +307,12 @@ export default function NewJoineeModule() {
       joiningDate: formData.joining_date,
       courseCompletion: 0,
       email_id: formData.email_id,
-      employee_id: formData.employee_id,
+      employee_id: generatedEmpId,
+      employeeId: generatedEmpId,
+      emp_id: generatedEmpId,
+      EmpID: generatedEmpId,
+      intern_id: generatedEmpId,
+      internId: generatedEmpId,
       status: 'Active',
       phone_number: formData.phone_number,
       duration: formData.duration,
@@ -309,6 +331,10 @@ export default function NewJoineeModule() {
         body: JSON.stringify(payload)
       });
       if (response.ok) {
+        const emailKey = (formData.email_id || '').toLowerCase().trim();
+        if (emailKey && generatedEmpId) {
+          localStorage.setItem('joinee_empid_' + emailKey, generatedEmpId);
+        }
         setToastMessage(editingId ? 'Information updated successfully! 🎉' : (isIntern ? 'Intern added successfully! 🎉' : 'New Joinee Successfully Enrolled! 🎉'));
         setToastType('success');
         setShowSuccessToast(true);
@@ -335,8 +361,8 @@ export default function NewJoineeModule() {
     }
   };
 
-  const handleDelete = async (joinee) => {
-    if (!user?.token || !window.confirm(`Are you sure you want to delete ${joinee.name}?`)) return;
+  const executeDelete = async (joinee) => {
+    if (!user?.token) return;
     try {
       const isIntern = !!joinee.is_intern;
       const endpoint = isIntern
@@ -579,7 +605,7 @@ export default function NewJoineeModule() {
                       <Pencil size={18} />
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(joinee); }}
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmJoinee(joinee); }}
                       style={{ padding: '8px', borderRadius: '10px', border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' }}
                       onMouseOver={(e) => e.currentTarget.style.background = '#fecaca'}
                       onMouseOut={(e) => e.currentTarget.style.background = '#fee2e2'}
@@ -589,10 +615,6 @@ export default function NewJoineeModule() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', gap: '10px', fontSize: '13px', alignItems: 'center' }}>
-                    <span style={{ color: '#94a3b8', minWidth: '110px' }}>{joinee.is_intern ? 'Intern ID' : 'Employee ID'}</span>
-                    <span style={{ fontWeight: '800', color: '#1e293b' }}>{joinee.intern_id || joinee.employee_id || (joinee.is_intern ? 'INT-000' : 'TEMP-001')}</span>
-                  </div>
                   <div style={{ display: 'flex', gap: '10px', fontSize: '13px', alignItems: 'center' }}>
                     <span style={{ color: '#94a3b8', minWidth: '110px' }}>Joining Date</span>
                     <span style={{ fontWeight: '700', color: '#1e293b' }}>
@@ -679,16 +701,7 @@ export default function NewJoineeModule() {
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '900', color: '#1e293b', letterSpacing: '0.3px' }}>
-                    {formData.is_intern ? 'Intern ID' : 'Employee ID'}
-                  </label>
-                  <input
-                    type="text" name="employee_id" value={formData.employee_id} onChange={handleInputChange}
-                    placeholder={formData.is_intern ? 'e.g. INT-001' : 'e.g. NBT-001'} required
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '12px 18px', borderRadius: '14px', border: '2px solid #e2e8f0', background: '#f8fafc', fontWeight: '800', fontSize: '13px', outline: 'none', color: '#0B1E3F' }}
-                  />
-                </div>
+
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '12px', fontWeight: '900', color: '#1e293b', letterSpacing: '0.3px' }}>Phone Number</label>
@@ -763,6 +776,69 @@ export default function NewJoineeModule() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deleteConfirmJoinee && (
+          <div className="modal-overlay" style={{
+            position: 'fixed', top: 0, left: 0, width: '100%', height: '100vh',
+            background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(10px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              style={{
+                background: 'white', padding: isMobile ? '24px 20px' : '36px 40px', borderRadius: '28px',
+                width: '90%', maxWidth: '440px', boxShadow: '0 25px 60px rgba(0,0,0,0.25)',
+                textAlign: 'center', position: 'relative'
+              }}
+            >
+              <div style={{
+                width: '64px', height: '64px', borderRadius: '50%',
+                background: '#fee2e2', color: '#ef4444',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 18px', fontSize: '28px'
+              }}>
+                ⚠️
+              </div>
+              <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '0 0 8px', letterSpacing: '-0.3px' }}>
+                Confirm Deletion
+              </h3>
+              <p style={{ fontSize: '14px', color: '#475569', margin: '0 0 24px', lineHeight: '1.6', fontWeight: '600' }}>
+                Are you sure you want to delete <span style={{ fontWeight: '900', color: '#ef4444' }}>{deleteConfirmJoinee.name}</span>? This action cannot be undone.
+              </p>
+              <div style={{ display: 'flex', gap: '14px', justifyContent: 'center' }}>
+                <button
+                  onClick={() => setDeleteConfirmJoinee(null)}
+                  style={{
+                    flex: 1, padding: '12px 20px', background: 'white', color: '#64748b',
+                    border: '2px solid #e2e8f0', borderRadius: '14px', fontWeight: '900', fontSize: '14px',
+                    cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    const joinee = deleteConfirmJoinee;
+                    setDeleteConfirmJoinee(null);
+                    await executeDelete(joinee);
+                  }}
+                  style={{
+                    flex: 1.2, padding: '12px 20px', background: '#ef4444', color: 'white',
+                    border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '14px',
+                    cursor: 'pointer', boxShadow: '0 6px 16px rgba(239, 68, 68, 0.35)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Yes, Delete
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

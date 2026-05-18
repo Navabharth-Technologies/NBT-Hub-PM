@@ -125,10 +125,10 @@ export default function PayslipScreen() {
                     {/* Employee Profile Table */}
                     <div style={{ display: 'grid', gridTemplateColumns: winWidth < 768 ? '1fr 1fr' : '1fr 1fr 1fr 1fr', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
                         {[
-                            { label: 'EMPLOYEE CODE', value: user?.employee_id || '20253' },
-                            { label: 'DEPARTMENT', value: user?.department || 'Information Technology' },
-                            { label: 'EMPLOYEE NAME', value: user?.name || 'Santhosha A Doddamallappanavara' },
-                            { label: 'DESIGNATION', value: user?.designation || 'Lead Software Engineer' }
+                            { label: 'EMPLOYEE CODE', value: user?.employee_id || user?.id || '' },
+                            { label: 'DEPARTMENT', value: user?.department || '' },
+                            { label: 'EMPLOYEE NAME', value: user?.name || '' },
+                            { label: 'DESIGNATION', value: user?.designation || user?.role || '' }
                         ].map((item, idx) => (
                             <div key={idx} style={{ padding: winWidth < 768 ? '10px' : '15px', borderRight: (idx + 1) % (winWidth < 768 ? 2 : 4) === 0 ? 'none' : '1px solid #e2e8f0', borderBottom: winWidth < 768 && idx < 2 ? '1px solid #e2e8f0' : 'none' }}>
                                 <p style={{ margin: '0 0 4px', fontSize: '8px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase' }}>{item.label}</p>

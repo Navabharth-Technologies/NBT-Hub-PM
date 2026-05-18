@@ -711,9 +711,19 @@ export default function TeamManagement() {
                       >
                         <div style={{width: '36px', height: '36px', borderRadius: '10px', background: '#3863a8', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px', boxShadow: '0 4px 10px rgba(56,99,168,0.2)'}}>{(team.lead || 'M').charAt(0)}</div>
                         {isEditingAlignment && <Icons.DragHandle />}
-                        <div>
-                          <div style={{fontWeight: '800', fontSize: '14px', color: '#1e293b'}}>{team.lead || 'Manager'}</div>
-                          <div style={{fontSize: '12px', color: '#64748b', fontWeight: '600'}}>{team.leadRole || 'Team Manager'}</div>
+                        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                          <div 
+                            style={{fontWeight: '800', fontSize: '14px', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}
+                            title={team.lead || 'Manager'}
+                          >
+                            {team.lead || 'Manager'}
+                          </div>
+                          <div 
+                            style={{fontSize: '12px', color: '#64748b', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}
+                            title={team.leadRole || 'Team Manager'}
+                          >
+                            {team.leadRole || 'Team Manager'}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -769,9 +779,19 @@ export default function TeamManagement() {
                             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold'
                           }}>{m.name.charAt(0)}</div>
                           {isEditingAlignment && <Icons.DragHandle />}
-                          <div style={{flex: 1}}>
-                            <div style={{fontWeight: '800', fontSize: '13px', color: '#1e293b'}}>{m.name}</div>
-                            <div style={{fontSize: '11px', color: '#64748b', fontWeight: '600'}}>{m.role}</div>
+                          <div style={{flex: 1, minWidth: 0, overflow: 'hidden'}}>
+                            <div 
+                              style={{fontWeight: '800', fontSize: '13px', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}
+                              title={m.name}
+                            >
+                              {m.name}
+                            </div>
+                            <div 
+                              style={{fontSize: '11px', color: '#64748b', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}
+                              title={m.role}
+                            >
+                              {m.role}
+                            </div>
                           </div>
                           {isPendingFilter && m.pendingTasks > 0 && (
                             <div style={{background: '#ea580c', color: 'white', fontSize: '10px', fontWeight: '900', padding: '2px 8px', borderRadius: '6px', boxShadow: '0 2px 5px rgba(234,88,12,0.3)'}}>
