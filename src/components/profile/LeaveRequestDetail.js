@@ -18,6 +18,12 @@ export default function LeaveRequestDetail() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [winWidth, setWinWidth] = useState(window.innerWidth);
+  const [modalState, setModalState] = useState({ show: false, message: '', type: 'APPROVED' });
+
+  const handleModalClose = () => {
+    setModalState({ show: false, message: '', type: 'APPROVED' });
+    navigate(-1);
+  };
 
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -160,8 +166,11 @@ export default function LeaveRequestDetail() {
         }
         // --- End Auto Update Logic ---
 
-        window.confirm(`Leave ${targetStatus === 'APPROVED' ? 'Approved!' : 'Rejected.'}`);
-        navigate(-1);
+        setModalState({
+          show: true,
+          message: `Leave ${targetStatus === 'APPROVED' ? 'Approved!' : 'Rejected.'}`,
+          type: targetStatus
+        });
       } else {
         const resData = await response.json().catch(() => ({}));
         alert(`Update Failed: ${resData.error || resData.message || 'Server Error'}`);
@@ -347,9 +356,9 @@ export default function LeaveRequestDetail() {
   if (isHRReq) {
     currentUserStage = 'l2'; // For HR requests, CEO approves at L2 stage
   } else {
-    if (userRoleStr.includes('PM') || userRoleStr.includes('CEO') || userRoleStr.includes('ADMIN') || userRoleStr.includes('MANAGER')) {
+    if (userRoleStr.includes('PM') || userRoleStr.includes('PROJECT MANAGER') || userRoleStr.includes('CEO') || userRoleStr.includes('ADMIN') || userRoleStr.includes('MANAGER')) {
       currentUserStage = 'l3';
-    } else if (userRoleStr.includes('HR')) {
+    } else if (userRoleStr === 'HR' || userRoleStr.includes('HUMAN RESOURCE') || userRoleStr.includes('HR ')) {
       currentUserStage = 'l2';
     }
   }
@@ -549,6 +558,123 @@ export default function LeaveRequestDetail() {
         </div>
       </main>
       <AppFooter />
+
+      {/* Custom Alert/Confirm Modal */}
+      {modalState.show && (
+        <>
+          <style>{`
+            @keyframes modalFadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes modalSlideUp {
+              from { transform: scale(0.95); opacity: 0; }
+              to { transform: scale(1); opacity: 1; }
+            }
+          `}</style>
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(15, 23, 42, 0.45)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 99999,
+            animation: 'modalFadeIn 0.2s ease-out'
+          }}>
+            <div style={{
+              background: 'white',
+              width: '90%',
+              maxWidth: '380px',
+              borderRadius: '32px',
+              padding: '32px',
+              boxShadow: '0 20px 50px rgba(15, 23, 42, 0.15)',
+              border: '1.5px solid #f1f5f9',
+              textAlign: 'center',
+              animation: 'modalSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              fontFamily: "'Outfit', sans-serif"
+            }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '22px',
+                background: modalState.type === 'APPROVED' ? '#f0fdf4' : '#fef2f2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+                border: `1.5px solid ${modalState.type === 'APPROVED' ? '#bbf7d0' : '#fecaca'}`
+              }}>
+                {modalState.type === 'APPROVED' ? (
+                  <CheckCircle2 size={32} color="#16a34a" />
+                ) : (
+                  <XCircle size={32} color="#ef4444" />
+                )}
+              </div>
+              <h2 style={{
+                fontSize: '22px',
+                fontWeight: '950',
+                color: '#0f172a',
+                margin: '0 0 8px 0'
+              }}>
+                {modalState.message}
+              </h2>
+              <p style={{
+                fontSize: '14px',
+                color: '#64748b',
+                margin: '0 0 24px 0',
+                lineHeight: '1.5',
+                fontWeight: '700'
+              }}>
+                {modalState.type === 'APPROVED' 
+                  ? 'The leave request has been approved successfully.' 
+                  : 'The leave request has been rejected successfully.'}
+              </p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button
+                  onClick={handleModalClose}
+                  style={{
+                    flex: 1,
+                    padding: '14px 24px',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: modalState.type === 'APPROVED' ? '#16a34a' : '#ef4444',
+                    color: 'white',
+                    fontSize: '14px',
+                    fontWeight: '900',
+                    cursor: 'pointer',
+                    boxShadow: `0 8px 20px ${modalState.type === 'APPROVED' ? 'rgba(22, 163, 74, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  OK
+                </button>
+                <button
+                  onClick={handleModalClose}
+                  style={{
+                    flex: 1,
+                    padding: '14px 24px',
+                    borderRadius: '16px',
+                    border: '1.5px solid #e2e8f0',
+                    background: '#f8fafc',
+                    color: '#64748b',
+                    fontSize: '14px',
+                    fontWeight: '900',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -319,9 +319,22 @@ export default function AwardsScreen() {
                     {/* Header Controls */}
                     <div style={{ display: 'flex', flexDirection: winWidth < 600 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 600 ? 'flex-start' : 'flex-start', marginBottom: '32px', gap: '20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <div onClick={() => navigate(-1)} style={{ cursor: 'pointer', background: '#f8fafc', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                            <button 
+                                onClick={() => navigate(-1)} 
+                                style={{
+                                    background: 'white',
+                                    padding: '10px',
+                                    borderRadius: '12px',
+                                    border: '1px solid #e2e8f0',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                }}
+                            >
                                 <ArrowLeft size={18} color="#64748b" />
-                            </div>
+                            </button>
                             <div>
                                 <h1 style={{ margin: 0, fontSize: winWidth < 768 ? '20px' : '24px', fontWeight: '950', color: '#0f172a', letterSpacing: '-0.5px' }}>Awards & Recognition</h1>
                                 <p style={{ margin: 0, fontSize: winWidth < 768 ? '11px' : '13px', color: '#94a3b8', fontWeight: '600' }}>Live achievements at NBT Hub</p>

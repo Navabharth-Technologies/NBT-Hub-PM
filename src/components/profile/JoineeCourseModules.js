@@ -5,7 +5,7 @@ import { API_ENDPOINTS, BASE_URL } from '../../config';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import './PMDashboard.css';
-import { Calendar, FileText, Video } from 'lucide-react';
+import { Calendar, FileText, Video, ArrowLeft } from 'lucide-react';
 
 export default function JoineeCourseModules() {
   const { id } = useParams();
@@ -123,13 +123,18 @@ export default function JoineeCourseModules() {
           <button 
             onClick={() => navigate('/new-joinees')}
             style={{
-              padding: '10px 24px', borderRadius: '12px', border: '1px solid #e2e8f0', 
-              background: '#ffffff', color: '#1e293b', fontWeight: '800', fontSize: '13px', 
-              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-              transition: 'all 0.2s', fontFamily: 'inherit'
+              background: 'white',
+              padding: '10px',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
             }}
           >
-            ← Back to Dashboard
+            <ArrowLeft size={18} color="#64748b" />
           </button>
         </header>
 

@@ -454,12 +454,11 @@ export default function TeamDetail() {
                               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: (leader.status || 'Offline') === 'Online' ? '#10b981' : '#cbd5e1' }}></div>
                               {leader.status || 'Offline'}
                             </div>
-                          </div>
-                          <div style={{ color: '#3863a8', fontSize: '20px', fontWeight: 'bold' }}>→</div>
                         </div>
-                      );
-                    })()
-                  ) : (
+                      </div>
+                    );
+                  })()
+                ) : (
                     <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '20px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
                       No designated leader assigned to this team.
                     </div>

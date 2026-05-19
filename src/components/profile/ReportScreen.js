@@ -187,7 +187,23 @@ export default function ReportScreen() {
   const renderIndividual = () => (
     <div style={{ textAlign: 'center', padding: '50px' }}>
       <h2 style={{ color: '#1e293b', fontWeight: '900' }}>Report No Longer Available</h2>
-      <button onClick={() => navigate(-1)} style={{ marginTop: '20px', padding: '10px 20px', borderRadius: '12px', background: '#3863a8', color: 'white', border: 'none', fontWeight: '800', cursor: 'pointer' }}>Go Back</button>
+      <button 
+        onClick={() => navigate(-1)} 
+        style={{
+          marginTop: '20px',
+          background: 'white',
+          padding: '10px',
+          borderRadius: '12px',
+          border: '1px solid #e2e8f0',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+        }}
+      >
+        <ArrowLeft size={18} color="#64748b" />
+      </button>
     </div>
   );
 

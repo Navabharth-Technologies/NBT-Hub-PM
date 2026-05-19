@@ -100,7 +100,7 @@ export default function BirthdayScreen() {
 
   useEffect(() => {
     const filtered = birthdays.filter(b => 
-      (b.name || b.employee_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+      (b.name || b.employee_name || '').toLowerCase().startsWith(searchTerm.toLowerCase())
     );
     setFilteredBirthdays(filtered);
   }, [searchTerm, birthdays]);

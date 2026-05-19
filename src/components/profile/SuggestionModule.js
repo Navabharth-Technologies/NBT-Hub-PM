@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS, BASE_URL } from '../../config';
 import './PMDashboard.css';
@@ -64,12 +65,21 @@ export default function SuggestionModule() {
       <main className="dashboard-content" style={{ paddingBottom: '100px' }}>
         <header className="section-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <button
-              onClick={() => navigate(-1)}
-              className="btn-outline"
-              style={{ padding: '8px 12px' }}
+            <button 
+              onClick={() => navigate(-1)} 
+              style={{
+                background: 'white',
+                padding: '10px',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+              }}
             >
-              ← Back
+              <ArrowLeft size={18} color="#64748b" />
             </button>
             <div>
               <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--primary-color)' }}>Innovation Hub</h1>

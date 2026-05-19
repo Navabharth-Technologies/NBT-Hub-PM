@@ -85,7 +85,17 @@ export default function AttendanceManagement() {
     if (user?.token) {
       fetch(API_ENDPOINTS.USERS, { headers: { 'Authorization': `Bearer ${user.token}` } })
         .then(res => res.json())
-        .then(data => { if (Array.isArray(data)) setAllEmployees(data); })
+        .then(data => {
+          if (Array.isArray(data)) {
+            const sorted = [...data].sort((a, b) => {
+              const idA = parseInt(String(a.employee_id || a.id || '').replace(/[^\d]/g, ''), 10) || 0;
+              const idB = parseInt(String(b.employee_id || b.id || '').replace(/[^\d]/g, ''), 10) || 0;
+              if (idA !== idB) return idA - idB;
+              return String(a.employee_id || a.id || '').localeCompare(String(b.employee_id || b.id || ''));
+            });
+            setAllEmployees(sorted);
+          }
+        })
         .catch(err => console.error("Error fetching users:", err));
       fetchAttendance();
     }
@@ -170,11 +180,9 @@ export default function AttendanceManagement() {
 
   const metrics = calculateMetrics();
   const filteredEmployees = allEmployees.filter(emp => {
+    if (!searchTerm) return true;
     const s = searchTerm.toLowerCase();
-    return (emp.name || emp.user_name || '').toLowerCase().includes(s) ||
-           String(emp.id).toLowerCase().includes(s) ||
-           (emp.role || '').toLowerCase().includes(s) ||
-           (emp.department || '').toLowerCase().includes(s);
+    return (emp.name || emp.user_name || '').toLowerCase().startsWith(s);
   });
 
   return (

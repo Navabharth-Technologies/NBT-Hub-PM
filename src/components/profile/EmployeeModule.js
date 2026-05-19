@@ -47,9 +47,7 @@ export default function EmployeeModule() {
   const uniqueRoles = ['All Roles', ...new Set(employees.map(emp => emp.role).filter(Boolean))];
 
   const filteredEmployees = employees.filter(emp => {
-    const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (emp.team && emp.team.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (emp.role && emp.role.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch = emp.name.toLowerCase().startsWith(searchTerm.toLowerCase());
     
     const matchesDept = selectedDept === 'All Roles' || 
       (emp.role && emp.role === selectedDept) ||

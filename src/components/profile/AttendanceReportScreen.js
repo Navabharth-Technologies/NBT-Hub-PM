@@ -111,7 +111,7 @@ export default function AttendanceReportScreen() {
   const filteredLogs = logs.filter(log => {
     const term = searchTerm.toLowerCase();
     return !term || 
-           (log.name || log.EmployeeName || '').toLowerCase().includes(term) ||
+           (log.name || log.EmployeeName || '').toLowerCase().startsWith(term) ||
            (log.user_id || log.Empcode || '').toString().includes(term);
   });
 
@@ -132,9 +132,23 @@ export default function AttendanceReportScreen() {
         
         {/* Breadcrumb */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px', opacity: 0.8 }}>
-          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', fontWeight: '800', color: '#3863a8' }}>
-            <ArrowLeft size={16} /> Attendance Center
+          <button 
+            onClick={() => navigate(-1)} 
+            style={{
+              background: 'white',
+              padding: '10px',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+            }}
+          >
+            <ArrowLeft size={18} color="#64748b" />
           </button>
+          <span style={{ fontSize: '14px', fontWeight: '800', color: '#3863a8' }}>Attendance Center</span>
           <span style={{ color: '#94a3b8', fontWeight: '900' }}>/</span>
           <span style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>Attendance Report</span>
         </div>

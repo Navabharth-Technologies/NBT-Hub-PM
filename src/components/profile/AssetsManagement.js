@@ -431,7 +431,7 @@ export default function AssetsManagement() {
     });
 
     return combined.filter(emp => {
-      const matchesSearch = (emp.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = (emp.name || '').toLowerCase().startsWith(searchTerm.toLowerCase()) ||
         (String(emp.id || '')).includes(searchTerm);
       const matchesDept = selectedDept === 'All' || (emp.team && emp.team.includes(selectedDept));
       return matchesSearch && matchesDept;

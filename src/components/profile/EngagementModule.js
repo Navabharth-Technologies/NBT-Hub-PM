@@ -5,7 +5,7 @@ import { useThread } from '../../context/ThreadContext';
 import { useAuth } from '../../context/AuthContext';
 import {
     Heart, MessageSquare, Smile,
-    Send, MoreHorizontal, User, Share2, Cake, Gift, Plus, ChevronLeft,
+    Send, MoreHorizontal, User, Share2, Cake, Gift, Plus, ArrowLeft,
     Trash2, Edit3, X, Check, Image as ImageIcon, Film, XCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -224,12 +224,36 @@ export default function EngagementModule() {
             
             <main style={styles.container}>
                 {/* BACK BUTTON */}
-                <button
-                    onClick={() => navigate(-1)}
-                    style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', marginBottom: '10px', width: 'fit-content' }}
-                >
-                    <ChevronLeft size={20} color="#64748b" />
-                </button>
+                <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'flex-start', 
+                    width: '100%',
+                    position: 'sticky', 
+                    top: winWidth < 768 ? '70px' : '85px', 
+                    zIndex: 1000, 
+                    backgroundColor: '#f8fafc', 
+                    paddingTop: '10px',
+                    marginTop: '-10px',
+                    paddingBottom: '5px' 
+                }}>
+                    <button
+                        onClick={() => navigate(-1)}
+                        style={{
+                            background: 'white',
+                            padding: '10px',
+                            borderRadius: '12px',
+                            border: '1px solid #e2e8f0',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                            marginBottom: '20px'
+                        }}
+                    >
+                        <ArrowLeft size={18} color="#64748b" />
+                    </button>
+                </div>
 
                 {/* CREATE THREAD */}
                 <div style={{ ...styles.card, borderTop: '5px solid #FDB913' }}>
