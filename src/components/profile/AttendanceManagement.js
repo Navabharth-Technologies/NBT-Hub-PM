@@ -937,7 +937,7 @@ export default function AttendanceManagement() {
                     }).length > 1;
 
                     const punchIn = firstLogForDay?.in_time || firstLogForDay?.INTime || firstLogForDay?.PunchIn || firstLogForDay?.punch_time || '----';
-                    const punchOut = (todayLog || (isMultiLog && lastLogForDay)) ? (lastLogForDay?.out_time || lastLogForDay?.OUTTime || lastLog?.PunchOut || lastLogForDay?.punch_time || lastLogForDay?.PunchIn || lastLogForDay?.in_time || '----') : '----';
+                    const punchOut = (todayLog || (isMultiLog && lastLogForDay)) ? (lastLogForDay?.out_time || lastLogForDay?.OUTTime || lastLogForDay?.PunchOut || lastLogForDay?.punch_time || lastLogForDay?.PunchIn || lastLogForDay?.in_time || '----') : '----';
                     
                     // Manual work time calculation if missing
                     let workHrs = log?.work_time || log?.work_hrs || log?.WorkTime;
