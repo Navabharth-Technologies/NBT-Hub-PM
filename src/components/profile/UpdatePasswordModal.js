@@ -74,7 +74,7 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
         setTimeout(() => {
           logout();
           window.location.href = '/login';
-        }, 2000);
+        }, 3000);
       } else {
         setError(data.error || data.message || 'Failed to process request');
       }
@@ -251,7 +251,7 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
               {success && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#10b981', background: '#ecfdf5', padding: '12px', borderRadius: '15px' }}>
                   <CheckCircle size={18} />
-                  <span style={{ fontSize: '14px', fontWeight: '900' }}>Security credentials updated!</span>
+                  <span style={{ fontSize: '14px', fontWeight: '900' }}>Your password has been changed. Please relogin.</span>
                 </div>
               )}
 
