@@ -72,15 +72,8 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
       if (response.ok) {
         setSuccess(true);
         setTimeout(() => {
-          if (logoutAllDevices && !resetMode) {
-            logout();
-            window.location.href = '/login';
-          } else {
-            onClose();
-            setSuccess(false);
-            setResetMode(false);
-            setPasswords({ currentPassword: '', otp: '', newPassword: '', confirmPassword: '' });
-          }
+          logout();
+          window.location.href = '/login';
         }, 2000);
       } else {
         setError(data.error || data.message || 'Failed to process request');
