@@ -243,7 +243,7 @@ export default function AttendanceManagement() {
         setAttendanceError('Session expired. Please log in again.');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/';
+        window.location.href = './';
         return;
       }
 

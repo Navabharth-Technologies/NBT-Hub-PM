@@ -73,7 +73,7 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
         setSuccess(true);
         setTimeout(() => {
           logout();
-          window.location.href = '/login';
+          window.location.href = './';
         }, 3000);
       } else {
         setError(data.error || data.message || 'Failed to process request');

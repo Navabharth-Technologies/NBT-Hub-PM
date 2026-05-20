@@ -9,6 +9,7 @@ export default function LoginScreen() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
@@ -67,9 +68,17 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) return alert('Please provide credentials');
+    setEmailError('');
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setEmailError('Please enter a valid email address.');
+      return;
+    }
+
     setIsLoggingIn(true);
     setMessage('');
-    const result = await login(email, password);
+    const result = await login(email.trim(), password);
     if (!result.success) {
       setMessage(result.error);
       setIsLoggingIn(false);
@@ -91,15 +100,19 @@ export default function LoginScreen() {
 
         <div style={styles.inputGroup}>
           <label style={styles.label}>Official Identity (Email)</label>
-          <div style={styles.inputWrapper}>
-            <Mail size={18} color="#94a3b8" />
+          <div style={{ ...styles.inputWrapper, border: emailError ? '1.5px solid #ef4444' : '1px solid #f1f5f9' }}>
+            <Mail size={18} color={emailError ? "#ef4444" : "#94a3b8"} />
             <input
               style={styles.input}
               placeholder="e.g. sahana@navshub.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (emailError) setEmailError('');
+              }}
             />
           </div>
+          {emailError && <div style={{ color: '#ef4444', fontSize: '11px', fontWeight: '600', marginTop: '5px', textAlign: 'left' }}>{emailError}</div>}
         </div>
 
         <div style={styles.inputGroup}>

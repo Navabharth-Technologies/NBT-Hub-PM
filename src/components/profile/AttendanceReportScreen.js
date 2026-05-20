@@ -74,7 +74,7 @@ export default function AttendanceReportScreen() {
         setTimeout(() => {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-          window.location.href = '/';
+          window.location.href = './';
         }, 2000);
         setLoading(false);
         return;

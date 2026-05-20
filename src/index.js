@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 
 // Global Security Interceptor (Fetch version of Axios Interceptor)
 const originalFetch = window.fetch;
@@ -10,7 +10,7 @@ window.fetch = async (...args) => {
     const response = await originalFetch(...args);
     if (response.status === 401) {
       // Avoid infinite loop if already on login page
-      if (window.location.pathname === '/login') return response;
+      if (window.location.hash === '#/login' || window.location.pathname === '/login') return response;
 
       try {
         const data = await response.clone().json();
@@ -22,7 +22,7 @@ window.fetch = async (...args) => {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('userRole');
-      window.location.href = '/login';
+      window.location.hash = '/login';
     }
     return response;
   } catch (error) {
@@ -36,8 +36,8 @@ window.fetch = async (...args) => {
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
+    <HashRouter>
       <App />
-    </BrowserRouter>
+    </HashRouter>
   </React.StrictMode>
 );
