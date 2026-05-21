@@ -242,35 +242,17 @@ const QuizModule = ({ onBack }) => {
       }, 0);
 
       const body = {
-        // User identifiers
-        employee_id: user?.employee_id || user?.id || user?.userId,
-        user_id: user?.employee_id || user?.id || user?.userId,
-        userId: user?.employee_id || user?.id || user?.userId,
-        
-        // Quiz identifiers
-        quiz_id: questions[0]?.quiz_id || questions[0]?.id,
-        quizId: questions[0]?.quiz_id || questions[0]?.id,
-        
-        // Results data
         total_questions: totalQuestions,
-        totalQuestions: totalQuestions,
         correct_count: correctCount,
-        correctCount: correctCount,
         total_score: totalPoints,
-        totalScore: totalPoints,
-        score: totalPoints,
-        points: totalPoints,
-        
-        // Timestamp
-        completion_date: new Date().toISOString(),
-        completionDate: new Date().toISOString()
+        quiz_id: questions[0]?.quiz_id || questions[0]?.id
       };
 
-      const response = await fetch(API_ENDPOINTS.QUIZ_SUBMIT_TOTAL || `${BASE_URL}/api/quizzes/submit-session`, {
+      const response = await fetch(API_ENDPOINTS.QUIZ_SUBMIT_TOTAL || `${BASE_URL}/api/fun-quizzes/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token?.trim()}`
         },
         body: JSON.stringify(body)
       });

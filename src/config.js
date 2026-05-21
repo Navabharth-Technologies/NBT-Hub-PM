@@ -95,7 +95,7 @@ export const API_ENDPOINTS = {
   INTERN_UPDATE: (id) => `${BASE_URL}/api/interns/${id}`,
   INTERN_PROMOTE: (id) => `${BASE_URL}/api/interns/promote/${id}`,
   INTERN_DELETE: (id) => `${BASE_URL}/api/interns/${id}`,
-  QUIZ_SUBMIT_TOTAL: `${BASE_URL}/api/quizzes/submit-session`,
+  QUIZ_SUBMIT_TOTAL: `${BASE_URL}/api/fun-quizzes/submit`,
   QUIZ_SUBMIT_ANSWER: `${BASE_URL}/api/fun-quizzes/submit-answer`,
   SUGGESTIONS_ADMIN: `${BASE_URL}/api/admin/suggestions`,
   SERVICE_CERTIFICATE_MY: `${BASE_URL}/api/service_certificate_requests/my`,
