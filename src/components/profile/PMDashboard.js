@@ -846,18 +846,7 @@ export default function PMDashboard() {
                 <div style={{ width: winWidth < 768 ? '38px' : '48px', height: winWidth < 768 ? '38px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '16px' : '22px', flexShrink: 0 }}>📅</div>
                 <h2 style={{ fontSize: winWidth < 768 ? '16px' : '22px', fontWeight: '950', color: '#1e293b', margin: 0, lineHeight: 1.2 }}>Leave/Attendance<br /> Management</h2>
               </div>
-              <button
-                style={{ background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer', fontSize: winWidth < 768 ? '12px' : '13px', paddingTop: '4px' }}
-                onClick={(e) => { e.stopPropagation(); navigate('/leaves'); }}
-              >
-                Leaves
-              </button>
-              <button
-                style={{ background: 'none', border: 'none', color: '#64748b', fontWeight: '800', cursor: 'pointer', fontSize: winWidth < 768 ? '12px' : '13px', paddingTop: '4px', marginLeft: '12px' }}
-                onClick={(e) => { e.stopPropagation(); navigate('/attendance'); }}
-              >
-                Attendance
-              </button>
+
             </div>
 
             <div style={{

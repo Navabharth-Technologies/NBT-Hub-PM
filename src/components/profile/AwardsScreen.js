@@ -27,12 +27,24 @@ export default function AwardsScreen() {
     const [granting, setGranting] = React.useState(false);
     const [history, setHistory] = React.useState({ pm: [] });
     const [feedback, setFeedback] = React.useState(null);
-    const [startDate, setStartDate] = React.useState('');
-    const [endDate, setEndDate] = React.useState('');
+    const [startDate, setStartDate] = React.useState(() => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}-01`;
+    });
+    const [endDate, setEndDate] = React.useState(() => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    });
     const [selectedHistoryUser, setSelectedHistoryUser] = React.useState(null);
     const [showAllFeed, setShowAllFeed] = React.useState(false);
     const [showRecipientDropdown, setShowRecipientDropdown] = React.useState(false);
     const [recipientSearch, setRecipientSearch] = React.useState('');
+    const [auditSearch, setAuditSearch] = React.useState('');
     const [showRewardDropdown, setShowRewardDropdown] = React.useState(false);
     const [availableAwards] = React.useState([
         { id: 'visionary', title: "Visionary Lead", rep: 200, desc: "Acknowledge exceptional leadership and vision." },
@@ -67,15 +79,15 @@ export default function AwardsScreen() {
                     const resJson = await empRes.json();
                     allStaff = [...allStaff, ...(Array.isArray(resJson) ? resJson : (resJson.data || []))];
                 }
-            } catch (e) {}
-            
+            } catch (e) { }
+
             try {
                 const userRes = await fetch(API_ENDPOINTS.USERS, { headers: { 'Authorization': `Bearer ${user.token}` } });
                 if (userRes.ok) {
                     const resJson = await userRes.json();
                     allStaff = [...allStaff, ...(Array.isArray(resJson) ? resJson : (resJson.data || []))];
                 }
-            } catch (e) {}
+            } catch (e) { }
 
             // Deduplicate
             const unique = Array.from(new Map(allStaff.map(s => [s.id || s.employee_id || s.userId, s])).values());
@@ -84,22 +96,67 @@ export default function AwardsScreen() {
             // Fetch Quiz Scores to aggregate
             let qList = [];
             try {
-                const uid = user?.employee_id || user?.userId || user?.id;
-                const qRes = await fetch(`${API_ENDPOINTS.QUIZ_LEADERBOARD}?employee_id=${uid}`, { headers: { 'Authorization': `Bearer ${user.token}` } });
+                const qRes = await fetch(API_ENDPOINTS.QUIZ_LEADERBOARD, { headers: { 'Authorization': `Bearer ${user.token}` } });
                 if (qRes.ok) {
                     const qData = await qRes.json();
                     qList = Array.isArray(qData) ? qData : (qData.data || []);
-                    setQuizScores(qList);
                 }
-            } catch (e) {}
+            } catch (e) { }
+
+            // Local Cache & Merge Strategy to prevent historical score loss when quiz is deleted
+            try {
+                let cachedQuizScores = [];
+                const localData = localStorage.getItem('nbt_historical_quiz_scores');
+                if (localData) {
+                    const parsed = JSON.parse(localData);
+                    if (Array.isArray(parsed)) {
+                        cachedQuizScores = parsed;
+                    }
+                }
+
+                const mergedMap = new Map();
+                // 1. Load historical cache first
+                cachedQuizScores.forEach(item => {
+                    if (item) {
+                        const empId = item.employee_id || item.user_id || item.userId || item.id || '';
+                        const score = Number(item.total_score || item.points || item.quiz_score || item.score || 0);
+                        const qId = item.quiz_id || item.quizId || '';
+                        const date = item.created_at || item.completion_date || item.date || '';
+                        const datePart = (date || '').split('T')[0];
+                        const uniqueKey = `${empId}-${qId || 'default'}-${score}-${datePart}`;
+                        mergedMap.set(uniqueKey, item);
+                    }
+                });
+
+                // 2. Overlay new active quiz scores
+                qList.forEach(item => {
+                    if (item) {
+                        const empId = item.employee_id || item.user_id || item.userId || item.id || '';
+                        const score = Number(item.total_score || item.points || item.quiz_score || item.score || 0);
+                        const qId = item.quiz_id || item.quizId || '';
+                        const date = item.created_at || item.completion_date || item.date || '';
+                        const datePart = (date || '').split('T')[0];
+                        const uniqueKey = `${empId}-${qId || 'default'}-${score}-${datePart}`;
+                        mergedMap.set(uniqueKey, item);
+                    }
+                });
+
+                const mergedList = Array.from(mergedMap.values());
+                localStorage.setItem('nbt_historical_quiz_scores', JSON.stringify(mergedList));
+                qList = mergedList;
+            } catch (cacheErr) {
+                console.error("Local quiz score caching error:", cacheErr);
+            }
+
+            setQuizScores(qList);
 
             // Fetch Leaderboard for Banner (Top Recognition) - Pass fresh quiz scores to avoid state lag
             await fetchLeaderboard(qList);
 
-        } catch (err) { 
+        } catch (err) {
             console.error(err);
-        } finally { 
-            setLoading(false); 
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -118,7 +175,7 @@ export default function AwardsScreen() {
                 const myGrants = Array.isArray(data) ? data.filter(r => String(r.granted_by) === String(uid)) : [];
                 setHistory({ pm: myGrants });
             }
-        } catch (err) {}
+        } catch (err) { }
     };
 
     const showFeedback = (msg, type) => {
@@ -128,9 +185,9 @@ export default function AwardsScreen() {
 
     const resolveEmployeeName = (id) => {
         if (!id) return 'Anonymous Member';
-        const emp = employees.find(e => 
-            String(e.id) === String(id) || 
-            String(e.employee_id) === String(id) || 
+        const emp = employees.find(e =>
+            String(e.id) === String(id) ||
+            String(e.employee_id) === String(id) ||
             String(e.userId) === String(id) ||
             String(e.emp_id) === String(id)
         );
@@ -144,49 +201,79 @@ export default function AwardsScreen() {
             const params = new URLSearchParams();
             if (startDate) params.append('startDate', startDate);
             if (endDate) params.append('endDate', endDate);
-            
-            const res = await fetch(`${API_ENDPOINTS.LEADERBOARD_ALL}?${params.toString()}`, { 
-                headers: { 'Authorization': `Bearer ${user.token}` } 
+
+            const res = await fetch(`${API_ENDPOINTS.LEADERBOARD_ALL}?${params.toString()}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
             });
             if (res.ok) {
                 const resJson = await res.json();
                 const baseLeaderboard = Array.isArray(resJson.data) ? resJson.data : (Array.isArray(resJson) ? resJson : []);
-                
+
                 // Merge quiz scores into leaderboard
                 const mergedMap = new Map();
-                
+
                 // First add base reward points
                 baseLeaderboard.forEach(item => {
                     const id = String(item.employee_id || item.id || item.userId);
-                    mergedMap.set(id, { 
-                        ...item, 
-                        total_points: Number(item.total_points || 0) 
+                    mergedMap.set(id, {
+                        id: isNaN(id) ? id : Number(id),
+                        name: item.name || item.employee_name || resolveEmployeeName(id),
+                        total_reward_points: Number(item.total_reward_points || item.total_points || 0),
+                        total_quiz_points: 0
                     });
                 });
-                
+
                 // Then add quiz points
                 activeQuizScores.forEach(q => {
-                    const id = String(q.employee_id || q.id || q.userId);
-                    const score = Number(q.total_score || q.points || q.score || 0);
+                    const id = String(q.employee_id || q.user_id || q.userId || q.id);
+                    const score = Number(q.total_score || q.points || q.quiz_score || q.score || 0);
                     if (mergedMap.has(id)) {
                         const existing = mergedMap.get(id);
-                        mergedMap.set(id, { ...existing, total_points: existing.total_points + score });
+                        existing.total_quiz_points += score;
                     } else {
-                        mergedMap.set(id, { 
-                            employee_id: id, 
-                            name: resolveEmployeeName(id), 
-                            total_points: score,
-                            role: 'Team Member'
+                        mergedMap.set(id, {
+                            id: isNaN(id) ? id : Number(id),
+                            name: resolveEmployeeName(id),
+                            total_reward_points: 0,
+                            total_quiz_points: score
                         });
                     }
                 });
-                
-                const finalLeaderboard = Array.from(mergedMap.values()).sort((a, b) => b.total_points - a.total_points);
-                setLeaderboard(finalLeaderboard);
+
+                const finalLeaderboard = Array.from(mergedMap.values()).map(item => {
+                    const empId = String(item.id);
+                    const emp = employees.find(e =>
+                        String(e.id) === empId ||
+                        String(e.employee_id) === empId ||
+                        String(e.userId) === empId ||
+                        String(e.emp_id) === empId
+                    );
+                    const total_points = item.total_reward_points + item.total_quiz_points;
+                    return {
+                        id: item.id,
+                        name: emp ? (emp.name || emp.employee_name || item.name) : item.name,
+                        role: emp ? (emp.designation || emp.role || 'Team Member') : 'Team Member',
+                        team: emp ? (emp.team || emp.department || 'Bytes Blasters✨') : 'Bytes Blasters✨',
+                        total_reward_points: item.total_reward_points,
+                        total_quiz_points: item.total_quiz_points,
+                        total_points: total_points
+                    };
+                });
+
+                // Sort descending by total_points
+                finalLeaderboard.sort((a, b) => b.total_points - a.total_points);
+
+                // Add ranks
+                const rankedLeaderboard = finalLeaderboard.map((item, index) => ({
+                    ...item,
+                    rank: String(index + 1)
+                }));
+
+                setLeaderboard(rankedLeaderboard);
             }
-        } catch (err) { 
+        } catch (err) {
             console.error("Leaderboard fetch error:", err);
-            setLeaderboard([]); 
+            setLeaderboard([]);
         }
     };
 
@@ -195,12 +282,12 @@ export default function AwardsScreen() {
     }, [startDate, endDate]);
 
     const combinedRewards = React.useMemo(() => {
-        const quizRewards = quizScores.map(q => ({
-            id: `quiz-${q.employee_id}`,
-            employee_id: q.employee_id,
+        const quizRewards = quizScores.map((q, index) => ({
+            id: `quiz-${q.employee_id || q.user_id || q.userId || q.id}-${q.id || index}`,
+            employee_id: q.employee_id || q.user_id || q.userId || q.id,
             reward_name: 'Quiz Excellence',
-            points: Number(q.total_score || q.points || q.score || 0),
-            created_at: new Date().toISOString(),
+            points: Number(q.total_score || q.points || q.quiz_score || q.score || 0),
+            created_at: q.created_at || q.completion_date || q.date || new Date().toISOString(),
             note: 'Earned from Quiz Hub'
         })).filter(q => q.points > 0);
 
@@ -216,25 +303,24 @@ export default function AwardsScreen() {
         return true;
     });
 
-    // Derive top contributor from rewards history for UI consistency
     const topContributor = React.useMemo(() => {
-        if (!combinedRewards || combinedRewards.length === 0) return leaderboard[0] || null;
-        
-        const stats = Array.from(new Set(combinedRewards.map(r => r.employee_id))).map(id => {
-            const userRewards = combinedRewards.filter(r => String(r.employee_id) === String(id));
+        if (!filteredRewards || filteredRewards.length === 0) return leaderboard[0] || null;
+
+        const stats = Array.from(new Set(filteredRewards.map(r => r.employee_id))).map(id => {
+            const userRewards = filteredRewards.filter(r => String(r.employee_id) === String(id));
             const totalRep = userRewards.reduce((sum, r) => sum + (Number(r.points) || 0), 0);
             const emp = employees.find(e => String(e.id) === String(id) || String(e.employee_id) === String(id) || String(e.userId) === String(id));
-            return { 
-                id, 
-                name: resolveEmployeeName(id), 
+            return {
+                id,
+                name: resolveEmployeeName(id),
                 total_points: totalRep,
                 role: emp?.role || 'Team Member',
                 profile_picture: emp?.profile_picture || emp?.profile_pic || emp?.photo
             };
         }).sort((a, b) => b.total_points - a.total_points);
-        
+
         return stats[0] || leaderboard[0] || null;
-    }, [rewards, leaderboard, employees, startDate, endDate]);
+    }, [filteredRewards, leaderboard, employees]);
 
     const handleGrantAward = async () => {
         if (!selectedEmployee) {
@@ -244,7 +330,7 @@ export default function AwardsScreen() {
         setGranting(true);
         try {
             const uid = user?.employee_id || user?.userId || user?.id;
-            
+
             // Sanitized payload for database persistence
             const payload = {
                 employee_id: Number(selectedEmployee.id || selectedEmployee.employee_id || selectedEmployee.userId || selectedEmployee.emp_id),
@@ -257,9 +343,9 @@ export default function AwardsScreen() {
 
             const res = await fetch(API_ENDPOINTS.REWARDS_GIVE, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'Authorization': `Bearer ${user.token}` 
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
                 },
                 body: JSON.stringify(payload)
             });
@@ -275,9 +361,9 @@ export default function AwardsScreen() {
                 const errJson = await res.json().catch(() => ({}));
                 showFeedback(errJson.error || errJson.message || "Failed to save to database.", "error");
             }
-        } catch (err) { 
+        } catch (err) {
             console.error("Grant Error:", err);
-            showFeedback("Network error. Could not connect to database.", "error"); 
+            showFeedback("Network error. Could not connect to database.", "error");
         }
         finally { setGranting(false); }
     };
@@ -289,7 +375,7 @@ export default function AwardsScreen() {
             if (res.ok) {
                 setRewards(prev => prev.filter(r => r.id !== id));
             }
-        } catch (err) {}
+        } catch (err) { }
     };
 
     const handleUpdateReward = async () => {
@@ -315,12 +401,12 @@ export default function AwardsScreen() {
 
             <main style={{ flex: 1, padding: winWidth < 768 ? '100px 16px 40px' : '120px 26px 40px', width: '100%', boxSizing: 'border-box', marginTop: 0 }}>
                 <div style={{ width: '100%' }}>
-                    
+
                     {/* Header Controls */}
                     <div style={{ display: 'flex', flexDirection: winWidth < 600 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 600 ? 'flex-start' : 'flex-start', marginBottom: '32px', gap: '20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <button 
-                                onClick={() => navigate(-1)} 
+                            <button
+                                onClick={() => navigate(-1)}
                                 style={{
                                     background: 'white',
                                     padding: '10px',
@@ -342,22 +428,43 @@ export default function AwardsScreen() {
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', width: winWidth < 768 ? '100%' : 'auto', justifyContent: winWidth < 600 ? 'flex-start' : 'flex-start', alignItems: 'center' }}>
                             <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px', width: winWidth < 480 ? '100%' : 'auto', overflowX: 'auto' }}>
-                                <button 
+                                <button
                                     onClick={() => setView('feed')}
                                     style={{ flex: winWidth < 480 ? 1 : 'none', padding: winWidth < 480 ? '8px 4px' : '8px 16px', borderRadius: '8px', fontSize: winWidth < 480 ? '10px' : '12px', fontWeight: '800', border: 'none', background: view === 'feed' ? 'white' : 'transparent', color: view === 'feed' ? '#0f172a' : '#64748b', cursor: 'pointer', boxShadow: view === 'feed' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', whiteSpace: 'nowrap' }}>
                                     Live Feed
                                 </button>
-                                <button 
-                                    onClick={() => setView('leaderboard')}
-                                    style={{ flex: winWidth < 480 ? 1 : 'none', padding: winWidth < 480 ? '8px 4px' : '8px 16px', borderRadius: '8px', fontSize: winWidth < 480 ? '10px' : '12px', fontWeight: '800', border: 'none', background: view === 'leaderboard' ? 'white' : 'transparent', color: view === 'leaderboard' ? '#0f172a' : '#64748b', cursor: 'pointer', boxShadow: view === 'leaderboard' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', whiteSpace: 'nowrap' }}>
-                                    Leaderboard
-                                </button>
-                                <button 
+
+                                <button
                                     onClick={() => setView('points')}
                                     style={{ flex: winWidth < 480 ? 1 : 'none', padding: winWidth < 480 ? '8px 4px' : '8px 16px', borderRadius: '8px', fontSize: winWidth < 480 ? '10px' : '12px', fontWeight: '800', border: 'none', background: view === 'points' ? 'white' : 'transparent', color: view === 'points' ? '#0f172a' : '#64748b', cursor: 'pointer', boxShadow: view === 'points' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', whiteSpace: 'nowrap' }}>
                                     Reward Points
                                 </button>
                             </div>
+
+                            <button 
+                                onClick={() => setView(view === 'audit' ? 'feed' : 'audit')}
+                                style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '8px', 
+                                    padding: '8px 16px', 
+                                    borderRadius: '12px', 
+                                    fontSize: '12px', 
+                                    fontWeight: '800', 
+                                    cursor: 'pointer', 
+                                    transition: 'all 0.2s ease', 
+                                    background: view === 'audit' ? '#eff6ff' : 'white', 
+                                    color: view === 'audit' ? '#2563eb' : '#64748b', 
+                                    border: view === 'audit' ? '3px solid #3b82f6' : '3px solid #cbd5e1', 
+                                    boxShadow: view === 'audit' ? '0 2px 4px rgba(59, 130, 246, 0.1)' : '0 2px 4px rgba(0,0,0,0.02)',
+                                    whiteSpace: 'nowrap',
+                                    height: '38px',
+                                    width: winWidth < 480 ? '100%' : 'auto',
+                                    justifyContent: 'center'
+                                }}>
+                                <ShieldCheck size={14} color={view === 'audit' ? '#2563eb' : '#64748b'} />
+                                Team Audit
+                            </button>
 
                             {/* Date Filter Integrated into Top Bar */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '6px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', width: winWidth < 480 ? '100%' : 'auto', justifyContent: winWidth < 480 ? 'center' : 'flex-start' }}>
@@ -372,11 +479,11 @@ export default function AwardsScreen() {
                                 </div>
                             </div>
                             {(user?.role?.toUpperCase() === 'ADMIN' || user?.role?.toUpperCase() === 'MANAGER') && (
-                                <button 
+                                <button
                                     onClick={() => setShowGrantModal(true)}
-                                    style={{ 
-                                        display: 'flex', alignItems: 'center', gap: '8px', padding: winWidth < 480 ? '12px' : '10px 20px', 
-                                        background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px', 
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '8px', padding: winWidth < 480 ? '12px' : '10px 20px',
+                                        background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px',
                                         fontSize: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15,23,42,0.3)',
                                         width: winWidth < 480 ? '100%' : 'auto', justifyContent: 'center'
                                     }}>
@@ -387,14 +494,14 @@ export default function AwardsScreen() {
                     </div>
 
                     {/* High-Fidelity Top Banner */}
-                    <div style={{ 
-                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', 
-                        borderRadius: '24px', 
-                        padding: winWidth < 768 ? '30px 20px' : '30px 60px', 
-                        display: 'grid', 
-                        gridTemplateColumns: winWidth < 768 ? '1fr' : '1fr 1fr 1fr', 
+                    <div style={{
+                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                        borderRadius: '24px',
+                        padding: winWidth < 768 ? '30px 20px' : '30px 60px',
+                        display: 'grid',
+                        gridTemplateColumns: winWidth < 768 ? '1fr' : '1fr 1fr 1fr',
                         gap: winWidth < 768 ? '30px' : '0',
-                        alignItems: 'center', 
+                        alignItems: 'center',
                         boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.4)',
                         marginBottom: '40px',
                         position: 'relative',
@@ -433,14 +540,14 @@ export default function AwardsScreen() {
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: winWidth < 1200 ? '1fr' : '1fr 380px', gap: '30px', alignItems: 'start' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: (winWidth < 1200 || view === 'audit') ? '1fr' : '1fr 380px', gap: '30px', alignItems: 'start' }}>
                         <div style={{ background: '#f8fafc', borderRadius: '24px', padding: winWidth < 768 ? '15px' : '30px', border: '1.5px solid #f1f5f9' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
                                 <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>
-                                    {view === 'feed' ? 'Global Rewards' : view === 'leaderboard' ? 'Organization Ranking' : 'Standard Recognition Tiers'}
+                                    {view === 'feed' ? 'Global Rewards' : view === 'audit' ? 'Team Recognition Audit' : 'Standard Recognition Tiers'}
                                 </h3>
                                 <div style={{ fontSize: '9px', fontWeight: '950', color: '#3863a8', background: '#e0f2fe', padding: '6px 12px', borderRadius: '10px', letterSpacing: '0.5px' }}>
-                                    {view === 'feed' ? `${rewards.length} ENTRIES` : view === 'leaderboard' ? 'ALL STAFF' : `${availableAwards.length} TIERS`}
+                                    {view === 'feed' ? `${selectedHistoryUser ? filteredRewards.filter(r => String(r.employee_id) === String(selectedHistoryUser)).length : filteredRewards.length} ENTRIES` : view === 'audit' ? `${filteredRewards.length} LOGS` : `${availableAwards.length} TIERS`}
                                 </div>
                             </div>
 
@@ -457,10 +564,10 @@ export default function AwardsScreen() {
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                                     {Array.from(new Set(filteredRewards.map(r => r.employee_id))).length > 5 && (
-                                                        <button 
+                                                        <button
                                                             onClick={() => setShowAllFeed(!showAllFeed)}
-                                                            style={{ 
-                                                                background: 'none', border: 'none', color: '#3863a8', fontSize: '11px', fontWeight: '900', cursor: 'pointer', textTransform: 'uppercase', textDecoration: 'underline' 
+                                                            style={{
+                                                                background: 'none', border: 'none', color: '#3863a8', fontSize: '11px', fontWeight: '900', cursor: 'pointer', textTransform: 'uppercase', textDecoration: 'underline'
                                                             }}>
                                                             {showAllFeed ? 'View Less' : 'View All'}
                                                         </button>
@@ -478,16 +585,16 @@ export default function AwardsScreen() {
                                                 }).sort((a, b) => b.totalRep - a.totalRep);
 
                                                 const displayedStats = showAllFeed ? employeeStats : employeeStats.slice(0, 5);
-                                                
+
                                                 return displayedStats.map(({ id: empId, totalRep, userRewards }, index) => {
                                                     const latest = userRewards.reduce((prev, current) => (new Date(prev.created_at || prev.date) > new Date(current.created_at || current.date)) ? prev : current, userRewards[0]);
                                                     return (
-                                                        <div key={empId} onClick={() => setSelectedHistoryUser(empId)} style={{ background: 'white', padding: winWidth < 768 ? '16px' : '20px', borderRadius: winWidth < 768 ? '20px' : '24px', border: '3px solid #cbd5e1', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.3s ease' }} 
+                                                        <div key={empId} onClick={() => setSelectedHistoryUser(empId)} style={{ background: 'white', padding: winWidth < 768 ? '16px' : '20px', borderRadius: winWidth < 768 ? '20px' : '24px', border: '3px solid #cbd5e1', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.3s ease' }}
                                                             onMouseEnter={e => {
                                                                 e.currentTarget.style.transform = 'translateY(-2px)';
                                                                 e.currentTarget.style.borderColor = '#3863a8';
                                                                 e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,0,0,0.05)';
-                                                            }} 
+                                                            }}
                                                             onMouseLeave={e => {
                                                                 e.currentTarget.style.transform = 'translateY(0)';
                                                                 e.currentTarget.style.borderColor = '#cbd5e1';
@@ -513,7 +620,7 @@ export default function AwardsScreen() {
                                         </div>
                                     ) : (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                            <button onClick={() => setSelectedHistoryUser(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: '800' }}><ChevronLeft size={16}/> Back to Feed</button>
+                                            <button onClick={() => setSelectedHistoryUser(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: '800' }}><ChevronLeft size={16} /> Back to Feed</button>
                                             {filteredRewards.filter(r => String(r.employee_id) === String(selectedHistoryUser)).map((r, i) => (
                                                 <div key={i} style={{ padding: '20px', borderRadius: '24px', background: 'white', border: '3px solid #cbd5e1' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -525,72 +632,167 @@ export default function AwardsScreen() {
                                         </div>
                                     )}
                                 </>
-                            ) : view === 'leaderboard' ? (
-                                <div style={{ 
-                                    maxHeight: '650px', 
-                                    overflowY: 'auto', 
-                                    paddingRight: '15px',
-                                    display: 'flex', 
-                                    flexDirection: 'column', 
-                                    gap: '10px',
-                                    scrollbarWidth: 'thin',
-                                    scrollbarColor: '#e2e8f0 transparent'
-                                }} className="custom-scroll">
-                                    {leaderboard.map((item, idx) => (
-                                        <div key={idx} style={{ 
-                                            background: idx === 0 ? 'linear-gradient(135deg, #ffffff 0%, #fff7ed 100%)' : idx < 3 ? 'white' : '#f8fafc', 
-                                            padding: winWidth < 768 ? (idx < 3 ? '15px 15px' : '12px 15px') : (idx < 3 ? '20px 25px' : '15px 20px'), 
-                                            borderRadius: idx < 3 ? '20px' : '16px', 
-                                            border: idx === 0 ? '4px solid #facc15' : '3px solid #cbd5e1', 
-                                            display: 'flex', 
-                                            justifyContent: 'space-between', 
-                                            alignItems: 'center',
-                                            boxShadow: idx === 0 ? '0 10px 15px -3px rgba(250, 204, 21, 0.1)' : 'none',
-                                            transition: 'all 0.3s ease',
-                                        }}
-                                        onMouseEnter={e => {
-                                            e.currentTarget.style.transform = 'translateY(-3px)';
-                                            e.currentTarget.style.borderColor = '#3863a8';
-                                            e.currentTarget.style.boxShadow = '0 12px 20px rgba(0,0,0,0.06)';
-                                        }}
-                                        onMouseLeave={e => {
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                            e.currentTarget.style.borderColor = item.id === 0 ? '#facc15' : '#cbd5e1';
-                                            e.currentTarget.style.boxShadow = item.id === 0 ? '0 10px 15px -3px rgba(250, 204, 21, 0.1)' : 'none';
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '12px' : (idx < 3 ? '20px' : '15px') }}>
-                                                <div style={{ width: idx < 3 ? '45px' : '35px', height: idx < 3 ? '45px' : '35px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', overflow: 'hidden', flexShrink: 0 }}>
-                                                    {(() => {
-                                                        const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
-                                                        const empId = cleanId(item.employee_id || item.id || item.userId);
-                                                        const rawPic = item.profile_picture || item.profile_pic || item.photo;
-                                                        const photoUrl = rawPic ? (rawPic.startsWith('http') || rawPic.startsWith('data:') ? rawPic : `${BASE_URL}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : `${BASE_URL}/api/users/${empId}/photo`;
-                                                        return (
-                                                            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                                                                <img 
-                                                                    src={photoUrl} 
-                                                                    alt="" 
-                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }}
-                                                                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                                                                />
-                                                                <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', color: '#64748b', fontSize: '14px', fontWeight: '900' }}>
-                                                                    {item.name?.charAt(0)}
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })()}
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: winWidth < 768 ? '13px' : (idx < 3 ? '15px' : '13px'), fontWeight: '1000', color: idx < 3 ? '#0f172a' : '#334155' }}>{item.name}</div>
-                                                    <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700' }}>{item.role}</div>
-                                                </div>
-                                            </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: winWidth < 768 ? '14px' : (idx < 3 ? '18px' : '14px'), fontWeight: '1000', color: idx < 3 ? '#0f172a' : '#475569' }}>{item.total_points}</div>
-                                                <div style={{ fontSize: '9px', color: '#94a3b8', fontWeight: '800' }}>REP</div>
+                            ) : view === 'audit' ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    {/* Audit Search Bar */}
+                                    <div style={{ position: 'relative', width: '100%' }}>
+                                        <input
+                                            type="text"
+                                            placeholder="Search by Recipient, Giver, or Recognition Tier..."
+                                            value={auditSearch}
+                                            onChange={e => setAuditSearch(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '14px 20px 14px 50px',
+                                                borderRadius: '16px',
+                                                border: '3px solid #cbd5e1',
+                                                fontSize: '13px',
+                                                fontWeight: '600',
+                                                outline: 'none',
+                                                color: '#1e293b',
+                                                boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
+                                            }}
+                                        />
+                                        <div style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                                            <Search size={18} />
+                                        </div>
+                                    </div>                                    {/* Stats Summary Cards for Audit */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: winWidth < 576 ? '1fr' : '1fr 1fr', gap: '15px' }}>
+                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '3px solid #cbd5e1' }}>
+                                            <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>Assigned points</div>
+                                            <div style={{ fontSize: '20px', fontWeight: '950', color: '#10b981' }}>
+                                                {(() => {
+                                                    const uid = user?.employee_id || user?.userId || user?.id;
+                                                    const myGrants = filteredRewards.filter(r => String(r.granted_by) === String(uid));
+                                                    return myGrants.reduce((sum, r) => sum + (Number(r.points) || 0), 0).toLocaleString();
+                                                })()} REP
                                             </div>
                                         </div>
-                                    ))}
+                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '3px solid #cbd5e1' }}>
+                                            <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>Employee of the month</div>
+                                            <div style={{ fontSize: '20px', fontWeight: '950', color: '#8b5cf6' }}>
+                                                {topContributor ? topContributor.name : "N/A"}
+                                            </div>
+                                        </div>
+                                    </div>
+ 
+                                    {/* Audit Logs List */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                        {(() => {
+                                            const uid = user?.employee_id || user?.userId || user?.id;
+                                            const auditLogs = filteredRewards.filter(r => {
+                                                if (String(r.granted_by) !== String(uid)) return false;
+                                                const recipientName = resolveEmployeeName(r.employee_id).toLowerCase();
+                                                const giverName = resolveEmployeeName(r.granted_by).toLowerCase();
+                                                const rewardName = (r.reward_name || '').toLowerCase();
+                                                const search = auditSearch.toLowerCase();
+                                                return recipientName.includes(search) || giverName.includes(search) || rewardName.includes(search);
+                                            });
+ 
+                                            if (auditLogs.length === 0) {
+                                                return (
+                                                    <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', background: 'white', borderRadius: '24px', border: '3px solid #cbd5e1' }}>
+                                                        <ShieldCheck size={40} style={{ color: '#cbd5e1', marginBottom: '10px' }} />
+                                                        <div style={{ fontWeight: '800', fontSize: '14px', color: '#64748b' }}>No audit records found matching your query.</div>
+                                                    </div>
+                                                );
+                                            }
+
+                                            return auditLogs.map((r, i) => {
+                                                const canRevoke = user?.role?.toUpperCase() === 'ADMIN' || user?.role?.toUpperCase() === 'MANAGER' || String(r.granted_by) === String(user?.employee_id || user?.userId || user?.id);
+                                                return (
+                                                    <div
+                                                        key={r.id || i}
+                                                        style={{
+                                                            background: 'white',
+                                                            padding: winWidth < 768 ? '16px' : '24px',
+                                                            borderRadius: '24px',
+                                                            border: '3px solid #cbd5e1',
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            gap: '15px',
+                                                            transition: 'all 0.3s ease'
+                                                        }}
+                                                        onMouseEnter={e => {
+                                                            e.currentTarget.style.borderColor = '#3863a8';
+                                                            e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,0,0,0.05)';
+                                                        }}
+                                                        onMouseLeave={e => {
+                                                            e.currentTarget.style.borderColor = '#cbd5e1';
+                                                            e.currentTarget.style.boxShadow = 'none';
+                                                        }}
+                                                    >
+                                                        {/* Top row: Recipient Info & Points */}
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '950', fontSize: '16px' }}>
+                                                                    {resolveEmployeeName(r.employee_id).charAt(0)}
+                                                                </div>
+                                                                <div>
+                                                                    <div style={{ fontSize: '15px', fontWeight: '1000', color: '#0f172a' }}>{resolveEmployeeName(r.employee_id)}</div>
+                                                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Recipient ID: {r.employee_id}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                <div style={{ background: '#ecfdf5', color: '#10b981', fontWeight: '1000', fontSize: '14px', padding: '6px 16px', borderRadius: '10px' }}>
+                                                                    +{r.points} REP
+                                                                </div>
+                                                                {canRevoke && (
+                                                                    <button
+                                                                        onClick={() => handleDeleteReward(r.id)}
+                                                                        style={{
+                                                                            background: '#fef2f2',
+                                                                            border: 'none',
+                                                                            padding: '8px',
+                                                                            borderRadius: '10px',
+                                                                            cursor: 'pointer',
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            color: '#ef4444'
+                                                                        }}
+                                                                        title="Revoke Recognition"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Middle Row: Badge, Giver & Timestamp */}
+                                                        <div style={{ display: 'grid', gridTemplateColumns: winWidth < 768 ? '1fr' : '1fr 1fr', gap: '12px', background: '#f8fafc', padding: '12px 16px', borderRadius: '12px' }}>
+                                                            <div>
+                                                                <span style={{ fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Recognition Tier</span>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '13px', color: '#1e293b' }}>
+                                                                    <Award size={14} color="#3b82f6" />
+                                                                    {r.reward_name || 'Excellence'}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <span style={{ fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Granted By</span>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '13px', color: '#1e293b' }}>
+                                                                    <UserCheck size={14} color="#10b981" />
+                                                                    {resolveEmployeeName(r.granted_by)}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Reason Note */}
+                                                        {r.note && (
+                                                            <div style={{ fontSize: '12px', color: '#475569', fontWeight: '600', fontStyle: 'italic', borderLeft: '3px solid #cbd5e1', paddingLeft: '12px', margin: '4px 0' }}>
+                                                                "{r.note}"
+                                                            </div>
+                                                        )}
+
+                                                        {/* Timestamp */}
+                                                        <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textAlign: 'right' }}>
+                                                            Awarded on: {new Date(r.created_at || r.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            });
+                                        })()}
+                                    </div>
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -611,72 +813,74 @@ export default function AwardsScreen() {
                         </div>
 
                         {/* Right Sidebar */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-                            <div style={{ 
-                                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', 
-                                borderRadius: winWidth < 768 ? '30px' : '40px', padding: winWidth < 768 ? '40px 25px' : '50px 40px', color: 'white', 
-                                boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.4)',
-                                position: 'relative', overflow: 'hidden',
-                                minHeight: winWidth < 768 ? 'auto' : '520px', display: 'flex', flexDirection: 'column', justifyContent: 'center'
-                            }}>
-                                {/* Decorative elements */}
-                                <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '150px', height: '150px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '50%', filter: 'blur(40px)' }}></div>
-                                <div style={{ position: 'absolute', bottom: '-20%', left: '-10%', width: '200px', height: '200px', background: 'rgba(250, 204, 21, 0.05)', borderRadius: '50%', filter: 'blur(60px)' }}></div>
+                        {view !== 'audit' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                                    borderRadius: winWidth < 768 ? '30px' : '40px', padding: winWidth < 768 ? '40px 25px' : '50px 40px', color: 'white',
+                                    boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.4)',
+                                    position: 'relative', overflow: 'hidden',
+                                    minHeight: winWidth < 768 ? 'auto' : '520px', display: 'flex', flexDirection: 'column', justifyContent: 'center'
+                                }}>
+                                    {/* Decorative elements */}
+                                    <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '150px', height: '150px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '50%', filter: 'blur(40px)' }}></div>
+                                    <div style={{ position: 'absolute', bottom: '-20%', left: '-10%', width: '200px', height: '200px', background: 'rgba(250, 204, 21, 0.05)', borderRadius: '50%', filter: 'blur(60px)' }}></div>
 
-                                <div style={{ position: 'relative', zIndex: 1 }}>
-                                    <div style={{ background: 'rgba(255,255,255,0.1)', width: '60px', height: '60px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: winWidth < 768 ? '20px' : '30px' }}>
-                                        <Trophy size={30} color="#facc15" />
-                                    </div>
-                                    <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '24px' : '28px', fontWeight: '1000', letterSpacing: '-0.8px', color: '#ffffff', lineHeight: '1.2' }}>Recognition Spotlight</h3>
-                                    <p style={{ margin: winWidth < 768 ? '10px 0 30px 0' : '15px 0 40px 0', fontSize: winWidth < 768 ? '14px' : '15px', color: '#94a3b8', fontWeight: '600', lineHeight: '1.7' }}>Celebrate the champions pushing our organization forward with exceptional dedication and vision.</p>
-                                    
-                                    {topContributor && (
-                                        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '25px', borderRadius: '24px', border: '1.5px solid rgba(255,255,255,0.1)', marginBottom: '40px' }}>
-                                            <div style={{ fontSize: '11px', fontWeight: '900', color: '#facc15', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '15px' }}>Top Contributor</div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                                <div style={{ width: '55px', height: '55px', borderRadius: '18px', background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                                                    {(() => {
-                                                        const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
-                                                        const empId = cleanId(topContributor.id || topContributor.employee_id);
-                                                        const rawPic = topContributor.profile_picture;
-                                                        const photoUrl = rawPic ? (rawPic.startsWith('http') || rawPic.startsWith('data:') ? rawPic : `${BASE_URL}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : `${BASE_URL}/api/users/${empId}/photo`;
-                                                        return (
-                                                            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                                                                <img 
-                                                                    src={photoUrl} 
-                                                                    alt="" 
-                                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '18px' }}
-                                                                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                                                                />
-                                                                <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#facc15', color: '#0f172a', fontSize: '22px', fontWeight: '1000' }}>
-                                                                    {topContributor.name.charAt(0)}
+                                    <div style={{ position: 'relative', zIndex: 1 }}>
+                                        <div style={{ background: 'rgba(255,255,255,0.1)', width: '60px', height: '60px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: winWidth < 768 ? '20px' : '30px' }}>
+                                            <Trophy size={30} color="#facc15" />
+                                        </div>
+                                        <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '24px' : '28px', fontWeight: '1000', letterSpacing: '-0.8px', color: '#ffffff', lineHeight: '1.2' }}>Recognition Spotlight</h3>
+                                        <p style={{ margin: winWidth < 768 ? '10px 0 30px 0' : '15px 0 40px 0', fontSize: winWidth < 768 ? '14px' : '15px', color: '#94a3b8', fontWeight: '600', lineHeight: '1.7' }}>Celebrate the champions pushing our organization forward with exceptional dedication and vision.</p>
+
+                                        {topContributor && (
+                                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '25px', borderRadius: '24px', border: '1.5px solid rgba(255,255,255,0.1)', marginBottom: '40px' }}>
+                                                <div style={{ fontSize: '11px', fontWeight: '900', color: '#facc15', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '15px' }}>Top Contributor</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                                                    <div style={{ width: '55px', height: '55px', borderRadius: '18px', background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                                        {(() => {
+                                                            const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
+                                                            const empId = cleanId(topContributor.id || topContributor.employee_id);
+                                                            const rawPic = topContributor.profile_picture;
+                                                            const photoUrl = rawPic ? (rawPic.startsWith('http') || rawPic.startsWith('data:') ? rawPic : `${BASE_URL}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : `${BASE_URL}/api/users/${empId}/photo`;
+                                                            return (
+                                                                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                                                    <img
+                                                                        src={photoUrl}
+                                                                        alt=""
+                                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '18px' }}
+                                                                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                                                    />
+                                                                    <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#facc15', color: '#0f172a', fontSize: '22px', fontWeight: '1000' }}>
+                                                                        {topContributor.name.charAt(0)}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        );
-                                                    })()}
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '17px', fontWeight: '900', color: '#ffffff' }}>{topContributor.name}</div>
-                                                    <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '700' }}>{topContributor.total_points} Reputation Points</div>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontSize: '17px', fontWeight: '900', color: '#ffffff' }}>{topContributor.name}</div>
+                                                        <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '700' }}>{topContributor.total_points} Reputation Points</div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    <button 
-                                        onClick={() => setShowGrantModal(true)} 
-                                        style={{ 
-                                            width: '100%', padding: '22px', borderRadius: '25px', border: 'none', 
-                                            background: '#ffffff', color: '#0f172a', fontWeight: '1000', 
-                                            fontSize: '15px', cursor: 'pointer', transition: 'all 0.2s',
-                                            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-                                            textTransform: 'uppercase', letterSpacing: '0.8px'
-                                        }}>
-                                        Grant Recognition
-                                    </button>
+                                        <button
+                                            onClick={() => setShowGrantModal(true)}
+                                            style={{
+                                                width: '100%', padding: '22px', borderRadius: '25px', border: 'none',
+                                                background: '#ffffff', color: '#0f172a', fontWeight: '1000',
+                                                fontSize: '15px', cursor: 'pointer', transition: 'all 0.2s',
+                                                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                                                textTransform: 'uppercase', letterSpacing: '0.8px'
+                                            }}>
+                                            Grant Recognition
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </main>
@@ -688,41 +892,45 @@ export default function AwardsScreen() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Select Recipient</label>
-                                <div 
+                                <div
                                     onClick={() => setShowRecipientDropdown(!showRecipientDropdown)}
-                                    style={{ 
-                                        width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9', 
-                                        background: '#f8fafc', fontWeight: '700', cursor: 'pointer', display: 'flex', 
-                                        justifyContent: 'space-between', alignItems: 'center' 
+                                    style={{
+                                        width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9',
+                                        background: '#f8fafc', fontWeight: '700', cursor: 'pointer', display: 'flex',
+                                        justifyContent: 'space-between', alignItems: 'center'
                                     }}>
                                     <span>{selectedEmployee ? (selectedEmployee.name || selectedEmployee.employee_name) : 'Select Recipient...'}</span>
                                     <ChevronRight size={18} style={{ transform: showRecipientDropdown ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
                                 </div>
-                                
+
                                 {showRecipientDropdown && (
-                                    <div style={{ 
-                                        position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', 
-                                        borderRadius: '14px', border: '1.5px solid #f1f5f9', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
-                                        zIndex: 10, marginTop: '8px', maxHeight: '250px', overflowY: 'auto' 
+                                    <div style={{
+                                        position: 'absolute', top: '100%', left: 0, right: 0, background: 'white',
+                                        borderRadius: '14px', border: '1.5px solid #f1f5f9', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                                        zIndex: 10, marginTop: '8px', maxHeight: '250px', overflowY: 'auto'
                                     }}>
                                         <div style={{ padding: '10px', position: 'sticky', top: 0, background: 'white', borderBottom: '1px solid #f1f5f9' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '10px', padding: '0 10px' }}>
                                                 <Search size={14} color="#64748b" />
-                                                <input 
+                                                <input
                                                     autoFocus
-                                                    placeholder="Search employee..." 
+                                                    placeholder="Search employee..."
                                                     value={recipientSearch}
                                                     onChange={e => setRecipientSearch(e.target.value)}
                                                     onClick={e => e.stopPropagation()}
-                                                    style={{ width: '100%', padding: '10px', border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '600' }} 
+                                                    style={{ width: '100%', padding: '10px', border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '600' }}
                                                 />
                                             </div>
                                         </div>
-                                        {employees.filter(emp => (emp.name || emp.employee_name || '').toLowerCase().includes(recipientSearch.toLowerCase())).map(emp => {
+                                        {employees.filter(emp => {
+                                            const uid = user?.employee_id || user?.userId || user?.id;
+                                            const empId = emp.id || emp.employee_id || emp.userId;
+                                            return String(empId) !== String(uid) && (emp.name || emp.employee_name || '').toLowerCase().includes(recipientSearch.toLowerCase());
+                                        }).map(emp => {
                                             const stableId = emp.id || emp.employee_id || emp.userId;
                                             return (
-                                                <div 
-                                                    key={stableId} 
+                                                <div
+                                                    key={stableId}
                                                     onClick={() => {
                                                         setSelectedEmployee(emp);
                                                         setShowRecipientDropdown(false);
@@ -744,25 +952,25 @@ export default function AwardsScreen() {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                                 <div style={{ position: 'relative' }}>
                                     <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Reward Name (Mandatory)</label>
-                                    <div 
+                                    <div
                                         onClick={() => setShowRewardDropdown(!showRewardDropdown)}
-                                        style={{ 
-                                            width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9', 
-                                            background: '#f8fafc', fontWeight: '700', cursor: 'pointer', display: 'flex', 
-                                            justifyContent: 'space-between', alignItems: 'center' 
+                                        style={{
+                                            width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9',
+                                            background: '#f8fafc', fontWeight: '700', cursor: 'pointer', display: 'flex',
+                                            justifyContent: 'space-between', alignItems: 'center'
                                         }}>
                                         <span>{grantData.reward_name || 'Select Reward...'}</span>
                                         <ChevronRight size={18} style={{ transform: showRewardDropdown ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
                                     </div>
 
                                     {showRewardDropdown && (
-                                        <div style={{ 
-                                            position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', 
-                                            borderRadius: '14px', border: '1.5px solid #f1f5f9', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
-                                            zIndex: 10, marginTop: '8px', maxHeight: '200px', overflowY: 'auto' 
+                                        <div style={{
+                                            position: 'absolute', top: '100%', left: 0, right: 0, background: 'white',
+                                            borderRadius: '14px', border: '1.5px solid #f1f5f9', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                                            zIndex: 10, marginTop: '8px', maxHeight: '200px', overflowY: 'auto'
                                         }}>
                                             {rewardNames.map(name => (
-                                                <div 
+                                                <div
                                                     key={name}
                                                     onClick={() => {
                                                         const pointsMap = {
@@ -788,7 +996,7 @@ export default function AwardsScreen() {
                                 </div>
                                 <div>
                                     <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Points (REP)</label>
-                                    <input type="number" value={grantData.points} onChange={e => setGrantData({ ...grantData, points: e.target.value })} style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontWeight: '700', outline: 'none' }} />
+                                    <input type="number" value={grantData.points} readOnly style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontWeight: '700', outline: 'none', cursor: 'not-allowed' }} />
                                 </div>
                             </div>
                             {feedback && <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: '800', color: feedback.type === 'success' ? '#10b981' : '#ef4444' }}>{feedback.msg}</div>}
@@ -806,15 +1014,29 @@ export default function AwardsScreen() {
                     <div style={{ background: 'white', borderRadius: '30px', padding: '40px', width: '90%', maxWidth: '500px' }}>
                         <h2 style={{ fontSize: '24px', fontWeight: '950', marginBottom: '30px', textAlign: 'center' }}>Modify Reward</h2>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                             <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Reward Name</label>
-                             <select 
-                                 value={selectedReward.reward_name || selectedReward.reward_type}
-                                 onChange={e => setSelectedReward({ ...selectedReward, reward_name: e.target.value })}
-                                 style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontWeight: '700', outline: 'none', marginBottom: '15px' }}>
-                                 {rewardNames.map(name => <option key={name} value={name}>{name}</option>)}
-                             </select>
-                             <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Points (REP)</label>
-                             <input type="number" value={selectedReward.points} onChange={e => setSelectedReward({...selectedReward, points: e.target.value})} style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9' }} />
+                            <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Reward Name</label>
+                            <select
+                                value={selectedReward.reward_name || selectedReward.reward_type}
+                                onChange={e => {
+                                    const pointsMap = {
+                                        "Visionary Lead": 200,
+                                        "Goal Achiever": 150,
+                                        "Team Growth": 150,
+                                        "Star Performer": 50,
+                                        "Problem Solver": 30,
+                                        "Collaborative Hero": 20
+                                    };
+                                    setSelectedReward({
+                                        ...selectedReward,
+                                        reward_name: e.target.value,
+                                        points: pointsMap[e.target.value] || selectedReward.points
+                                    });
+                                }}
+                                style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontWeight: '700', outline: 'none', marginBottom: '15px' }}>
+                                {rewardNames.map(name => <option key={name} value={name}>{name}</option>)}
+                            </select>
+                            <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Points (REP)</label>
+                            <input type="number" value={selectedReward.points} readOnly style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontWeight: '700', outline: 'none', cursor: 'not-allowed' }} />
                             <div style={{ display: 'flex', gap: '15px' }}>
                                 <button onClick={() => setShowEditModal(false)} style={{ flex: 1, padding: '14px', borderRadius: '50px', background: 'white', fontWeight: '900' }}>Cancel</button>
                                 <button onClick={handleUpdateReward} disabled={isSubmitting} style={{ flex: 1, padding: '14px', borderRadius: '50px', background: '#0f172a', color: 'white', fontWeight: '900' }}>{isSubmitting ? 'Saving...' : 'Save'}</button>

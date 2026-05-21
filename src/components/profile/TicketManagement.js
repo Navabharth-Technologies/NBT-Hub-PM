@@ -204,7 +204,6 @@ export default function TicketManagement() {
              >
                <Download size={16} /> Export
              </button>
-             <button className="btn-primary" style={{ flex: 1, padding: '12px' }} onClick={() => fetchTickets()}>Refresh</button>
           </div>
         </header>
 

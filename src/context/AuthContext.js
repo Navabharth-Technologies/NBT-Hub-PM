@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { BASE_URL, API_ENDPOINTS } from '../config';
+import { API_ENDPOINTS } from '../config';
 
 export const AuthContext = (typeof window !== 'undefined' && window.__NBT_AUTH_CONTEXT__)
   ? window.__NBT_AUTH_CONTEXT__
@@ -15,11 +15,19 @@ export const AuthProvider = ({ children }) => {
 
   // Restore session from localStorage on app load
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    try {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser && savedUser !== 'undefined' && savedUser !== '[object Object]') {
+        setUser(JSON.parse(savedUser));
+      }
+    } catch (error) {
+      console.error('Failed to restore user session:', error);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('userRole');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email, password) => {

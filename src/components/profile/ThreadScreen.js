@@ -608,12 +608,7 @@ export default function ThreadScreen() {
                                                         <div style={{ flex: 1, padding: '15px', background: 'white', borderRadius: '20px', border: '3px solid #cbd5e1', position: 'relative' }}>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
                                                                 <span style={{ fontSize: '12px', fontWeight: '1000', color: '#0B1E3F' }}>{cUser}</span>
-                                                                {isMyComment && (
-                                                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                                                        <button onClick={() => { setEditingCommentId(c.id); setEditCommentContent(cText); }} style={{ border: 'none', background: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }}><Edit3 size={13} /></button>
-                                                                        <button onClick={() => deleteComment(post.id, c.id)} style={{ border: 'none', background: 'none', color: '#fda4af', cursor: 'pointer', padding: '2px' }}><Trash2 size={13} /></button>
-                                                                    </div>
-                                                                )}
+
                                                             </div>
 
                                                             {editingCommentId === c.id ? (

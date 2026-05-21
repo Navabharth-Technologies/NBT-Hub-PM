@@ -22,6 +22,7 @@ const QuizModule = ({ onBack }) => {
   const [submissionFeedback, setSubmissionFeedback] = useState({ show: false, points: 0 });
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [quizActive, setQuizActive] = useState(false);
+  const [customAlert, setCustomAlert] = useState({ show: false, message: '' });
 
   const showSuccessState = (pts) => {
     setSubmissionFeedback({ show: true, points: pts });
@@ -64,7 +65,7 @@ const QuizModule = ({ onBack }) => {
           correct_answer: item.correct_answer || null,
           user_selected_letter: null
         }));
-        setQuestions(mapped);
+        setQuestions(mapped.filter(q => !q.has_answered));
       }
     } catch (err) {
       console.error(err);
@@ -96,7 +97,52 @@ const QuizModule = ({ onBack }) => {
         ...(Array.isArray(subData) ? subData : (subData.data || [])).map(u => ({ id: u.employee_id || u.id, name: u.employee_name || u.name }))
       ];
 
-      const scoreList = Array.isArray(scoreData) ? scoreData : (scoreData.data || []);
+      let scoreList = Array.isArray(scoreData) ? scoreData : (scoreData.data || []);
+
+      // Local Cache & Merge Strategy to prevent historical score loss when quiz is deleted
+      try {
+        let cachedQuizScores = [];
+        const localData = localStorage.getItem('nbt_historical_quiz_scores');
+        if (localData) {
+          const parsed = JSON.parse(localData);
+          if (Array.isArray(parsed)) {
+            cachedQuizScores = parsed;
+          }
+        }
+
+        const mergedMap = new Map();
+        // 1. Load historical cache first
+        cachedQuizScores.forEach(item => {
+          if (item) {
+            const empId = item.employee_id || item.user_id || item.userId || item.id || '';
+            const score = Number(item.total_score || item.points || item.quiz_score || item.score || 0);
+            const qId = item.quiz_id || item.quizId || '';
+            const date = item.created_at || item.completion_date || item.date || '';
+            const datePart = (date || '').split('T')[0];
+            const uniqueKey = `${empId}-${qId || 'default'}-${score}-${datePart}`;
+            mergedMap.set(uniqueKey, item);
+          }
+        });
+
+        // 2. Overlay new active quiz scores
+        scoreList.forEach(item => {
+          if (item) {
+            const empId = item.employee_id || item.user_id || item.userId || item.id || '';
+            const score = Number(item.total_score || item.points || item.quiz_score || item.score || 0);
+            const qId = item.quiz_id || item.quizId || '';
+            const date = item.created_at || item.completion_date || item.date || '';
+            const datePart = (date || '').split('T')[0];
+            const uniqueKey = `${empId}-${qId || 'default'}-${score}-${datePart}`;
+            mergedMap.set(uniqueKey, item);
+          }
+        });
+
+        const mergedList = Array.from(mergedMap.values());
+        localStorage.setItem('nbt_historical_quiz_scores', JSON.stringify(mergedList));
+        scoreList = mergedList;
+      } catch (cacheErr) {
+        console.error("Local quiz score caching error:", cacheErr);
+      }
 
       // 2. Map and Deduplicate precise quiz scores to exact employee name strings
       const deduplicatedMap = new Map();
@@ -237,11 +283,11 @@ const QuizModule = ({ onBack }) => {
         showSuccessState(totalPoints);
         setTimeout(() => {
           setQuizActive(false);
-          alert("Quiz submitted successfully! 🎉");
+          setCustomAlert({ show: true, message: "Quiz submitted successfully! 🎉" });
         }, 1500);
       } else {
         const errData = await response.json().catch(() => ({}));
-        alert(`Submission failed: The server rejected the request. Please check the backend field names.`);
+        setCustomAlert({ show: true, message: "Submission failed: The server rejected the request. Please check the backend field names." });
         console.error("Submission failed:", errData);
       }
     } catch (err) {
@@ -343,6 +389,51 @@ const QuizModule = ({ onBack }) => {
                 <p style={{ fontSize: '18px', fontWeight: '800', color: '#15803d', margin: 0 }}>+{submissionFeedback.points} REP Points Stored</p>
                 <div style={{ marginTop: '20px', fontSize: '14px', color: '#64748b', fontWeight: '700' }}>Returning to dashboard...</div>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {customAlert.show && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)',
+                zIndex: 11000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '20px'
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20, opacity: 0 }}
+                animate={{ scale: 1, y: 0, opacity: 1 }}
+                exit={{ scale: 0.9, y: 20, opacity: 0 }}
+                style={{
+                  backgroundColor: 'white', borderRadius: '24px', padding: '30px',
+                  width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', textAlign: 'center',
+                  boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+                  border: '1px solid #cbd5e1'
+                }}
+              >
+                <div style={{ width: '56px', height: '56px', borderRadius: '18px', backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}>🎉</div>
+                <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', margin: '0 0 10px 0' }}>Success</h3>
+                <p style={{ fontSize: '14px', fontWeight: '700', color: '#64748b', margin: '0 0 24px 0', lineHeight: 1.5 }}>{customAlert.message}</p>
+                <button
+                  onClick={() => setCustomAlert({ show: false, message: '' })}
+                  style={{
+                    backgroundColor: '#10b981', color: 'white', border: 'none', padding: '12px 36px',
+                    borderRadius: '12px', fontWeight: '800', fontSize: '14px', cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)', width: '100%', transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#059669'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#10b981'}
+                >
+                  OK
+                </button>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>

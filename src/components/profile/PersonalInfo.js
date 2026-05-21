@@ -5,14 +5,14 @@ import {
   ArrowLeft, Save, Building2,
   AlertCircle, CheckCircle2, User, Landmark, RefreshCw,
   MapPin, GraduationCap, History,
-  FileCheck, Users, Trash2, Pencil, Upload, ChevronDown, ChevronLeft, ChevronRight, X
+  FileCheck, Users, Pencil, Upload, ChevronDown, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { BASE_URL, API_ENDPOINTS } from '../../config';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 
-const LOCKED_FIELDS = ['gross_salary_a', 'salary', 'pt', 'bgv_status', 'approved_by_ceo', 'age'];
+const LOCKED_FIELDS = ['age'];
 
 const SECTIONS = [
   {
@@ -91,7 +91,6 @@ const SECTIONS = [
       { key: 'college', label: 'College', type: 'text', required: true },
       { key: 'university', label: 'University', type: 'text', required: true },
       { key: 'previous_org', label: 'Previous Organization', type: 'text' },
-      { key: 'experience_letter_photo', label: 'Previous Experience', type: 'file' },
       { key: 'source', label: 'Source', type: 'text' },
       { key: 'languages_known', label: 'Languages Known', type: 'text' },
     ]
@@ -147,7 +146,7 @@ export default function PersonalInfo({ onBack }) {
   const { user } = useAuth();
   const [form, setForm] = useState({
     emp_name: '', gender: 'Male', dob: '', age: '', religion: '', blood_group: '', marital_status: 'Single', nationality: 'Indian', father_husband_name: '', pan_number: '', aadhar_number: '', category: 'General',
-    pancard_photo: '', adharcard_photo: '', voter_id: '', voter_card: '', passport_no: '', passport: '',
+    pancard_photo: '', adharcard_photo: '', voter_id: '', voter_id_photo: '', passport_no: '', passport_photo: '',
     designation: '', department: '', process: '', supervisor_l1: '', supervisor_l2: '', doj: '', ft_pt: 'Full Time', status: 'Active', place: '', moved: '', official_email: '',
     contact_no: '', emergency_contact_no: '', personal_email: '', present_address: '', permanent_address: '', state: '',
     sslc_percentage: '', sslc_markscard: '', puc_percentage: '', puc_markscard: '',
@@ -159,7 +158,6 @@ export default function PersonalInfo({ onBack }) {
     bgv_status: 'Pending', appointment_letter: 'Not Sent', approved_by_ceo: 'No', onboarding_doc_completed: 'No', id_card: 'Not Issued', onboarding_link: '',
     profile_pic: ''
   });
-  const profileInputRef = useRef(null);
   const [uploadingFiles, setUploadingFiles] = useState({});
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
@@ -193,6 +191,13 @@ export default function PersonalInfo({ onBack }) {
   }, []);
 
   useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  useEffect(() => {
     const loadDocs = async () => {
       try {
         const uid = selectedEmpId;
@@ -200,7 +205,7 @@ export default function PersonalInfo({ onBack }) {
 
         const emptyForm = {
           emp_name: '', gender: 'Male', dob: '', age: '', religion: '', blood_group: '', marital_status: 'Single', nationality: 'Indian', father_husband_name: '', pan_number: '', aadhar_number: '', category: 'General',
-          pancard_photo: '', adharcard_photo: '', voter_id: '', voter_card: '', passport_no: '', passport: '',
+          pancard_photo: '', adharcard_photo: '', voter_id: '', voter_id_photo: '', passport_no: '', passport_photo: '',
           designation: '', department: '', process: '', supervisor_l1: '', supervisor_l2: '', doj: '', ft_pt: 'Full Time', status: 'Active', place: '', moved: '', official_email: '',
           contact_no: '', emergency_contact_no: '', personal_email: '', present_address: '', permanent_address: '', state: '',
           sslc_percentage: '', sslc_markscard: '', puc_percentage: '', puc_markscard: '',
@@ -236,8 +241,10 @@ export default function PersonalInfo({ onBack }) {
             // Aggressive mapping for backend column variations
             if (lowerKey.includes('pan_card') || lowerKey === 'pancard') targetKey = 'pancard_photo';
             if (lowerKey.includes('aadhar_card') || lowerKey.includes('adhar_card') || lowerKey === 'adharcard') targetKey = 'adharcard_photo';
-            if (lowerKey.includes('voter_card') || lowerKey.includes('voter_id')) targetKey = 'voter_card';
-            if (lowerKey.includes('passport')) targetKey = 'passport';
+            // Map all voter card/id photo columns to voter_id_photo (the key the UI uses)
+            if (lowerKey === 'voter_id_photo' || lowerKey === 'voter_card' || lowerKey === 'voter_id_proof' || lowerKey === 'voteridphoto') targetKey = 'voter_id_photo';
+            // Map all passport photo columns to passport_photo (the key the UI uses)
+            if (lowerKey === 'passport_photo' || lowerKey === 'passport_proof' || lowerKey === 'passportphoto') targetKey = 'passport_photo';
             if (lowerKey.includes('sslc_markscard')) targetKey = 'sslc_markscard';
             if (lowerKey.includes('puc_markscard')) targetKey = 'puc_markscard';
             if (lowerKey.includes('ug_pg_markscard')) targetKey = 'ug_pg_markscard';
@@ -462,6 +469,9 @@ export default function PersonalInfo({ onBack }) {
       if (key === 'aadhar_number' && sanitizedValue.length > 12) {
         sanitizedValue = sanitizedValue.substring(0, 12);
       }
+      if (key === 'bank_account_no' && sanitizedValue.length > 18) {
+        sanitizedValue = sanitizedValue.substring(0, 18);
+      }
     } else if (key === 'pan_number') {
       sanitizedValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
       if (sanitizedValue.length > 10) sanitizedValue = sanitizedValue.substring(0, 10);
@@ -478,6 +488,10 @@ export default function PersonalInfo({ onBack }) {
       sanitizedValue = value.replace(/[^0-9.]/g, '');
       const parts = sanitizedValue.split('.');
       if (parts.length > 2) sanitizedValue = parts[0] + '.' + parts.slice(1).join('');
+      // Limit to 4 digits + 1 decimal point = 5 characters
+      if (sanitizedValue.length > 5) {
+        sanitizedValue = sanitizedValue.substring(0, 5);
+      }
     }
 
     let updates = { [key]: sanitizedValue };
@@ -510,7 +524,16 @@ export default function PersonalInfo({ onBack }) {
     setForm(prev => ({ ...prev, ...updates }));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (shouldGoNext = false) => {
+    if (!isEditing && shouldGoNext) {
+      const currentIndex = SECTIONS.findIndex(s => s.id === activeSection);
+      const nextSection = SECTIONS[currentIndex + 1];
+      if (nextSection) {
+        setActiveSection(nextSection.id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      return;
+    }
     // Mandatory Field Validation
     const mandatoryFields = [
       { key: 'emp_name', label: 'Employee Name' },
@@ -663,7 +686,18 @@ export default function PersonalInfo({ onBack }) {
       });
       if (res.ok) {
         setToast({ type: 'success', msg: 'Profile Info updated successfully!' });
-        setIsEditing(false);
+        if (shouldGoNext) {
+          const currentIndex = SECTIONS.findIndex(s => s.id === activeSection);
+          const nextSection = SECTIONS[currentIndex + 1];
+          if (nextSection) {
+            setActiveSection(nextSection.id);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else {
+            setIsEditing(false);
+          }
+        } else {
+          setIsEditing(false);
+        }
       }
     } catch {
       setToast({ type: 'error', msg: 'Network error.' });
@@ -819,16 +853,15 @@ export default function PersonalInfo({ onBack }) {
 
             <motion.button
               whileTap={{ scale: 0.97 }}
-              onClick={isEditing ? handleSave : () => setIsEditing(true)}
-              disabled={saving}
+              onClick={() => setIsEditing(prev => !prev)}
               style={{
-                padding: '14px 28px', backgroundColor: isEditing ? '#315A9E' : 'white', color: isEditing ? 'white' : '#0B1E3F',
+                padding: '14px 28px', backgroundColor: isEditing ? '#ef4444' : 'white', color: isEditing ? 'white' : '#0B1E3F',
                 border: '3px solid #cbd5e1', outline: 'none', boxSizing: 'border-box', borderRadius: '16px', fontWeight: '900', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: '8px'
               }}
             >
-              {isEditing ? (saving ? <RefreshCw size={16} className="spin" /> : <Save size={16} />) : <Pencil size={16} />}
-              {isEditing ? (saving ? 'Saving...' : 'Save All') : 'Edit Profile'}
+              {isEditing ? <X size={16} /> : <Pencil size={16} />}
+              {isEditing ? 'Cancel' : 'Edit Profile'}
             </motion.button>
           </div>
         </div>
@@ -1010,7 +1043,7 @@ export default function PersonalInfo({ onBack }) {
                         value={form[field.key]}
                         disabled={isDisabled}
                         onChange={e => handleChange(field.key, e.target.value)}
-                        style={{ width: '100%', padding: '16px 20px', borderRadius: '16px', fontWeight: '900', border: isMobile ? '2px solid #cbd5e1' : '3px solid #cbd5e1', backgroundColor: isDisabled ? '#f1f5f9' : 'white', boxSizing: 'border-box', fontFamily: 'inherit', fontSize: '16px' }}
+                        style={{ width: '100%', padding: '16px 20px', borderRadius: '16px', fontWeight: '900', color: '#0B1E3F', WebkitTextFillColor: '#0B1E3F', border: isMobile ? '2px solid #cbd5e1' : '3px solid #cbd5e1', backgroundColor: isDisabled ? '#f1f5f9' : 'white', boxSizing: 'border-box', fontFamily: 'inherit', fontSize: '16px' }}
                       >
                         {field.options.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
@@ -1025,6 +1058,8 @@ export default function PersonalInfo({ onBack }) {
                           padding: '16px 20px', 
                           borderRadius: '16px', 
                           fontWeight: '900', 
+                          color: '#0B1E3F',
+                          WebkitTextFillColor: '#0B1E3F',
                           border: isMobile ? '2px solid #cbd5e1' : '3px solid #cbd5e1', 
                           backgroundColor: isDisabled ? '#f1f5f9' : 'white', 
                           boxSizing: 'border-box', 
@@ -1037,6 +1072,66 @@ export default function PersonalInfo({ onBack }) {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Save & Next / Next Button at the bottom of the section */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '16px',
+              marginTop: '40px',
+              paddingTop: '24px',
+              borderTop: '1.5px solid #f1f5f9'
+            }}>
+              {SECTIONS.findIndex(s => s.id === activeSection) < SECTIONS.length - 1 ? (
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => handleSave(true)}
+                  disabled={saving}
+                  style={{
+                    padding: '14px 28px',
+                    backgroundColor: '#315A9E',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '16px',
+                    fontWeight: '900',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 8px 20px rgba(49, 90, 158, 0.25)',
+                    fontSize: '15px'
+                  }}
+                >
+                  {saving ? <RefreshCw size={16} className="spin" /> : <Save size={16} />}
+                  {isEditing ? 'Save & Next' : 'Next'}
+                </motion.button>
+              ) : (
+                isEditing && (
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => handleSave(false)}
+                    disabled={saving}
+                    style={{
+                      padding: '14px 28px',
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '16px',
+                      fontWeight: '900',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 8px 20px rgba(16, 185, 129, 0.25)',
+                      fontSize: '15px'
+                    }}
+                  >
+                    {saving ? <RefreshCw size={16} className="spin" /> : <Save size={16} />}
+                    Save & Finish
+                  </motion.button>
+                )
+              )}
             </div>
           </motion.div>
         </div>
