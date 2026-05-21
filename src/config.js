@@ -85,6 +85,8 @@ export const API_ENDPOINTS = {
   REWARD_CATEGORIES: `${BASE_URL}/api/rewards/categories`,
   REWARDS_GIVE: `${BASE_URL}/api/rewards`,
   LEADERBOARD_ALL: `${BASE_URL}/api/employees/leaderboard/all`,
+  REWARDS_LEADERBOARD: `${BASE_URL}/api/rewards/leaderboard`,
+
   ASSETS: `${BASE_URL}/api/assets`,
   ASSET_UPDATE: (id) => `${BASE_URL}/api/assets/${id}`,
   ASSET_GET: `${BASE_URL}/api/assets`,

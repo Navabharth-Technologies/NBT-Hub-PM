@@ -30,7 +30,12 @@ export default function AttendanceManagement() {
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const getTodayStr = () => new Date().toISOString().split('T')[0];
-  const [fromDate, setFromDate] = useState(localStorage.getItem('nbtAttendanceFromDate') || '2026-01-01');
+  const [fromDate, setFromDate] = useState(() => {
+    const saved = localStorage.getItem('nbtAttendanceFromDate');
+    const today = getTodayStr();
+    // If saved value is the old hardcoded default, reset to today
+    return (saved && saved !== '2026-01-01') ? saved : today;
+  });
   const [toDate, setToDate] = useState(() => {
     const saved = localStorage.getItem('nbtAttendanceToDate');
     const today = getTodayStr();

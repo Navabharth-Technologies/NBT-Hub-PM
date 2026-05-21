@@ -304,23 +304,26 @@ export default function AwardsScreen() {
     });
 
     const topContributor = React.useMemo(() => {
-        if (!filteredRewards || filteredRewards.length === 0) return leaderboard[0] || null;
+        if (!leaderboard || leaderboard.length === 0) return null;
+        const leader = leaderboard[0];
+        const emp = employees.find(e =>
+            String(e.id) === String(leader.id) ||
+            String(e.employee_id) === String(leader.id) ||
+            String(e.userId) === String(leader.id)
+        );
+        return {
+            ...leader,
+            role: emp?.role || leader.role || 'Team Member',
+            profile_picture: emp?.profile_picture || emp?.profile_pic || emp?.photo
+        };
+    }, [leaderboard, employees]);
 
-        const stats = Array.from(new Set(filteredRewards.map(r => r.employee_id))).map(id => {
-            const userRewards = filteredRewards.filter(r => String(r.employee_id) === String(id));
-            const totalRep = userRewards.reduce((sum, r) => sum + (Number(r.points) || 0), 0);
-            const emp = employees.find(e => String(e.id) === String(id) || String(e.employee_id) === String(id) || String(e.userId) === String(id));
-            return {
-                id,
-                name: resolveEmployeeName(id),
-                total_points: totalRep,
-                role: emp?.role || 'Team Member',
-                profile_picture: emp?.profile_picture || emp?.profile_pic || emp?.photo
-            };
-        }).sort((a, b) => b.total_points - a.total_points);
-
-        return stats[0] || leaderboard[0] || null;
-    }, [filteredRewards, leaderboard, employees]);
+    const myRank = React.useMemo(() => {
+        if (!leaderboard || leaderboard.length === 0 || !user) return null;
+        const uid = String(user.employee_id || user.userId || user.id);
+        const match = leaderboard.find(item => String(item.id) === uid);
+        return match ? match.rank : null;
+    }, [leaderboard, user]);
 
     const handleGrantAward = async () => {
         if (!selectedEmployee) {
@@ -441,21 +444,21 @@ export default function AwardsScreen() {
                                 </button>
                             </div>
 
-                            <button 
+                            <button
                                 onClick={() => setView(view === 'audit' ? 'feed' : 'audit')}
-                                style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '8px', 
-                                    padding: '8px 16px', 
-                                    borderRadius: '12px', 
-                                    fontSize: '12px', 
-                                    fontWeight: '800', 
-                                    cursor: 'pointer', 
-                                    transition: 'all 0.2s ease', 
-                                    background: view === 'audit' ? '#eff6ff' : 'white', 
-                                    color: view === 'audit' ? '#2563eb' : '#64748b', 
-                                    border: view === 'audit' ? '3px solid #3b82f6' : '3px solid #cbd5e1', 
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '8px 16px',
+                                    borderRadius: '12px',
+                                    fontSize: '12px',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    background: view === 'audit' ? '#eff6ff' : 'white',
+                                    color: view === 'audit' ? '#2563eb' : '#64748b',
+                                    border: view === 'audit' ? '3px solid #3b82f6' : '3px solid #cbd5e1',
                                     boxShadow: view === 'audit' ? '0 2px 4px rgba(59, 130, 246, 0.1)' : '0 2px 4px rgba(0,0,0,0.02)',
                                     whiteSpace: 'nowrap',
                                     height: '38px',
@@ -507,16 +510,19 @@ export default function AwardsScreen() {
                         position: 'relative',
                         overflow: 'hidden'
                     }}>
-                        <div style={{ position: 'absolute', top: '-50%', left: '-10%', width: '40%', height: '200%', background: 'radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, transparent 70%)', transform: 'rotate(-45deg)', opacity: 0.5 }}></div>
-
-                        {/* Current Rank */}
+                        <div style={{ position: 'absolute', top: '-50%', left: '-10%', width: '40%', height: '200%', background: 'radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, transparent 70%)', transform: 'rotate(-45deg)', opacity: 0.5 }}></div>                        {/* Current Rank / My Reputation */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', borderRight: winWidth < 768 ? 'none' : '1.5px solid rgba(255,255,255,0.1)', borderBottom: winWidth < 768 ? '1.5px solid rgba(255,255,255,0.1)' : 'none', paddingBottom: winWidth < 768 ? '20px' : '0' }}>
                             <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                <Trophy size={winWidth < 768 ? 24 : 32} color="#facc15" />
+                                <Trophy size={winWidth < 768 ? 24 : 32} color="#38bdf8" />
                             </div>
                             <div>
-                                <p style={{ margin: '0 0 5px 0', fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Member Status</p>
-                                <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '20px' : '24px', fontWeight: '950', color: '#ffffff' }}>Active Hub</h3>
+                                <p style={{ margin: '0 0 5px 0', fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.2px' }}>My Reputation</p>
+                                <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '20px' : '24px', fontWeight: '950', color: '#ffffff' }}>
+                                    {(user?.totalPoints ?? user?.total_points ?? user?.totalRep ?? 0).toLocaleString()} <span style={{ fontSize: '12px', color: '#38bdf8', fontWeight: '800' }}>PTS</span>
+                                </h3>
+                                <p style={{ margin: '3px 0 0 0', fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>
+                                    {myRank ? `Ranked #${myRank} overall` : 'Active Hub'}
+                                </p>
                             </div>
                         </div>
 
@@ -578,16 +584,11 @@ export default function AwardsScreen() {
                                                 </div>
                                             </div>
                                             {(() => {
-                                                const employeeStats = Array.from(new Set(filteredRewards.map(r => r.employee_id))).map(id => {
-                                                    const userRewards = filteredRewards.filter(r => String(r.employee_id) === String(id));
-                                                    const totalRep = userRewards.reduce((sum, r) => sum + (Number(r.points) || 0), 0);
-                                                    return { id, totalRep, userRewards };
-                                                }).sort((a, b) => b.totalRep - a.totalRep);
+                                                const activeLeaderboard = leaderboard.filter(item => item.total_points > 0);
+                                                const displayedStats = showAllFeed ? activeLeaderboard : activeLeaderboard.slice(0, 5);
 
-                                                const displayedStats = showAllFeed ? employeeStats : employeeStats.slice(0, 5);
-
-                                                return displayedStats.map(({ id: empId, totalRep, userRewards }, index) => {
-                                                    const latest = userRewards.reduce((prev, current) => (new Date(prev.created_at || prev.date) > new Date(current.created_at || current.date)) ? prev : current, userRewards[0]);
+                                                return displayedStats.map((item, index) => {
+                                                    const empId = item.id;
                                                     return (
                                                         <div key={empId} onClick={() => setSelectedHistoryUser(empId)} style={{ background: 'white', padding: winWidth < 768 ? '16px' : '20px', borderRadius: winWidth < 768 ? '20px' : '24px', border: '3px solid #cbd5e1', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.3s ease' }}
                                                             onMouseEnter={e => {
@@ -601,17 +602,18 @@ export default function AwardsScreen() {
                                                                 e.currentTarget.style.boxShadow = 'none';
                                                             }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '12px' : '15px' }}>
-                                                                <div style={{ width: winWidth < 768 ? '40px' : '45px', height: winWidth < 768 ? '40px' : '45px', borderRadius: '14px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid #cbd5e1', fontSize: '14px', fontWeight: '950', color: '#0369a1' }}>#{index + 1}</div>
+                                                                <div style={{ width: winWidth < 768 ? '40px' : '45px', height: winWidth < 768 ? '40px' : '45px', borderRadius: '14px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid #cbd5e1', fontSize: '14px', fontWeight: '950', color: '#0369a1' }}>#{item.rank}</div>
                                                                 <div>
-                                                                    <div style={{ fontSize: winWidth < 768 ? '14px' : '15px', fontWeight: '1000', color: '#0f172a' }}>{resolveEmployeeName(empId)}</div>
-                                                                    <div style={{ fontSize: winWidth < 768 ? '10px' : '11px', color: '#64748b', fontWeight: '700' }}>
-                                                                        {userRewards.length} recognitions • {latest.reward_name || 'Excellence'}
+                                                                    <div style={{ fontSize: winWidth < 768 ? '14px' : '15px', fontWeight: '1000', color: '#0f172a' }}>{item.name}</div>
+                                                                    <div style={{ fontSize: winWidth < 768 ? '10px' : '11px', color: '#64748b', fontWeight: '700', display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                                                        <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '6px' }}>🏆 Awards: {item.total_reward_points} pts</span>
+                                                                        <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '6px' }}>📝 Quizzes: {item.total_quiz_points} pts</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                             <div style={{ textAlign: 'right' }}>
-                                                                <div style={{ fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '1000', color: '#10b981' }}>+{totalRep}</div>
-                                                                <div style={{ fontSize: '8px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>REP</div>
+                                                                <div style={{ fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '1000', color: '#10b981' }}>+{item.total_points}</div>
+                                                                <div style={{ fontSize: '8px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>PTS</div>
                                                             </div>
                                                         </div>
                                                     );
@@ -675,7 +677,7 @@ export default function AwardsScreen() {
                                             </div>
                                         </div>
                                     </div>
- 
+
                                     {/* Audit Logs List */}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                         {(() => {
@@ -688,7 +690,7 @@ export default function AwardsScreen() {
                                                 const search = auditSearch.toLowerCase();
                                                 return recipientName.includes(search) || giverName.includes(search) || rewardName.includes(search);
                                             });
- 
+
                                             if (auditLogs.length === 0) {
                                                 return (
                                                     <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', background: 'white', borderRadius: '24px', border: '3px solid #cbd5e1' }}>
@@ -833,8 +835,52 @@ export default function AwardsScreen() {
                                         <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '24px' : '28px', fontWeight: '1000', letterSpacing: '-0.8px', color: '#ffffff', lineHeight: '1.2' }}>Recognition Spotlight</h3>
                                         <p style={{ margin: winWidth < 768 ? '10px 0 30px 0' : '15px 0 40px 0', fontSize: winWidth < 768 ? '14px' : '15px', color: '#94a3b8', fontWeight: '600', lineHeight: '1.7' }}>Celebrate the champions pushing our organization forward with exceptional dedication and vision.</p>
 
+                                        {user && (
+                                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px 25px', borderRadius: '24px', border: '1.5px solid rgba(255,255,255,0.1)', marginBottom: '20px' }}>
+                                                <div style={{ fontSize: '11px', fontWeight: '900', color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '15px' }}>My Points Profile</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '15px' }}>
+                                                    <div style={{ width: '55px', height: '55px', borderRadius: '18px', background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                                        {(() => {
+                                                            const empId = user.employee_id || user.id;
+                                                            const rawPic = user.profile_pic || user.profile_picture;
+                                                            const photoUrl = rawPic ? (rawPic.startsWith('http') || rawPic.startsWith('data:') ? rawPic : `${BASE_URL}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : `${BASE_URL}/api/users/${empId}/photo`;
+                                                            return (
+                                                                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                                                    <img
+                                                                        src={photoUrl}
+                                                                        alt=""
+                                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '18px' }}
+                                                                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                                                    />
+                                                                    <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#38bdf8', color: '#0f172a', fontSize: '22px', fontWeight: '1000' }}>
+                                                                        {(user.name || 'U').charAt(0)}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontSize: '17px', fontWeight: '900', color: '#ffffff' }}>{user.name || 'NBT User'}</div>
+                                                        <div style={{ fontSize: '13px', color: '#38bdf8', fontWeight: '800', marginTop: '2px' }}>
+                                                            🏆 {(user.totalPoints ?? user.total_points ?? user.totalRep ?? 0).toLocaleString()} PTS
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8', fontWeight: '600' }}>
+                                                        <span>Awards Endorsements:</span>
+                                                        <span style={{ color: '#ffffff', fontWeight: '750' }}>{user.rewardPoints ?? user.reward_points ?? 0} Pts</span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94a3b8', fontWeight: '600' }}>
+                                                        <span>Quiz Completions:</span>
+                                                        <span style={{ color: '#ffffff', fontWeight: '750' }}>{user.quizPoints ?? user.quiz_points ?? 0} Pts</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {topContributor && (
-                                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '25px', borderRadius: '24px', border: '1.5px solid rgba(255,255,255,0.1)', marginBottom: '40px' }}>
+                                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '20px 25px', borderRadius: '24px', border: '1.5px solid rgba(255,255,255,0.1)', marginBottom: '30px' }}>
                                                 <div style={{ fontSize: '11px', fontWeight: '900', color: '#facc15', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '15px' }}>Top Contributor</div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                                                     <div style={{ width: '55px', height: '55px', borderRadius: '18px', background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
@@ -860,7 +906,7 @@ export default function AwardsScreen() {
                                                     </div>
                                                     <div>
                                                         <div style={{ fontSize: '17px', fontWeight: '900', color: '#ffffff' }}>{topContributor.name}</div>
-                                                        <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '700' }}>{topContributor.total_points} Reputation Points</div>
+                                                        <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '700' }}>{(topContributor.total_points ?? topContributor.totalPoints ?? topContributor.totalRep ?? 0)} Total Points</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -887,7 +933,7 @@ export default function AwardsScreen() {
 
             {showGrantModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                    <div style={{ background: 'white', borderRadius: '30px', padding: winWidth < 768 ? '25px' : '40px', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
+                    <div style={{ background: 'white', borderRadius: '30px', padding: winWidth < 768 ? '25px' : '50px', width: '100%', maxWidth: '680px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
                         <h2 style={{ fontSize: '24px', fontWeight: '950', color: '#0f172a', marginBottom: '30px', textAlign: 'center' }}>Grant Recognition</h2>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div style={{ position: 'relative' }}>

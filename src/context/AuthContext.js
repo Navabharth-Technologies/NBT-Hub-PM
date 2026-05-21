@@ -41,12 +41,24 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok) {
+        // Normalize points fields
+        const totalPoints = Number(data.user.totalPoints ?? data.user.total_points ?? data.user.totalRep ?? 0);
+        const rewardPoints = Number(data.user.rewardPoints ?? data.user.reward_points ?? 0);
+        const quizPoints = Number(data.user.quizPoints ?? data.user.quiz_points ?? 0);
+
         // Securely package user data with JWT and employee_id as per manifest
         const authData = {
           ...data.user,
           token: data.token,
           id: data.user.id,
-          employee_id: data.user.employee_id
+          employee_id: data.user.employee_id,
+          totalPoints,
+          rewardPoints,
+          quizPoints,
+          total_points: totalPoints,
+          reward_points: rewardPoints,
+          quiz_points: quizPoints,
+          totalRep: totalPoints
         };
 
         setUser(authData);
@@ -97,7 +109,24 @@ export const AuthProvider = ({ children }) => {
 
   const updateUserData = (newData) => {
     setUser(prev => {
-      const updated = { ...prev, ...newData };
+      const merged = { ...prev, ...newData };
+
+      // Normalize points fields
+      const totalPoints = Number(merged.totalPoints ?? merged.total_points ?? merged.totalRep ?? 0);
+      const rewardPoints = Number(merged.rewardPoints ?? merged.reward_points ?? 0);
+      const quizPoints = Number(merged.quizPoints ?? merged.quiz_points ?? 0);
+
+      const updated = {
+        ...merged,
+        totalPoints,
+        rewardPoints,
+        quizPoints,
+        total_points: totalPoints,
+        reward_points: rewardPoints,
+        quiz_points: quizPoints,
+        totalRep: totalPoints
+      };
+
       try {
         localStorage.setItem('user', JSON.stringify(updated));
       } catch (e) {
