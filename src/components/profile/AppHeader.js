@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Trophy } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getTheme } from '../../constants/Theme';
 import { useNavigate } from 'react-router-dom';
@@ -170,43 +170,6 @@ export default function AppHeader() {
               border: '2px solid #e0f2f1', // Matches light teal background
               boxShadow: '0 0 4px rgba(0,0,0,0.1)'
             }} />
-          </div>
-        )}
-        {/* Floating combined points bubble badge */}
-        {user && (
-          <div
-            onClick={() => navigate('/awards')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'rgba(255, 255, 255, 0.25)',
-              border: '1.5px solid rgba(255, 255, 255, 0.4)',
-              padding: winWidth < 768 ? '6px 10px' : '8px 14px',
-              borderRadius: '12px',
-              cursor: 'pointer',
-              fontWeight: '900',
-              fontSize: winWidth < 768 ? '11px' : '13px',
-              color: '#1e293b',
-              transition: 'all 0.2s ease',
-              backdropFilter: 'blur(4px)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-              height: '44px',
-              boxSizing: 'border-box'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.backgroundColor = 'white';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
-            }}
-          >
-            <Trophy size={winWidth < 768 ? 12 : 14} color="#facc15" fill="#facc15" />
-            <span style={{ fontFamily: "'Outfit', sans-serif", whiteSpace: 'nowrap' }}>
-              {(user.totalPoints ?? user.total_points ?? user.totalRep ?? 0).toLocaleString()} <span style={{ fontSize: winWidth < 768 ? '8px' : '9px', fontWeight: '800', color: '#4b5563' }}>PTS</span>
-            </span>
           </div>
         )}
 
