@@ -16,7 +16,7 @@ const EMOJI_LIST = ['❤️', '👍', '😮', '😂', '🔥', '👏', '🎂'];
 
 export default function EngagementModule() {
     const navigate = useNavigate();
-    const { threads, loading, addPost, deletePost, updatePost, toggleReaction, toggleBadge, addComment, fetchComments } = useThread();
+    const { threads, loading, addPost, deletePost, updatePost, deleteComment, updateComment, toggleReaction, toggleBadge, addComment, fetchComments } = useThread();
     const { user } = useAuth();
     
     const [fullscreenMedia, setFullscreenMedia] = useState(null);
@@ -36,6 +36,8 @@ export default function EngagementModule() {
     const [loadingComments, setLoadingComments] = useState({});
     const [editingPostId, setEditingPostId] = useState(null);
     const [editContent, setEditContent] = useState('');
+    const [editingCommentId, setEditingCommentId] = useState(null);
+    const [editCommentContent, setEditCommentContent] = useState('');
     const [winWidth, setWinWidth] = useState(window.innerWidth);
 
     useEffect(() => {
@@ -512,8 +514,43 @@ export default function EngagementModule() {
                                                         })()}
                                                     </div>
                                                     <div style={{ flex: 1, padding: '12px', background: 'white', borderRadius: '15px', border: '1px solid #f1f5f9' }}>
-                                                        <div style={{ fontSize: '12px', fontWeight: '900', color: '#315A9E', marginBottom: '4px' }}>{cUser}</div>
-                                                        <div style={{ fontSize: '13px', color: '#0B1E3F', fontWeight: '600' }}>{cText}</div>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                                            <div style={{ fontSize: '12px', fontWeight: '900', color: '#315A9E' }}>{cUser}</div>
+                                                            {editingCommentId !== c.id && (
+                                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                                    <button
+                                                                        onClick={() => { setEditingCommentId(c.id); setEditCommentContent(cText); }}
+                                                                        title="Edit comment"
+                                                                        style={{ border: 'none', background: '#f0f7ff', color: '#315A9E', padding: '5px 8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                    >
+                                                                        <Edit3 size={13} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={async () => { await deleteComment(post.id, c.id); const updated = await fetchComments(post.id); setPostComments(prev => ({ ...prev, [post.id]: updated })); }}
+                                                                        title="Delete comment"
+                                                                        style={{ border: 'none', background: '#fef2f2', color: '#ef4444', padding: '5px 8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                    >
+                                                                        <Trash2 size={13} />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {editingCommentId === c.id ? (
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                                                                <textarea
+                                                                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #315A9E', fontSize: '13px', outline: 'none', minHeight: '60px', background: '#f8fafc', boxSizing: 'border-box' }}
+                                                                    value={editCommentContent}
+                                                                    onChange={e => setEditCommentContent(e.target.value)}
+                                                                    autoFocus
+                                                                />
+                                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                                    <button onClick={() => { updateComment(post.id, c.id, editCommentContent); setEditingCommentId(null); }} style={{ fontSize: '11px', fontWeight: '900', color: 'white', background: '#315A9E', border: 'none', padding: '6px 15px', borderRadius: '8px', cursor: 'pointer' }}>UPDATE</button>
+                                                                    <button onClick={() => setEditingCommentId(null)} style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', background: 'none', border: '1.5px solid #e2e8f0', padding: '6px 15px', borderRadius: '8px', cursor: 'pointer' }}>CANCEL</button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ fontSize: '13px', color: '#0B1E3F', fontWeight: '600' }}>{cText}</div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             );

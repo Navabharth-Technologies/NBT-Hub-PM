@@ -635,7 +635,7 @@ export default function PerformanceModule() {
           <div style={{ display: 'grid', gridTemplateColumns: winWidth < 1024 ? (winWidth < 600 ? '1fr' : '1fr 1fr') : 'repeat(3, 1fr)', gap: '24px' }}>
             <div
               style={{ ...dashboardStyles.docCard, cursor: 'pointer' }}
-              onClick={() => navigate('/payslips')}
+              onClick={() => navigate('/salary-statements')}
             >
               <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <div style={{ width: '60px', height: '60px', borderRadius: '20px', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FileText color="#22c55e" size={26} /></div>

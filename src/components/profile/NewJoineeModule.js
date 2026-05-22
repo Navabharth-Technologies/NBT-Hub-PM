@@ -185,7 +185,16 @@ export default function NewJoineeModule() {
       filteredValue = value.replace(/[^a-zA-Z0-9]/g, '');
     } else if (name === 'duration') {
       // Only digits
-      filteredValue = value.replace(/\D/g, '');
+      let digits = value.replace(/\D/g, '');
+      if (digits !== '') {
+        const val = parseInt(digits, 10);
+        if (formData.is_intern) {
+          if (val > 12) digits = '12';
+        } else {
+          if (val > 365) digits = '365';
+        }
+      }
+      filteredValue = digits;
     } else if (name === 'email_id') {
       const atIndex = value.indexOf('@');
       if (atIndex !== -1) {

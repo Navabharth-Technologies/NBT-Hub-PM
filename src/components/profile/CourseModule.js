@@ -259,21 +259,7 @@ export default function CourseModule() {
                     <Calendar size={12} /> Deadline: {formatDate(c.deadline) || 'No deadline'}
                   </div>
 
-                  <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                    <span style={{ fontWeight: '600', color: '#64748b' }}>Completion Progress</span>
-                    <span style={{ fontWeight: '900', color: '#3863a8' }}>
-                      {typeof c.completed === 'number' && typeof c.assigned_to === 'number' ?
-                        `${Math.round((c.completed / c.assigned_to) * 100)}%` :
-                        (c.completed && c.assigned_to ? 'In Progress' : '0%')
-                      }
-                    </span>
-                  </div>
-                  <div className="progress-bar-container" style={{ height: '10px', borderRadius: '5px' }}>
-                    <div className="progress-bar-fill" style={{
-                      width: typeof c.completed === 'number' && typeof c.assigned_to === 'number' ? `${(c.completed / c.assigned_to) * 100}%` : '0%',
-                      background: c.category === 'Policy' ? '#ef4444' : 'linear-gradient(90deg, #3863a8, #5c85d6)'
-                    }}></div>
-                  </div>
+
 
                   <div className="course-action-buttons">
                     {c.pdf_url && (

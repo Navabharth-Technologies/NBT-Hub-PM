@@ -32,6 +32,7 @@ import AwardsScreen from './components/profile/AwardsScreen';
 import ResignationUserScreen from './components/profile/ResignationUserScreen';
 import ServiceCertificateUserScreen from './components/profile/ServiceCertificateUserScreen';
 import PayslipScreen from './components/profile/PayslipScreen';
+import SalaryStatements from './components/profile/SalaryStatements';
 import PersonalInfo from './components/profile/PersonalInfo';
 import AssetsManagement from './components/profile/AssetsManagement';
 import MyLeaves from './components/profile/MyLeaves';
@@ -83,6 +84,7 @@ function AppRoutes() {
       <Route path="/resignations" element={<ResignationUserScreen />} />
       <Route path="/service-certificates" element={<ServiceCertificateUserScreen />} />
       <Route path="/payslips" element={<PayslipScreen />} />
+      <Route path="/salary-statements" element={<SalaryStatements />} />
       <Route path="/personal-info" element={<PersonalInfo onBack={() => window.history.back()} />} />
       <Route path="/assets" element={<AssetsManagement />} />
       <Route path="/my-leaves" element={<MyLeaves />} />

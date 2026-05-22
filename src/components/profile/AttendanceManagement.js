@@ -11,6 +11,113 @@ import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import './PMDashboard.css';
 
+const parseTime = (timeStr, baseDate = new Date()) => {
+  if (!timeStr || timeStr === '----' || timeStr === '--:--' || timeStr === '00:00' || timeStr === '00:00:00') return null;
+  try {
+    const cleanStr = String(timeStr).trim();
+    const isPM = cleanStr.toUpperCase().includes('PM');
+    const isAM = cleanStr.toUpperCase().includes('AM');
+
+    const timeOnly = cleanStr.replace(/[^\d:]/g, '');
+    const parts = timeOnly.split(':');
+    if (parts.length < 2) return null;
+
+    let hours = parseInt(parts[0], 10);
+    let minutes = parseInt(parts[1], 10);
+    let seconds = parts[2] ? parseInt(parts[2], 10) : 0;
+
+    if (isPM && hours < 12) hours += 12;
+    if (isAM && hours === 12) hours = 0;
+
+    const d = new Date(baseDate);
+    d.setHours(hours, minutes, seconds, 0);
+    return d;
+  } catch (e) {
+    return null;
+  }
+};
+
+const getWorkHrs = (inTime, outTime, recordDate) => {
+  const isMissing = (t) => !t || t === '--:--' || t === '00:00' || t === 'null' || t === '----';
+  if (isMissing(inTime)) return '00:00';
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isToday = recordDate === todayStr;
+
+  const inDate = parseTime(inTime);
+  if (!inDate) return '00:00';
+
+  let outDate = null;
+  if (!isMissing(outTime)) {
+    outDate = parseTime(outTime);
+  }
+
+  if (!outDate) {
+    if (isToday) {
+      const now = new Date();
+      const diffMs = now - inDate;
+      if (diffMs <= 0) return '00:00';
+      const diffMins = Math.floor(diffMs / 60000);
+      const h = Math.floor(diffMins / 60);
+      const m = diffMins % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    } else {
+      return '00:00';
+    }
+  }
+
+  const diffMs = outDate - inDate;
+  if (diffMs <= 0) return '00:00';
+  const diffMins = Math.floor(diffMs / 60000);
+  const h = Math.floor(diffMins / 60);
+  const m = diffMins % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
+
+const getDBStatusLabel = (log, cleanLog) => {
+  if (!log) return 'Absent';
+  const rawStatus = String(log.status || log.remark || '').trim();
+  if (!rawStatus) {
+    return (cleanLog && cleanLog.displayInTime !== '----') ? 'In Office' : 'Absent';
+  }
+
+  const s = rawStatus.toUpperCase();
+  if (s === 'P' || s === 'PRESENT' || s.includes('IN-OFFICE') || s.includes('PRESENT') || s.includes('IN OFFICE')) {
+    return 'In Office';
+  }
+  if (s === 'A' || s === 'ABSENT') {
+    return 'Absent';
+  }
+  if (s === 'HD' || s === 'HALF_DAY' || s.includes('HALF DAY') || s.includes('HALFDAY')) {
+    return 'Half day';
+  }
+
+  return log.status;
+};
+
+const getStatusStyles = (statusText) => {
+  const t = String(statusText || '').toLowerCase();
+  if (t.includes('present') || t.includes('in-office') || t.includes('in office')) {
+    return {
+      bg: '#f1f5f9',
+      border: '#cbd5e1',
+      color: '#000000'
+    };
+  }
+  if (t.includes('half')) {
+    return {
+      bg: '#f5f3ff',
+      border: '#d8b4fe',
+      color: '#7c3aed'
+    };
+  }
+  return {
+    bg: '#fef2f2',
+    border: '#fee2e2',
+    color: '#ef4444'
+  };
+};
+
 export default function AttendanceManagement() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,6 +130,14 @@ export default function AttendanceManagement() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('summary'); // 'summary' or 'raw'
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [allEmployees, setAllEmployees] = useState([]);
   const [userLocation, setUserLocation] = useState(localStorage.getItem('savedUserLocation') || 'Fetching location...');
@@ -708,7 +823,7 @@ export default function AttendanceManagement() {
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <div style={{ fontSize: winWidth < 768 ? '17px' : '20px', fontWeight: '950', color: '#0f172a', marginBottom: '1px' }}>Shift Status</div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: '10px', fontWeight: '950', color: (personalAttendance?.in_time && personalAttendance.in_time !== '----') ? '#16a34a' : '#ef4444', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '2px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '950', color: (personalAttendance?.in_time && personalAttendance.in_time !== '----') ? '#16a34a' : '#0d0d0dff', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '2px' }}>
                     {(personalAttendance?.in_time && personalAttendance.in_time !== '----') ? 'In Office' : 'Offline'}
                   </div>
                   {(personalAttendance?.in_time && personalAttendance.in_time !== '----') && (
@@ -880,11 +995,11 @@ export default function AttendanceManagement() {
           )}
 
           <div style={{ display: 'flex', gap: winWidth < 600 ? '12px' : '24px', borderBottom: '1.5px solid #e2e8f0', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px' }}>
-            <button 
+            <button
               onClick={() => setViewMode('summary')}
               style={{ padding: '0 0 12px 0', background: 'transparent', border: 'none', borderBottom: '3px solid #1d4ed8', color: '#1d4ed8', fontWeight: '800', fontSize: winWidth < 600 ? '12px' : '14px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
-            > 
-              Daily Summary 
+            >
+              Daily Summary
             </button>
           </div>
 
@@ -912,7 +1027,7 @@ export default function AttendanceManagement() {
                         const getT = x => new Date(x?.created_at || x?.punch_time || 0).getTime();
                         return getT(b) - getT(a);
                       });
-                    
+
                     const log = dayLogsForEmp[0]; // Latest log for basic info
                     const firstLogForDay = dayLogsForEmp[dayLogsForEmp.length - 1];
                     const lastLogForDay = dayLogsForEmp.length > 1 ? dayLogsForEmp[0] : null;
@@ -943,24 +1058,9 @@ export default function AttendanceManagement() {
 
                     const punchIn = firstLogForDay?.in_time || firstLogForDay?.INTime || firstLogForDay?.PunchIn || firstLogForDay?.punch_time || '----';
                     const punchOut = (todayLog || (isMultiLog && lastLogForDay)) ? (lastLogForDay?.out_time || lastLogForDay?.OUTTime || lastLogForDay?.PunchOut || lastLogForDay?.punch_time || lastLogForDay?.PunchIn || lastLogForDay?.in_time || '----') : '----';
-                    
-                    // Manual work time calculation if missing
-                    let workHrs = log?.work_time || log?.work_hrs || log?.WorkTime;
-                    if ((!workHrs || workHrs === '00:00') && punchIn !== '----' && punchOut !== '----') {
-                      const parse = (t) => {
-                        const s = String(t).replace(/[^\d:]/g, '');
-                        const [h, m] = s.split(':').map(Number);
-                        return (isNaN(h) || isNaN(m)) ? null : h * 60 + m;
-                      };
-                      const start = parse(punchIn);
-                      const end = parse(punchOut);
-                      if (start !== null && end !== null && end > start) {
-                        const diff = end - start;
-                        workHrs = `${String(Math.floor(diff / 60)).padStart(2, '0')}:${String(diff % 60).padStart(2, '0')}`;
-                      }
-                    }
-                    if (!workHrs) workHrs = '00:00';
+
                     const pDate = log?.punch_date || log?.date || log?.created_at;
+                    const workHrs = getWorkHrs(punchIn, punchOut, pDate);
 
                     return (
                       <div key={idx} style={{ background: 'white', borderRadius: '24px', padding: '20px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
@@ -1020,27 +1120,8 @@ export default function AttendanceManagement() {
                             <MapPin size={12} /> {log?.in_location || log?.location || '----'}
                           </div>
                           {(() => {
-                            const todayPunchIn = todayLog?.in_time || todayLog?.INTime || todayLog?.PunchIn || todayLog?.punch_time;
-                            const today = new Date();
-                            const isSunday = today.getDay() === 0;
-                            const month = today.toLocaleDateString('en-US', { month: 'short' });
-                            const dateDay = String(today.getDate()).padStart(2, '0');
-                            const dayMonth = `${month} ${dateDay}`;
-                            const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
-                            const isHoliday = holidays.includes(dayMonth);
-
-                            const hasValidPunchIn = todayPunchIn && todayPunchIn !== '----' && todayPunchIn !== '--:--' && todayPunchIn !== '00:00';
-                            let rawStatus = hasValidPunchIn ? 'Present' : 'Absent';
-                            if (!hasValidPunchIn) {
-                              if (isSunday) rawStatus = 'WO';
-                              else if (isHoliday) rawStatus = 'NH';
-                              else rawStatus = 'Absent';
-                            }
-
-                            const isPresent = rawStatus.toUpperCase().includes('PRESENT');
-                            const isWO = rawStatus === 'WO';
-                            const isNH = rawStatus === 'NH';
-
+                            const statusLabel = getDBStatusLabel(log, { displayInTime: punchIn });
+                            const styles = getStatusStyles(statusLabel);
                             return (
                               <div style={{
                                 display: 'inline-flex',
@@ -1048,12 +1129,12 @@ export default function AttendanceManagement() {
                                 gap: '6px',
                                 padding: '6px 14px',
                                 borderRadius: '100px',
-                                background: isPresent ? '#f0fdf4' : (isWO || isNH ? '#eff6ff' : '#fef2f2'),
-                                border: `1.5px solid ${isPresent ? '#bbf7d0' : (isWO || isNH ? '#dbeafe' : '#fee2e2')}`,
-                                color: isPresent ? '#16a34a' : (isWO || isNH ? '#3b82f6' : '#ef4444'),
+                                background: styles.bg,
+                                border: `1.5px solid ${styles.border}`,
+                                color: styles.color,
                                 fontWeight: '950'
                               }}>
-                                {rawStatus}
+                                {statusLabel}
                               </div>
                             );
                           })()}
@@ -1128,34 +1209,16 @@ export default function AttendanceManagement() {
 
                       const getCleanAttendance = (record) => {
                         if (!record) return { displayInTime: '----', displayOutTime: '----', displayWorkTime: '00:00' };
-                        const today = new Date().toISOString().split('T')[0];
                         const recordDate = record?.punch_date || '';
-                        const isToday = recordDate === today;
                         const isMissing = (t) => !t || t === '--:--' || t === '00:00' || t === 'null' || t === '----';
-                        
+
                         const rawIn = record?.in_time;
                         const rawOut = record?.out_time;
-                        let rawWork = record?.work_hrs;
-
-                        // Manual calculation fallback for work hours
-                        if ((!rawWork || rawWork === '00:00') && !isMissing(rawIn) && !isMissing(rawOut)) {
-                          const parse = (t) => {
-                            const s = String(t).replace(/[^\d:]/g, '');
-                            const [h, m] = s.split(':').map(Number);
-                            return (isNaN(h) || isNaN(m)) ? null : h * 60 + m;
-                          };
-                          const start = parse(rawIn);
-                          const end = parse(rawOut);
-                          if (start !== null && end !== null && end > start) {
-                            const diff = end - start;
-                            rawWork = `${String(Math.floor(diff / 60)).padStart(2, '0')}:${String(diff % 60).padStart(2, '0')}`;
-                          }
-                        }
 
                         return {
                           displayInTime: isMissing(rawIn) ? '----' : rawIn,
-                          displayOutTime: (isToday && sortedDayLogs.length < 2) || isMissing(rawOut) ? '----' : rawOut,
-                          displayWorkTime: (isToday && sortedDayLogs.length < 2) || isMissing(rawWork) ? '00:00' : (rawWork || '00:00')
+                          displayOutTime: isMissing(rawOut) ? '----' : rawOut,
+                          displayWorkTime: getWorkHrs(rawIn, rawOut, recordDate)
                         };
                       };
                       const cleanLog = getCleanAttendance(log);
@@ -1197,17 +1260,24 @@ export default function AttendanceManagement() {
                             {cleanLog.displayWorkTime}
                           </td>
                           <td style={{ padding: '20px' }}>
-                            <div style={{
-                              display: 'inline-flex',
-                              padding: '6px 12px',
-                              borderRadius: '8px',
-                              background: (log && cleanLog.displayInTime !== '----') ? '#f0fdf4' : '#fef2f2',
-                              color: (log && cleanLog.displayInTime !== '----') ? '#16a34a' : '#ef4444',
-                              fontSize: '11px',
-                              fontWeight: '950'
-                            }}>
-                              {(log && cleanLog.displayInTime !== '----') ? 'Present' : 'Absent'}
-                            </div>
+                            {(() => {
+                              const statusLabel = getDBStatusLabel(log, cleanLog);
+                              const styles = getStatusStyles(statusLabel);
+                              return (
+                                <div style={{
+                                  display: 'inline-flex',
+                                  padding: '6px 12px',
+                                  borderRadius: '8px',
+                                  background: styles.bg,
+                                  border: `1.5px solid ${styles.border}`,
+                                  color: styles.color,
+                                  fontSize: '11px',
+                                  fontWeight: '950'
+                                }}>
+                                  {statusLabel}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td style={{ padding: '20px', fontSize: '12px', color: '#64748b', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={log?.in_location || '----'}>
                             {log?.in_location || '----'}

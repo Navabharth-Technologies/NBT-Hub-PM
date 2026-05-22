@@ -22,7 +22,7 @@ const QuizModule = ({ onBack }) => {
   const [submissionFeedback, setSubmissionFeedback] = useState({ show: false, points: 0 });
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [quizActive, setQuizActive] = useState(false);
-  const [customAlert, setCustomAlert] = useState({ show: false, message: '' });
+  const [customAlert, setCustomAlert] = useState({ show: false, message: '', type: 'success' });
 
   const showSuccessState = (pts) => {
     setSubmissionFeedback({ show: true, points: pts });
@@ -241,20 +241,18 @@ const QuizModule = ({ onBack }) => {
         return sum;
       }, 0);
 
-      const body = {
-        total_questions: totalQuestions,
-        correct_count: correctCount,
-        total_score: totalPoints,
-        quiz_id: questions[0]?.quiz_id || questions[0]?.id
-      };
-
-      const response = await fetch(API_ENDPOINTS.QUIZ_SUBMIT_TOTAL || `${BASE_URL}/api/fun-quizzes/submit`, {
+      const response = await fetch(`${BASE_URL}/api/fun-quizzes/submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token?.trim()}`
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          total_questions: totalQuestions,
+          correct_count: correctCount,
+          total_score: totalPoints,
+          quiz_id: questions[0]?.quiz_id || questions[0]?.id
+        })
       });
 
       if (response.ok) {
@@ -265,11 +263,11 @@ const QuizModule = ({ onBack }) => {
         showSuccessState(totalPoints);
         setTimeout(() => {
           setQuizActive(false);
-          setCustomAlert({ show: true, message: "Quiz submitted successfully! 🎉" });
+          setCustomAlert({ show: true, message: "Quiz submitted successfully! 🎉", type: 'success' });
         }, 1500);
       } else {
         const errData = await response.json().catch(() => ({}));
-        setCustomAlert({ show: true, message: "Submission failed: The server rejected the request. Please check the backend field names." });
+        setCustomAlert({ show: true, message: errData.message || `Submission failed (${response.status}). Please try again.`, type: 'error' });
         console.error("Submission failed:", errData);
       }
     } catch (err) {
@@ -400,18 +398,24 @@ const QuizModule = ({ onBack }) => {
                   border: '1px solid #cbd5e1'
                 }}
               >
-                <div style={{ width: '56px', height: '56px', borderRadius: '18px', backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}>🎉</div>
-                <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A', margin: '0 0 10px 0' }}>Success</h3>
+                <div style={{ width: '56px', height: '56px', borderRadius: '18px', backgroundColor: customAlert.type === 'error' ? '#fee2e2' : '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}>
+                  {customAlert.type === 'error' ? '❌' : '🎉'}
+                </div>
+                <h3 style={{ fontSize: '18px', fontWeight: '900', color: customAlert.type === 'error' ? '#b91c1c' : '#0F172A', margin: '0 0 10px 0' }}>
+                  {customAlert.type === 'error' ? 'Submission Failed' : 'Success'}
+                </h3>
                 <p style={{ fontSize: '14px', fontWeight: '700', color: '#64748b', margin: '0 0 24px 0', lineHeight: 1.5 }}>{customAlert.message}</p>
                 <button
-                  onClick={() => setCustomAlert({ show: false, message: '' })}
+                  onClick={() => setCustomAlert({ show: false, message: '', type: 'success' })}
                   style={{
-                    backgroundColor: '#10b981', color: 'white', border: 'none', padding: '12px 36px',
+                    backgroundColor: customAlert.type === 'error' ? '#ef4444' : '#10b981',
+                    color: 'white', border: 'none', padding: '12px 36px',
                     borderRadius: '12px', fontWeight: '800', fontSize: '14px', cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)', width: '100%', transition: 'all 0.2s'
+                    boxShadow: customAlert.type === 'error' ? '0 4px 12px rgba(239,68,68,0.2)' : '0 4px 12px rgba(16,185,129,0.2)',
+                    width: '100%', transition: 'all 0.2s'
                   }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#059669'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#10b981'}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                 >
                   OK
                 </button>

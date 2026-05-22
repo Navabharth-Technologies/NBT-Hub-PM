@@ -480,7 +480,7 @@ export default function PMDashboard() {
         setTimeout(() => setShowSuccessToast(false), 3000);
         setShowCreateTeam(false);
         setNewTeam({ teamName: '', leadId: '', memberIds: ['', '', '', ''] });
-        
+
         // Refresh teams
         const teamRes = await fetch(API_ENDPOINTS.TEAMS, {
           headers: { 'Authorization': `Bearer ${user.token}` }
@@ -923,7 +923,7 @@ export default function PMDashboard() {
                 )}
               </div>
             </div>
-            <button style={{ width: '100%', padding: '14px', background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '16px', color: '#3863a8', fontWeight: '900', fontSize: '14px', cursor: 'pointer', transition: '0.2s' }}>Manage Workforce</button>
+
           </section>
 
           {/* Upcoming Birthdays Section */}
@@ -1020,15 +1020,15 @@ export default function PMDashboard() {
             </div>
             <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
               <button onClick={() => setShowCreateTeam(false)} style={{ flex: 1, padding: '12px', borderRadius: '50px', border: '1.5px solid #eef2f6', background: 'white', color: '#64748b', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
-              <button 
-                onClick={handleCreateTeam} 
+              <button
+                onClick={handleCreateTeam}
                 disabled={isSubmitting}
-                style={{ 
-                  flex: 2, padding: '12px', borderRadius: '50px', border: 'none', 
-                  background: isSubmitting ? '#94a3b8' : '#3863a8', 
-                  color: 'white', fontWeight: '800', fontSize: '13px', 
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer', 
-                  boxShadow: '0 8px 12px rgba(56,99,168,0.2)' 
+                style={{
+                  flex: 2, padding: '12px', borderRadius: '50px', border: 'none',
+                  background: isSubmitting ? '#94a3b8' : '#3863a8',
+                  color: 'white', fontWeight: '800', fontSize: '13px',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 8px 12px rgba(56,99,168,0.2)'
                 }}
               >
                 {isSubmitting ? 'Establishing...' : 'Confirm Unit'}

@@ -606,9 +606,26 @@ export default function ThreadScreen() {
                                                             })()}
                                                         </div>
                                                         <div style={{ flex: 1, padding: '15px', background: 'white', borderRadius: '20px', border: '3px solid #cbd5e1', position: 'relative' }}>
-                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                                                                 <span style={{ fontSize: '12px', fontWeight: '1000', color: '#0B1E3F' }}>{cUser}</span>
-
+                                                                {editingCommentId !== c.id && (
+                                                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                                                        <button
+                                                                            onClick={() => { setEditingCommentId(c.id); setEditCommentContent(cText); }}
+                                                                            title="Edit comment"
+                                                                            style={{ border: 'none', background: '#f0f7ff', color: '#315A9E', padding: '5px 8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                        >
+                                                                            <Edit3 size={13} />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={async () => { await deleteComment(post.id, c.id); const updated = await fetchComments(post.id); setPostComments(prev => ({ ...prev, [post.id]: updated })); }}
+                                                                            title="Delete comment"
+                                                                            style={{ border: 'none', background: '#fef2f2', color: '#ef4444', padding: '5px 8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                        >
+                                                                            <Trash2 size={13} />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
                                                             </div>
 
                                                             {editingCommentId === c.id ? (
