@@ -122,7 +122,8 @@ export default function PMDashboard() {
         const userRes = await fetch(API_ENDPOINTS.USERS, {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
-        const currentUsers = userRes.ok ? await userRes.json() : [];
+        const rawUsers = userRes.ok ? await userRes.json() : [];
+        const currentUsers = Array.isArray(rawUsers) ? rawUsers.filter(u => String(u.employee_id || u.id || u.empId || '').trim() !== '20250') : [];
         if (userRes.ok) {
           setUsersList(currentUsers);
           setEmployeesCount(currentUsers.length);
@@ -256,8 +257,9 @@ export default function PMDashboard() {
         });
         if (attLogsRes.ok) {
           const logData = await attLogsRes.json();
-          masterLogs = logData.data || logData.attendance || logData.logs || logData;
-          if (Array.isArray(masterLogs)) {
+          const rawLogs = logData.data || logData.attendance || logData.logs || logData;
+          masterLogs = Array.isArray(rawLogs) ? rawLogs.filter(l => String(l?.user_id || l?.Empcode || l?.EmpID || '').trim() !== '20250') : [];
+          if (masterLogs.length > 0 || Array.isArray(rawLogs)) {
             const todayStr = new Date().toISOString().split('T')[0];
             const todayLogs = masterLogs.filter(l => {
               let lDate = (l?.punch_date || l?.PunchDate || l?.date || '').split('T')[0].split(' ')[0];
@@ -981,7 +983,7 @@ export default function PMDashboard() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {upcomingBirthdays.length > 0 ? upcomingBirthdays.map((bday, idx) => (
+              {upcomingBirthdays.length > 0 ? upcomingBirthdays.slice(0, 3).map((bday, idx) => (
                 <div key={idx} style={{
                   display: 'flex', alignItems: 'center', gap: '15px', padding: '14px',
                   borderRadius: '16px', background: '#ffffff', border: '3px solid #cbd5e1',
@@ -1019,7 +1021,7 @@ export default function PMDashboard() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {holidays.length > 0 ? holidays.map((holiday, idx) => (
+              {holidays.length > 0 ? holidays.slice(0, 3).map((holiday, idx) => (
                 <div key={idx} style={{
                   display: 'flex', alignItems: 'center', gap: '15px', padding: '14px',
                   borderRadius: '16px', background: '#f8fafc', border: '3px solid #cbd5e1',

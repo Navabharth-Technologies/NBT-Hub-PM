@@ -29,14 +29,14 @@ export default function SuggestionModule() {
         const res = await fetch(fetchUrl, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (res.ok) {
           const data = await res.json();
           console.log('SuggestionModule: Raw Data Received:', data);
-          
+
           const list = Array.isArray(data) ? data : (data.data || data.suggestions || []);
           console.log('SuggestionModule: Processed List Length:', list.length);
-          
+
           const mapped = list.map(s => ({
             user: s.employee_name || s.user_name || s.user || 'Anonymous',
             team: s.employee_id || s.department || s.team || 'N/A',
@@ -65,8 +65,8 @@ export default function SuggestionModule() {
       <main className="dashboard-content" style={{ paddingBottom: '100px' }}>
         <header className="section-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <button 
-              onClick={() => navigate(-1)} 
+            <button
+              onClick={() => navigate(-1)}
               style={{
                 background: 'white',
                 padding: '10px',
@@ -82,14 +82,14 @@ export default function SuggestionModule() {
               <ArrowLeft size={18} color="#64748b" />
             </button>
             <div>
-              <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--primary-color)' }}>Innovation Hub</h1>
+              <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--primary-color)' }}>Suggestion Hub</h1>
               <p style={{ color: 'var(--text-muted)' }}>Collaborative space for internal suggestions & workflow improvements.</p>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color)' }}>84%</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 'bold' }}>PARTICIPATION RATE</div>
+              <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color)' }}></div>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 'bold' }}></div>
             </div>
           </div>
         </header>
@@ -139,10 +139,7 @@ export default function SuggestionModule() {
                         {s.participation}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button className="btn-ghost" style={{ fontSize: '12px', padding: '8px 16px' }}>Archive</button>
-                      <button className="btn-primary" style={{ fontSize: '12px', padding: '8px 16px' }}>Review Input</button>
-                    </div>
+
                   </div>
                 </div>
               ))

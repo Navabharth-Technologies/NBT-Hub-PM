@@ -110,9 +110,9 @@ export default function LeaveRequestDetail() {
         const requireL2 = !isHRReq;
         const requireL3 = !isHRReq; // For HR, only L2 (CEO) is required
 
-        const isFullyApproved = targetStatus === 'APPROVED' && 
-          (!requireL1 || willBeL1) && 
-          (!requireL2 || willBeL2) && 
+        const isFullyApproved = targetStatus === 'APPROVED' &&
+          (!requireL1 || willBeL1) &&
+          (!requireL2 || willBeL2) &&
           (!requireL3 || willBeL3);
 
         if (isFullyApproved) {
@@ -120,16 +120,16 @@ export default function LeaveRequestDetail() {
             const leaveDate = new Date(request?.startDate);
             const month = isNaN(leaveDate.getTime()) ? 4 : leaveDate.getMonth() + 1;
             const year = isNaN(leaveDate.getTime()) ? 2026 : leaveDate.getFullYear();
-            
+
             const statsRes = await fetch(`${API_ENDPOINTS.ADMIN_LEAVE_STATS}?month=${month}&year=${year}`, {
               headers: { 'Authorization': `Bearer ${user?.token || localStorage.getItem('token')}` }
             });
-            
+
             if (statsRes.ok) {
               const statsData = await statsRes.json();
               const allStats = Array.isArray(statsData) ? statsData : (statsData.stats || statsData.data || []);
               const empStat = allStats.find(s => String(s.employee_id || s.user_id) === String(request?.empCode));
-              
+
               let cl = parseFloat(empStat?.leaves_taken || 0);
               let lop = parseFloat(empStat?.LOP || 0);
               let available = parseFloat(empStat?.leaves_available || 0);
@@ -145,7 +145,7 @@ export default function LeaveRequestDetail() {
 
               await fetch(API_ENDPOINTS.ADMIN_LEAVE_STATS_UPDATE, {
                 method: 'PUT',
-                headers: { 
+                headers: {
                   'Content-Type': 'application/json',
                   'Authorization': `Bearer ${user?.token || localStorage.getItem('token')}`
                 },
@@ -249,13 +249,13 @@ export default function LeaveRequestDetail() {
           const masterEmp = Array.isArray(empData) ? empData.find(e => {
             const eid = cleanId(e.id || e.EmpID || e.employee_id || e.userId || e.emp_id);
             if (eid && targetId && eid === targetId) return true;
-            
+
             // Fallback to name matching if IDs don't match exactly
             const eName = String(e.name || e.user_name || '').toLowerCase().trim();
             const fName = String(found.employee_name || found.name || found.full_name || '').toLowerCase().trim();
             return eName && fName && eName === fName;
           }) : null;
-          
+
           // Attempt to fetch fresh profile data for the most accurate photo
           let freshProfile = null;
           try {
@@ -266,11 +266,11 @@ export default function LeaveRequestDetail() {
               const pData = await profileRes.json();
               freshProfile = Array.isArray(pData) ? pData[0] : (pData.data || pData);
             }
-          } catch (e) {}
+          } catch (e) { }
 
-          const finalPic = freshProfile?.profile_picture || freshProfile?.profile_pic || freshProfile?.ProfilePic || 
-                          masterEmp?.profile_picture || masterEmp?.profile_pic || masterEmp?.ProfilePic || 
-                          found.profile_pic || found.profilePic || found.profile_picture;
+          const finalPic = freshProfile?.profile_picture || freshProfile?.profile_pic || freshProfile?.ProfilePic ||
+            masterEmp?.profile_picture || masterEmp?.profile_pic || masterEmp?.ProfilePic ||
+            found.profile_pic || found.profilePic || found.profile_picture;
 
           const resolvedRole = (freshProfile?.designation || freshProfile?.role || masterEmp?.role || masterEmp?.designation || found.user_role || found.designation || found.role || 'Employee').toUpperCase();
           const isLeadRequester = resolvedRole.includes('LEAD') || resolvedRole.includes('MANAGER') || resolvedRole.includes('CEO') || resolvedRole.includes('ADMIN');
@@ -297,19 +297,26 @@ export default function LeaveRequestDetail() {
           ].filter(Boolean).join(',');
 
           const isHRRequester = resolvedRole === 'HR' || resolvedRole.includes('HUMAN RESOURCE');
-          
+
           // Resolve CEO name dynamically
-          const ceoUser = Array.isArray(empData) ? empData.find(e => 
-            String(e.role || '').toUpperCase().includes('CEO') || 
+          const ceoUser = Array.isArray(empData) ? empData.find(e =>
+            String(e.role || '').toUpperCase().includes('CEO') ||
             String(e.name || '').toLowerCase().includes('dinesh') ||
             String(e.full_name || '').toLowerCase().includes('dinesh')
           ) : null;
           const ceoName = ceoUser ? (ceoUser.name || ceoUser.full_name) : 'Dinesh';
 
+          // Resolve HR name dynamically from employee ID 202515
+          const hrUser = Array.isArray(empData) ? empData.find(e => {
+            const eid = String(e.employee_id || e.id || e.EmpID || '').trim();
+            return eid === '202515';
+          }) : null;
+          const dynamicHRName = hrUser ? (hrUser.name || hrUser.full_name) : '';
+
           // Resolve RM for Project Managers (Dinesh)
           let dynamicPMName = found.l3_name || 'Anish V N';
           const isPMRequester = resolvedRole.includes('PROJECT MANAGER') || resolvedRole === 'PM';
-          
+
           if (isPMRequester || isHRRequester) {
             const rmDinesh = Array.isArray(empData) ? empData.find(e =>
               String(e.name || '').toLowerCase().includes('dinesh') ||
@@ -334,7 +341,7 @@ export default function LeaveRequestDetail() {
             profile_pic: finalPic,
             approvals: {
               l1: { name: dynamicLeadName, status: resolveStatus(pickStatus(found.rm_status, found.l1_status)), stage: 'L1' },
-              l2: { name: isHRRequester ? ceoName : (found.l2_name || 'Sinchana Hs'), status: resolveStatus(pickStatus(found.hr_status, found.l2_status)), stage: 'L2' },
+              l2: { name: isHRRequester ? ceoName : (found.l2_name || dynamicHRName), status: resolveStatus(pickStatus(found.hr_status, found.l2_status)), stage: 'L2' },
               l3: { name: dynamicPMName, status: resolveStatus(pickStatus(found.pm_status, found.l3_status, found.manager_status)), stage: 'L3' }
             }
           });
@@ -384,25 +391,25 @@ export default function LeaveRequestDetail() {
           <div style={{ display: 'flex', flexDirection: winWidth < 600 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 600 ? 'center' : 'flex-start', marginBottom: '40px', gap: '20px' }}>
             <div style={{ display: 'flex', flexDirection: winWidth < 480 ? 'column' : 'row', gap: '20px', alignItems: 'center', textAlign: winWidth < 480 ? 'center' : 'left' }}>
               <div style={{ width: winWidth < 768 ? '60px' : '80px', height: winWidth < 768 ? '60px' : '80px', borderRadius: '24px', background: '#0f172a', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '950', flexShrink: 0, overflow: 'hidden' }}>
-                  {(() => {
-                    const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
-                    const empId = cleanId(request.user_id || request.emp_id || request.employee_id || request.id);
-                    const photoUrl = request.profile_pic ? (request.profile_pic.startsWith('http') || request.profile_pic.startsWith('data:') ? request.profile_pic : `${BASE_URL}${request.profile_pic.startsWith('/') ? '' : '/'}${request.profile_pic}`) : `${BASE_URL}/api/users/${empId}/photo`;
-                    
-                    return (
-                      <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                        <img 
-                          src={photoUrl} 
-                          alt={request.employeeName} 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '20px' }}
-                          onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                        />
-                        <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', fontSize: '32px', fontWeight: '900', borderRadius: '20px' }}>
-                          {request.employeeName ? request.employeeName.charAt(0).toUpperCase() : 'A'}
-                        </div>
+                {(() => {
+                  const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
+                  const empId = cleanId(request.user_id || request.emp_id || request.employee_id || request.id);
+                  const photoUrl = request.profile_pic ? (request.profile_pic.startsWith('http') || request.profile_pic.startsWith('data:') ? request.profile_pic : `${BASE_URL}${request.profile_pic.startsWith('/') ? '' : '/'}${request.profile_pic}`) : `${BASE_URL}/api/users/${empId}/photo`;
+
+                  return (
+                    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                      <img
+                        src={photoUrl}
+                        alt={request.employeeName}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '20px' }}
+                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                      />
+                      <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: 'white', fontSize: '32px', fontWeight: '900', borderRadius: '20px' }}>
+                        {request.employeeName ? request.employeeName.charAt(0).toUpperCase() : 'A'}
                       </div>
-                    );
-                  })()}
+                    </div>
+                  );
+                })()}
               </div>
               <div>
                 <h1 style={{ fontSize: winWidth < 768 ? '20px' : '24px', fontWeight: '950', color: '#0f172a', margin: 0 }}>{request.employeeName}</h1>
@@ -532,7 +539,7 @@ export default function LeaveRequestDetail() {
             const isHRReqLocal = reqRole === 'HR' || reqRole.includes('HUMAN RESOURCE');
             const currentUserRole = (user?.role || '').toUpperCase();
             const isCEO = currentUserRole.includes('CEO') || currentUserRole.includes('ADMIN') || String(user?.name || user?.full_name || '').toUpperCase().includes('DINESH');
-            
+
             if (isHRReqLocal && !isCEO) return null;
 
             return (
@@ -630,8 +637,8 @@ export default function LeaveRequestDetail() {
                 lineHeight: '1.5',
                 fontWeight: '700'
               }}>
-                {modalState.type === 'APPROVED' 
-                  ? 'The leave request has been approved successfully.' 
+                {modalState.type === 'APPROVED'
+                  ? 'The leave request has been approved successfully.'
                   : 'The leave request has been rejected successfully.'}
               </p>
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>

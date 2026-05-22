@@ -21,6 +21,9 @@ export default function AssetsManagement() {
   const [selectedDept, setSelectedDept] = useState('All');
   const [editModal, setEditModal] = useState({ show: false, employee: null, isReadOnly: false });
   const [availableAssetsModal, setAvailableAssetsModal] = useState(false);
+  const [availableStockModal, setAvailableStockModal] = useState(false);
+  const [stockSearch, setStockSearch] = useState('');
+  const [stockCategory, setStockCategory] = useState('All');
   const [saving, setSaving] = useState(false);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [showToast, setShowToast] = useState(false);
@@ -467,6 +470,13 @@ export default function AssetsManagement() {
           </div>
           <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto', flexDirection: winWidth < 480 ? 'column' : 'row' }}>
             <button
+              onClick={() => setAvailableStockModal(true)}
+              style={{ flex: 1, background: 'white', color: '#0ea5e9', border: '2px solid #0ea5e9', padding: '12px 20px', borderRadius: '14px', fontWeight: '800', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all 0.3s' }}
+            >
+              <Sparkles size={16} />
+              Available Assets
+            </button>
+            <button
               onClick={() => setAvailableAssetsModal(true)}
               style={{ flex: 1, background: 'white', color: '#3163aa', border: '2px solid #3163aa', padding: '12px 20px', borderRadius: '14px', fontWeight: '800', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all 0.3s' }}
             >
@@ -503,16 +513,6 @@ export default function AssetsManagement() {
               style={{ width: '100%', padding: '12px 15px 12px 45px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', background: 'white', fontFamily: "'Outfit', sans-serif", fontSize: '14px' }}
             />
           </div>
-          <select
-            value={selectedDept}
-            onChange={(e) => setSelectedDept(e.target.value)}
-            style={{ width: winWidth < 768 ? '100%' : '180px', padding: '12px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: 'white', fontWeight: '600', color: '#1e293b', fontFamily: "'Outfit', sans-serif", fontSize: '14px' }}
-          >
-            <option value="All">All Units</option>
-            <option value="Technical Support">Support Sigma</option>
-            <option value="Development">Development Devildog</option>
-            <option value="Marketing">Growth Bravo</option>
-          </select>
         </div>
 
         {winWidth < 1024 ? (
@@ -1075,6 +1075,204 @@ export default function AssetsManagement() {
               <div style={{ fontSize: '20px' }}>ℹ️</div>
               <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', lineHeight: '1.5' }}>
                 This directory shows all employees who have already submitted their asset details. Click on any card to view their complete hardware inventory.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Available Stock Inventory Modal */}
+      {availableStockModal && (
+        <div className="modal-overlay" style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000
+        }}>
+          <div className="modal-content animate-slide-up" style={{
+            background: 'white', borderRadius: '30px', width: '95%', maxWidth: '850px',
+            padding: '35px', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif"
+          }}>
+            <button
+              onClick={() => {
+                setAvailableStockModal(false);
+                setStockSearch('');
+                setStockCategory('All');
+              }}
+              style={{ position: 'absolute', top: '25px', right: '25px', background: '#f1f5f9', border: 'none', borderRadius: '50%', padding: '8px', cursor: 'pointer', color: '#64748b', zIndex: 10 }}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ textAlign: 'center', marginBottom: '25px', flexShrink: 0 }}>
+              <div style={{ background: '#e0f2fe', width: '60px', height: '60px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
+                <Sparkles size={30} color="#0284c7" />
+              </div>
+              <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', margin: '0 0 6px 0' }}>Available Stock Inventory</h2>
+              <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Deployable hardware assets currently in storage & ready for assignment</p>
+            </div>
+
+            {/* Controls */}
+            <div style={{ display: 'flex', flexDirection: winWidth < 600 ? 'column' : 'row', gap: '15px', marginBottom: '20px', flexShrink: 0 }}>
+              <div style={{ flex: 1, position: 'relative' }}>
+                <Search size={16} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input
+                  type="text"
+                  placeholder="Search available hardware..."
+                  value={stockSearch}
+                  onChange={(e) => setStockSearch(e.target.value)}
+                  style={{ width: '100%', padding: '10px 15px 10px 40px', borderRadius: '12px', border: '1px solid #e2e8f0', outline: 'none', fontSize: '13px', fontFamily: "'Outfit', sans-serif" }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: winWidth < 600 ? '8px' : '0' }}>
+                {['All', 'Laptops', 'Keyboards', 'Mice', 'Mobiles', 'Accessories', 'Others'].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setStockCategory(cat)}
+                    style={{
+                      padding: '8px 16px', borderRadius: '10px', border: 'none',
+                      background: stockCategory === cat ? '#0ea5e9' : '#f1f5f9',
+                      color: stockCategory === cat ? 'white' : '#475569',
+                      fontWeight: '800', fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Grid of Stock Items */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '5px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: winWidth < 500 ? '1fr' : (winWidth < 800 ? '1fr 1fr' : '1fr 1fr 1fr'), gap: '15px' }}>
+                {[
+                  { id: 'STK-001', name: 'MacBook Pro 16" (M3 Max, 36GB, 1TB)', category: 'Laptops', qty: 5, specs: 'Apple M3 Max, Space Black, Liquid Retina XDR', status: 'In Stock' },
+                  { id: 'STK-002', name: 'Dell XPS 15 9530', category: 'Laptops', qty: 3, specs: 'Intel i9, 32GB RAM, 1TB SSD, RTX 4070', status: 'In Stock' },
+                  { id: 'STK-003', name: 'Lenovo ThinkPad X1 Carbon Gen 11', category: 'Laptops', qty: 2, specs: 'Intel i7, 16GB RAM, 512GB SSD', status: 'Low Stock' },
+                  { id: 'STK-004', name: 'Logitech MX Keys S Keyboard', category: 'Keyboards', qty: 15, specs: 'Tactile quiet, backlit keys, Bluetooth/Logi Bolt', status: 'In Stock' },
+                  { id: 'STK-005', name: 'Keychron K2 Mechanical Keyboard', category: 'Keyboards', qty: 6, specs: 'Gateron Brown, RGB Backlit, 84-key', status: 'In Stock' },
+                  { id: 'STK-006', name: 'Logitech MX Master 3S Mouse', category: 'Mice', qty: 12, specs: '8K DPI, Quiet Clicks, Darkfield tracking', status: 'In Stock' },
+                  { id: 'STK-007', name: 'Apple Magic Mouse 2', category: 'Mice', qty: 8, specs: 'Wireless, Multi-Touch surface, Rechargeable', status: 'In Stock' },
+                  { id: 'STK-008', name: 'Alumode Adjustable Laptop Stand', category: 'Accessories', qty: 20, specs: 'Ergonomic aluminum, 6 levels adjustable', status: 'In Stock' },
+                  { id: 'STK-009', name: 'SanDisk Ultra 128GB USB 3.0', category: 'Accessories', qty: 35, specs: 'Dual drive USB Type-C & Type-A', status: 'In Stock' },
+                  { id: 'STK-010', name: 'iPhone 15 Pro 256GB', category: 'Mobiles', qty: 2, specs: 'Titanium Grey, A17 Pro Chip, 48MP camera', status: 'Low Stock' },
+                  { id: 'STK-011', name: 'Samsung Galaxy S24 Ultra', category: 'Mobiles', qty: 3, specs: '512GB, Titanium Yellow, S-Pen included', status: 'In Stock' },
+                  { id: 'STK-012', name: 'Logitech Brio 4K Webcam', category: 'Others', qty: 8, specs: '4K Ultra HD, HDR, RightLight 3 auto-focus', status: 'In Stock' },
+                  { id: 'STK-013', name: 'Jabra Evolve2 65 Headset', category: 'Others', qty: 10, specs: 'Noise cancelling, wireless bluetooth, charging stand', status: 'In Stock' },
+                ].filter(item => {
+                  const matchesSearch = item.name.toLowerCase().includes(stockSearch.toLowerCase()) ||
+                    item.specs.toLowerCase().includes(stockSearch.toLowerCase()) ||
+                    item.id.toLowerCase().includes(stockSearch.toLowerCase());
+                  const matchesCategory = stockCategory === 'All' || item.category === stockCategory;
+                  return matchesSearch && matchesCategory;
+                }).map((item, idx) => {
+                  const isLow = item.status === 'Low Stock';
+                  const badgeColor = isLow ? '#f59e0b' : '#10b981';
+                  const badgeBg = isLow ? '#fffbeb' : '#f0fdf4';
+
+                  // Dynamic icon selection
+                  let itemIcon = <Package size={16} />;
+                  if (item.category === 'Laptops') itemIcon = <Laptop size={16} />;
+                  else if (item.category === 'Keyboards') itemIcon = <Keyboard size={16} />;
+                  else if (item.category === 'Mice') itemIcon = <MousePointer size={16} />;
+                  else if (item.category === 'Mobiles') itemIcon = <Smartphone size={16} />;
+                  else if (item.category === 'Accessories') itemIcon = <HardDrive size={16} />;
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        background: '#f8fafc',
+                        border: '1.5px solid #e2e8f0',
+                        borderRadius: '20px',
+                        padding: '18px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.01)'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.borderColor = '#0ea5e9';
+                        e.currentTarget.style.boxShadow = '0 8px 16px rgba(14, 165, 233, 0.05)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.01)';
+                      }}
+                    >
+                      <div>
+                        {/* Stock Item Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '800' }}>{item.id}</span>
+                          <span style={{ fontSize: '9px', fontWeight: '900', color: badgeColor, background: badgeBg, padding: '2px 8px', borderRadius: '6px', letterSpacing: '0.5px' }}>
+                            {item.qty} Qty
+                          </span>
+                        </div>
+
+                        {/* Details */}
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                          <div style={{ background: 'white', padding: '8px', borderRadius: '10px', color: '#0ea5e9', border: '1px solid #e2e8f0' }}>
+                            {itemIcon}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '800', fontSize: '13px', color: '#1e293b', lineHeight: '1.4', marginBottom: '4px' }}>
+                              {item.name}
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>
+                              {item.specs}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action */}
+                      <button
+                        onClick={() => {
+                          setAvailableStockModal(false);
+                          setStockSearch('');
+                          setStockCategory('All');
+                          
+                          // Pre-fill the form based on item category
+                          setForm({
+                            employee_name: '', employee_id: '', designation: '', joining_date: '', last_working_date: '',
+                            laptop_details: item.category === 'Laptops' ? item.name : '',
+                            mouse: item.category === 'Mice' ? 'Yes' : 'No',
+                            keyboard: item.category === 'Keyboards' ? 'Yes' : 'No',
+                            laptop_stand: item.name.toLowerCase().includes('stand') ? 'Yes' : 'No',
+                            ruf_pad: 'No', pendrive: item.name.toLowerCase().includes('sandisk') ? 'Yes' : 'No',
+                            mobile: item.category === 'Mobiles' ? 'Yes' : 'No',
+                            camera: item.name.toLowerCase().includes('webcam') ? 'Yes' : 'No',
+                            earphone: item.name.toLowerCase().includes('headset') ? 'Yes' : 'No',
+                            tablet: 'No'
+                          });
+                          setEditModal({ show: true, employee: { is_new: true, name: '' } });
+                        }}
+                        style={{
+                          width: '100%', padding: '8px 0', borderRadius: '10px', border: 'none',
+                          background: '#e0f2fe', color: '#0284c7', fontSize: '11px', fontWeight: '800',
+                          cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px'
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.background = '#0ea5e9'; e.currentTarget.style.color = 'white'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.background = '#e0f2fe'; e.currentTarget.style.color = '#0284c7'; }}
+                      >
+                        <Plus size={12} /> Assign Hardware
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Info Footer */}
+            <div style={{ marginTop: '20px', padding: '15px', background: '#f0f9ff', borderRadius: '15px', border: '1px solid #e0f2fe', display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
+              <div style={{ fontSize: '16px' }}>💡</div>
+              <div style={{ fontSize: '11px', color: '#0369a1', fontWeight: '600', lineHeight: '1.4' }}>
+                Select an item and click <b>Assign Hardware</b> to automatically initiate a pre-filled configuration setup for new or existing employees.
               </div>
             </div>
           </div>

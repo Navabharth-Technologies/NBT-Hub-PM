@@ -6,7 +6,38 @@ import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config';
-import './PMDashboard.css';
+const toDisplayDate = (dateStr) => {
+  if (!dateStr) return '';
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
+  try {
+    const cleanDate = dateStr.split('T')[0];
+    const parts = cleanDate.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      const [y, m, d] = parts;
+      return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+    }
+  } catch (e) {
+    console.error('Error formatting display date:', e);
+  }
+  return dateStr;
+};
+
+const toISODate = (dateStr) => {
+  if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  try {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const [d, m, y] = parts;
+      if (y.length === 4) {
+        return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+      }
+    }
+  } catch (e) {
+    console.error('Error formatting ISO date:', e);
+  }
+  return dateStr;
+};
 
 export default function NewJoineeModule() {
   const navigate = useNavigate();
@@ -175,11 +206,12 @@ export default function NewJoineeModule() {
       // Only allow letters and spaces
       filteredValue = value.replace(/[^a-zA-Z\s]/g, '');
     } else if (name === 'phone_number') {
-      // Only allow numbers and cap at 10 digits
-      filteredValue = value.replace(/\D/g, '');
-      if (filteredValue.length > 10) {
-        filteredValue = filteredValue.slice(0, 10);
+      // Only allow numbers, must start with 9, 8, 7, or 6, and cap at 10 digits
+      let digits = value.replace(/\D/g, '');
+      if (digits.length > 0 && !['9', '8', '7', '6'].includes(digits[0])) {
+        digits = formData.phone_number || '';
       }
+      filteredValue = digits.slice(0, 10);
     } else if (name === 'employee_id') {
       // Alphanumeric only
       filteredValue = value.replace(/[^a-zA-Z0-9]/g, '');
@@ -195,6 +227,52 @@ export default function NewJoineeModule() {
         }
       }
       filteredValue = digits;
+    } else if (name === 'joining_date') {
+      // DD/MM/YYYY formatting with validation rules
+      let clean = value.replace(/[^0-9]/g, '');
+      clean = clean.slice(0, 8);
+      
+      let dd = clean.slice(0, 2);
+      let mm = clean.slice(2, 4);
+      let yyyy = clean.slice(4, 8);
+      
+      if (dd.length === 2) {
+        const ddVal = parseInt(dd, 10);
+        if (ddVal > 31 || ddVal === 0) {
+          dd = '31';
+        }
+      } else if (dd.length === 1) {
+        const ddVal = parseInt(dd, 10);
+        if (ddVal > 3) {
+          dd = '0' + dd;
+        }
+      }
+      
+      if (mm.length === 2) {
+        const mmVal = parseInt(mm, 10);
+        if (mmVal > 12 || mmVal === 0) {
+          mm = '12';
+        }
+      } else if (mm.length === 1) {
+        const mmVal = parseInt(mm, 10);
+        if (mmVal > 1) {
+          mm = '0' + mm;
+        }
+      }
+      
+      const validatedDigits = dd + mm + yyyy;
+      let formatted = '';
+      if (validatedDigits.length > 0) {
+        formatted += validatedDigits.slice(0, 2);
+      }
+      if (validatedDigits.length > 2) {
+        formatted += '/' + validatedDigits.slice(2, 4);
+      }
+      if (validatedDigits.length > 4) {
+        formatted += '/' + validatedDigits.slice(4, 8);
+      }
+      
+      filteredValue = formatted;
     } else if (name === 'email_id') {
       const atIndex = value.indexOf('@');
       if (atIndex !== -1) {
@@ -233,7 +311,7 @@ export default function NewJoineeModule() {
       name: joinee.name || '',
       email_id: joinee.email_id || joinee.emailId || joinee.email || '',
       role: joinee.role || joinee.Designation || '',
-      joining_date: joinee.joining_date || joinee.joiningDate ? new Date(joinee.joining_date || joinee.joiningDate).toISOString().split('T')[0] : '',
+      joining_date: toDisplayDate(joinee.joining_date || joinee.joiningDate),
       employee_id: empId,
       reporting_manager: existingManager ? (existingManager.employee_id || existingManager.name) : (joinee.Reporting_manager_id || joinee.reporting_manager_id || joinee.Reporting_manager || joinee.reporting_manager || joinee.manager || ''),
       phone_number: joinee.phone_number || joinee.phone || joinee.contact_no || '',
@@ -263,8 +341,8 @@ export default function NewJoineeModule() {
       return;
     }
 
-    if (formData.phone_number.length !== 10) {
-      setToastMessage('Phone number must be exactly 10 digits');
+    if (formData.phone_number.length !== 10 || !['9', '8', '7', '6'].includes(formData.phone_number[0])) {
+      setToastMessage('Phone number must start with 9, 8, 7, or 6 and be exactly 10 digits');
       setToastType('error');
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 3000);
@@ -275,6 +353,16 @@ export default function NewJoineeModule() {
       setToastMessage('Joining date is required');
       setToastType('error');
       setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 3000);
+      return;
+    }
+
+    const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+    if (!dateRegex.test(formData.joining_date)) {
+      setToastMessage('Joining date must be in DD/MM/YYYY format');
+      setToastType('error');
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 3000);
       return;
     }
 
@@ -303,8 +391,8 @@ export default function NewJoineeModule() {
       emailId: formData.email_id,
       password: 'Intern@' + (generatedEmpId || '123'),
       role: formData.role,
-      joining_date: formData.joining_date,
-      joiningDate: formData.joining_date,
+      joining_date: toISODate(formData.joining_date),
+      joiningDate: toISODate(formData.joining_date),
       intern_id: generatedEmpId,
       internId: generatedEmpId,
       employee_id: generatedEmpId,
@@ -322,7 +410,8 @@ export default function NewJoineeModule() {
       name: formData.name,
       role: formData.role,
       emailId: formData.email_id,
-      joiningDate: formData.joining_date,
+      joiningDate: toISODate(formData.joining_date),
+      joining_date: toISODate(formData.joining_date),
       courseCompletion: 0,
       email_id: formData.email_id,
       employee_id: generatedEmpId,
@@ -761,7 +850,11 @@ export default function NewJoineeModule() {
                   <label style={{ fontSize: '12px', fontWeight: '900', color: '#1e293b', letterSpacing: '0.3px' }}>Joining Date</label>
                   <div style={{ position: 'relative' }}>
                     <input
-                      type="date" name="joining_date" value={formData.joining_date} onChange={handleInputChange}
+                      type="text"
+                      name="joining_date"
+                      placeholder="DD/MM/YYYY"
+                      value={formData.joining_date}
+                      onChange={handleInputChange}
                       required
                       style={{ width: '100%', boxSizing: 'border-box', padding: '12px 18px', borderRadius: '14px', border: '2px solid #e2e8f0', background: '#f8fafc', fontWeight: '800', fontSize: '13px', outline: 'none', color: '#0B1E3F' }}
                     />

@@ -74,8 +74,36 @@ const getWorkHrs = (inTime, outTime, recordDate) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
+const parseTimeStr = (tStr) => {
+  if (!tStr || tStr === '----' || tStr === '--:--' || tStr.includes('00:00')) return -1;
+  let s = String(tStr).trim();
+  let isPM = s.toUpperCase().includes('PM');
+  let isAM = s.toUpperCase().includes('AM');
+  s = s.replace(/[^\d:]/g, '');
+  let parts = s.split(':');
+  if (parts.length < 2) return -1;
+  let h = parseInt(parts[0], 10);
+  let m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return -1;
+  if (isPM && h < 12) h += 12;
+  if (isAM && h === 12) h = 0;
+  return h * 60 + m;
+};
+
 const getDBStatusLabel = (log, cleanLog) => {
   if (!log) return 'Absent';
+
+  // Dynamic time-based Half Day override
+  const punchIn = log.in_time || log.INTime || log.PunchIn || log.punch_time || (cleanLog && cleanLog.displayInTime) || '----';
+  const punchOut = log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric || (cleanLog && cleanLog.displayOutTime) || '----';
+  const pIn = parseTimeStr(punchIn);
+  const pOut = parseTimeStr(punchOut);
+
+  const isHalfDayTime = (pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60));
+  if (isHalfDayTime) {
+    return 'Half day';
+  }
+
   const rawStatus = String(log.status || log.remark || '').trim();
   if (!rawStatus) {
     return (cleanLog && cleanLog.displayInTime !== '----') ? 'In Office' : 'Absent';
@@ -117,6 +145,7 @@ const getStatusStyles = (statusText) => {
     color: '#ef4444'
   };
 };
+
 
 export default function AttendanceManagement() {
   const navigate = useNavigate();
@@ -329,7 +358,8 @@ export default function AttendanceManagement() {
         .then(res => res.json())
         .then(data => {
           if (Array.isArray(data)) {
-            const sorted = [...data].sort((a, b) => {
+            const filtered = data.filter(emp => String(emp.employee_id || emp.id || '').trim() !== '20250');
+            const sorted = [...filtered].sort((a, b) => {
               const idA = parseInt(String(a.employee_id || a.id || '').replace(/[^\d]/g, ''), 10) || 0;
               const idB = parseInt(String(b.employee_id || b.id || '').replace(/[^\d]/g, ''), 10) || 0;
               if (idA !== idB) return idA - idB;
@@ -371,7 +401,7 @@ export default function AttendanceManagement() {
       const masterLogs = logsData.data || logsData.attendance || logsData.logs || logsData;
 
       if (Array.isArray(masterLogs)) {
-        const validLogs = masterLogs.filter(l => l !== null);
+        const validLogs = masterLogs.filter(l => l !== null && String(l?.user_id || l?.Empcode || l?.EmpID || '').trim() !== '20250');
         setAttendanceLogs(validLogs);
 
         const todayStr = new Date().toISOString().split('T')[0];
@@ -392,19 +422,38 @@ export default function AttendanceManagement() {
           const lastLog = myTodayLogs[myTodayLogs.length - 1];
 
           const in_time = firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time || firstLog?.PunchTime;
-          let out_time = '----';
+          
+          const checkHasPunchOut = (record) => {
+            if (!record) return null;
+            const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric || record.PunchTime || record.punch_time;
+            return (outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00') ? outVal : null;
+          };
 
+          let out_time = '----';
           if (lastLog && lastLog !== firstLog) {
-            out_time = lastLog?.out_time || lastLog?.OUTTime || lastLog?.PunchOut || lastLog?.punch_time || lastLog?.PunchTime || '----';
-          } else if (firstLog?.out_time && firstLog?.out_time !== '----') {
-            out_time = firstLog.out_time;
+            out_time = checkHasPunchOut(lastLog) || checkHasPunchOut(firstLog) || '----';
+          } else {
+            out_time = checkHasPunchOut(firstLog) || '----';
+          }
+
+          const outLocVal = (logRec) => {
+            if (!logRec) return null;
+            const locVal = logRec.punchout_location || logRec.out_location || logRec.location || logRec.PunchOut_location || logRec.in_location || logRec.punchin_location;
+            return (locVal && locVal !== '----') ? locVal : null;
+          };
+
+          let out_loc = '----';
+          if (lastLog && lastLog !== firstLog) {
+            out_loc = outLocVal(lastLog) || outLocVal(firstLog) || '----';
+          } else {
+            out_loc = outLocVal(firstLog) || '----';
           }
 
           setPersonalAttendance({
             ...firstLog,
             in_time: in_time && in_time !== '----' ? in_time : null,
             out_time: out_time || '----',
-            PunchOut_location: lastLog?.out_location || lastLog?.PunchOut_location || lastLog?.location || firstLog?.out_location || '----'
+            PunchOut_location: out_loc || '----'
           });
         } else {
           setPersonalAttendance(null);
@@ -598,7 +647,13 @@ export default function AttendanceManagement() {
         log.in_time || log.INTime || '----',
         log.out_time || log.OUTTime || '----',
         log.work_time || log.work_hrs || '00:00',
-        (log.in_time || log.INTime) ? (log.status || 'PRESENT') : 'ABSENT',
+        (() => {
+          const pIn = parseTimeStr(log.in_time || log.INTime || log.PunchIn || log.punch_time);
+          const pOut = parseTimeStr(log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric);
+          const isHalfDayTime = (pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60));
+          if (isHalfDayTime) return 'HALF_DAY';
+          return (log.in_time || log.INTime) ? (log.status || 'PRESENT') : 'ABSENT';
+        })(),
         log.punchin_location || log.in_location || log.PunchIn_location || log.location || '----',
         log.punchout_location || log.out_location || log.PunchOut_location || '----'
       ];
@@ -638,7 +693,13 @@ export default function AttendanceManagement() {
         log.in_time || log.INTime || '----',
         log.out_time || log.OUTTime || '----',
         log.work_time || log.work_hrs || '00:00',
-        (log.in_time || log.INTime) ? (log.status || 'PRESENT') : 'ABSENT',
+        (() => {
+          const pIn = parseTimeStr(log.in_time || log.INTime || log.PunchIn || log.punch_time);
+          const pOut = parseTimeStr(log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric);
+          const isHalfDayTime = (pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60));
+          if (isHalfDayTime) return 'HALF_DAY';
+          return (log.in_time || log.INTime) ? (log.status || 'PRESENT') : 'ABSENT';
+        })(),
         log.punchin_location || log.in_location || log.PunchIn_location || log.location || '----',
         log.punchout_location || log.out_location || log.PunchOut_location || '----'
       ];
@@ -668,22 +729,6 @@ export default function AttendanceManagement() {
     const uniquePresentToday = new Set(todayLogs.map(l => String(l?.user_id || l?.Empcode || l?.EmpID || ''))).size;
     const presentCount = uniquePresentToday;
 
-    const parseTimeStr = (tStr) => {
-      if (!tStr || tStr === '----' || tStr === '--:--' || tStr.includes('00:00')) return -1;
-      let s = String(tStr).trim();
-      let isPM = s.toUpperCase().includes('PM');
-      let isAM = s.toUpperCase().includes('AM');
-      s = s.replace(/[^\d:]/g, '');
-      let parts = s.split(':');
-      if (parts.length < 2) return -1;
-      let h = parseInt(parts[0], 10);
-      let m = parseInt(parts[1], 10);
-      if (isNaN(h) || isNaN(m)) return -1;
-      if (isPM && h < 12) h += 12;
-      if (isAM && h === 12) h = 0;
-      return h * 60 + m;
-    };
-
     const lateLogins = (attendanceLogs || []).filter(l => {
       const pIn = parseTimeStr(l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time);
       if (pIn === -1) return false;
@@ -694,7 +739,7 @@ export default function AttendanceManagement() {
       const pIn = parseTimeStr(l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time);
       const pOut = parseTimeStr(l?.out_time || l?.OUTTime || l?.PunchOut || l?.punch_time_out || l?.out_time_biometric);
       if (pIn !== -1 && pIn > (13 * 60 + 30)) return true;
-      if (pOut !== -1 && pOut > (14 * 60 + 30) && pOut < (17 * 60)) return true;
+      if (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60)) return true;
       return false;
     });
 
@@ -822,15 +867,47 @@ export default function AttendanceManagement() {
               </div>
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <div style={{ fontSize: winWidth < 768 ? '17px' : '20px', fontWeight: '950', color: '#0f172a', marginBottom: '1px' }}>Shift Status</div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: '10px', fontWeight: '950', color: (personalAttendance?.in_time && personalAttendance.in_time !== '----') ? '#16a34a' : '#0d0d0dff', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '2px' }}>
-                    {(personalAttendance?.in_time && personalAttendance.in_time !== '----') ? 'In Office' : 'Offline'}
-                  </div>
-                  {(personalAttendance?.in_time && personalAttendance.in_time !== '----') && (
-                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#1e293b' }}>
-                      Punch in: {personalAttendance.in_time}
-                    </div>
-                  )}
+                <div style={{
+                  fontSize: '10px',
+                  fontWeight: '950',
+                  color: (() => {
+                    if (!personalAttendance?.in_time || personalAttendance.in_time === '----') return '#ef4444';
+                    const hasOut = personalAttendance.out_time && 
+                                   personalAttendance.out_time !== '----' && 
+                                   personalAttendance.out_time !== '--:--' && 
+                                   personalAttendance.out_time !== '00:00' && 
+                                   personalAttendance.out_time !== '00:00:00';
+                    if (hasOut) {
+                      const pIn = parseTimeStr(personalAttendance.in_time);
+                      const pOut = parseTimeStr(personalAttendance.out_time);
+                      if ((pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60))) {
+                        return '#f97316';
+                      }
+                      return '#64748b';
+                    }
+                    return '#16a34a';
+                  })(),
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.8px',
+                  marginBottom: '4px'
+                }}>
+                  {(() => {
+                    if (!personalAttendance?.in_time || personalAttendance.in_time === '----') return 'Offline';
+                    const hasOut = personalAttendance.out_time && 
+                                   personalAttendance.out_time !== '----' && 
+                                   personalAttendance.out_time !== '--:--' && 
+                                   personalAttendance.out_time !== '00:00' && 
+                                   personalAttendance.out_time !== '00:00:00';
+                    if (hasOut) {
+                      const pIn = parseTimeStr(personalAttendance.in_time);
+                      const pOut = parseTimeStr(personalAttendance.out_time);
+                      if ((pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60))) {
+                        return 'Half Day';
+                      }
+                      return 'Shift Closed';
+                    }
+                    return 'In Office';
+                  })()}
                 </div>
                 <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '5px', maxWidth: '100%' }}>
                   <MapPin size={11} color="#cbd5e1" /> <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{isLocating ? 'Locating...' : (userLocation || 'Location required')}</span>
@@ -878,10 +955,21 @@ export default function AttendanceManagement() {
                 </div>
               </div>
 
-              {personalAttendance?.in_time && (!personalAttendance?.out_time || personalAttendance?.out_time === '--:--' || personalAttendance?.out_time === '----' || personalAttendance?.out_time === '00:00' || personalAttendance?.out_time === '00:00:00') && (
+              {personalAttendance?.in_time && (
                 <div style={{ textAlign: winWidth < 480 ? 'center' : 'right', minWidth: winWidth < 480 ? '100%' : '140px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Session</div>
-                  <div style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>{elapsedTime}</div>
+                  {(!personalAttendance?.out_time || personalAttendance?.out_time === '--:--' || personalAttendance?.out_time === '----' || personalAttendance?.out_time === '00:00' || personalAttendance?.out_time === '00:00:00') ? (
+                    <>
+                      <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Session</div>
+                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>{elapsedTime}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '4px' }}>Work Hours</div>
+                      <div style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>
+                        {getWorkHrs(personalAttendance.in_time, personalAttendance.out_time, personalAttendance.punch_date || personalAttendance.created_at)}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -941,16 +1029,52 @@ export default function AttendanceManagement() {
                     gap: '10px',
                     padding: '16px 24px',
                     borderRadius: '16px',
-                    background: '#f8fafc',
-                    border: '1.5px solid #e2e8f0',
-                    color: '#475569',
+                    background: (() => {
+                      const pIn = parseTimeStr(personalAttendance?.in_time);
+                      const pOut = parseTimeStr(personalAttendance?.out_time);
+                      if ((pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60))) {
+                        return '#fff7ed';
+                      }
+                      return '#f8fafc';
+                    })(),
+                    border: (() => {
+                      const pIn = parseTimeStr(personalAttendance?.in_time);
+                      const pOut = parseTimeStr(personalAttendance?.out_time);
+                      if ((pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60))) {
+                        return '1.5px solid #fed7aa';
+                      }
+                      return '1.5px solid #e2e8f0';
+                    })(),
+                    color: (() => {
+                      const pIn = parseTimeStr(personalAttendance?.in_time);
+                      const pOut = parseTimeStr(personalAttendance?.out_time);
+                      if ((pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60))) {
+                        return '#f97316';
+                      }
+                      return '#475569';
+                    })(),
                     fontWeight: '950',
                     fontSize: '13px',
                     textTransform: 'uppercase',
                     letterSpacing: '0.5px',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                   }}>
-                    <ShieldCheck size={20} color="#64748b" /> SHIFT CLOSED
+                    {(() => {
+                      const pIn = parseTimeStr(personalAttendance?.in_time);
+                      const pOut = parseTimeStr(personalAttendance?.out_time);
+                      if ((pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60))) {
+                        return (
+                          <>
+                            <Clock size={20} color="#f97316" /> HALF DAY
+                          </>
+                        );
+                      }
+                      return (
+                        <>
+                          <ShieldCheck size={20} color="#64748b" /> SHIFT CLOSED
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -1016,51 +1140,68 @@ export default function AttendanceManagement() {
                 {displayedEmployees.length > 0 ? (
                   displayedEmployees.map((emp, idx) => {
                     const todayStr = new Date().toISOString().split('T')[0];
-                    const dayLogsForEmp = (attendanceLogs || [])
+                    const logsForEmp = (attendanceLogs || [])
                       .filter(l => {
                         if (!l) return false;
-                        const logUserId = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+                        const logId = String(l?.user_id || l?.Empcode || l?.EmpID || l?.userId || l?.UserId || '').trim();
                         const empId = String(emp?.id || '').trim();
-                        return empId && logUserId && (logUserId === empId);
+                        let logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0].split(' ')[0];
+                        if (logDate.includes('-') && logDate.split('-')[0].length !== 4) {
+                          const parts = logDate.split('-');
+                          if (parts.length === 3) logDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        }
+                        return empId && logId && (logId === empId) && (logDate >= fromDate && logDate <= toDate);
                       })
-                      .sort((a, b) => {
-                        const getT = x => new Date(x?.created_at || x?.punch_time || 0).getTime();
-                        return getT(b) - getT(a);
-                      });
+                      .sort((a, b) => new Date(a?.created_at || a?.punch_time) - new Date(b?.created_at || b?.punch_time));
 
-                    const log = dayLogsForEmp[0]; // Latest log for basic info
-                    const firstLogForDay = dayLogsForEmp[dayLogsForEmp.length - 1];
-                    const lastLogForDay = dayLogsForEmp.length > 1 ? dayLogsForEmp[0] : null;
-
-                    const todayLog = (attendanceLogs || []).find(l => {
-                      if (!l) return false;
-                      const logUserId = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
-                      const empId = String(emp?.id || '').trim();
-                      let logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0].split(' ')[0];
-                      if (logDate.includes('-') && logDate.split('-')[0].length !== 4) {
-                        const p = logDate.split('-');
-                        if (p.length === 3) logDate = `${p[2]}-${p[1]}-${p[0]}`;
+                    // 1. Group logs by date to prevent cross-day data leaking
+                    const groupedByDate = (logsForEmp || []).reduce((acc, log) => {
+                      let d = (log.punch_date || log.date || log.created_at || '').split('T')[0].split(' ')[0];
+                      if (d.includes('-') && d.split('-')[0].length !== 4) {
+                        const p = d.split('-');
+                        if (p.length === 3) d = `${p[2]}-${p[1]}-${p[0]}`;
                       }
-                      return empId && logUserId && logUserId === empId && logDate === todayStr;
-                    });
-
-                    const isMultiLog = (attendanceLogs || []).filter(l => {
-                      if (!l) return false;
-                      const logUserId = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
-                      const empId = String(emp?.id || '').trim();
-                      let logDate = (l?.punch_date || l?.date || l?.created_at || '').split('T')[0].split(' ')[0];
-                      if (logDate.includes('-') && logDate.split('-')[0].length !== 4) {
-                        const p = logDate.split('-');
-                        if (p.length === 3) logDate = `${p[2]}-${p[1]}-${p[0]}`;
+                      if (d && d !== '----') {
+                        if (!acc[d]) acc[d] = [];
+                        acc[d].push(log);
                       }
-                      return empId && logUserId && (logUserId === empId) && (logDate === todayStr);
-                    }).length > 1;
+                      return acc;
+                    }, {});
 
-                    const punchIn = firstLogForDay?.in_time || firstLogForDay?.INTime || firstLogForDay?.PunchIn || firstLogForDay?.punch_time || '----';
-                    const punchOut = (todayLog || (isMultiLog && lastLogForDay)) ? (lastLogForDay?.out_time || lastLogForDay?.OUTTime || lastLogForDay?.PunchOut || lastLogForDay?.punch_time || lastLogForDay?.PunchIn || lastLogForDay?.in_time || '----') : '----';
+                    // 2. Get the latest date available in the range for this employee
+                    const dates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+                    const latestDate = dates[0];
+                    const latestDayLogs = groupedByDate[latestDate] || [];
 
-                    const pDate = log?.punch_date || log?.date || log?.created_at;
-                    const workHrs = getWorkHrs(punchIn, punchOut, pDate);
+                    // 3. Sort logs within THAT day only
+                    const sortedDayLogs = latestDayLogs.sort((a, b) => new Date(a.created_at || a.punch_time) - new Date(b.created_at || b.punch_time));
+
+                    const firstLog = sortedDayLogs[0];
+                    const lastLog = sortedDayLogs.length > 1 ? sortedDayLogs[sortedDayLogs.length - 1] : null;
+
+                    const checkHasPunchOut = (record) => {
+                      if (!record) return false;
+                      const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric;
+                      return outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00';
+                    };
+                    const hasDayPunchOut = sortedDayLogs.some(checkHasPunchOut);
+                    const dayPunchOutLog = [...sortedDayLogs].reverse().find(checkHasPunchOut) || lastLog || firstLog;
+                    const dayPunchOutVal = dayPunchOutLog?.out_time || dayPunchOutLog?.OUTTime || dayPunchOutLog?.PunchOut || dayPunchOutLog?.punch_time_out || dayPunchOutLog?.out_time_biometric || '----';
+
+                    const punchIn = firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time || '----';
+                    const punchOut = (latestDate === todayStr && !hasDayPunchOut) ? '----' : dayPunchOutVal;
+                    const pDate = latestDate;
+                    const workHrs = (latestDate === todayStr && !hasDayPunchOut) ? '00:00' : (dayPunchOutLog?.work_hrs || firstLog?.work_hrs || '00:00');
+
+                    const log = firstLog ? {
+                      ...firstLog,
+                      punch_date: latestDate,
+                      in_time: punchIn,
+                      out_time: punchOut,
+                      in_location: firstLog?.punchin_location || firstLog?.in_location || '----',
+                      out_location: (latestDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog?.punchout_location || dayPunchOutLog?.out_location || dayPunchOutLog?.in_location || dayPunchOutLog?.location || '----'),
+                      work_hrs: workHrs
+                    } : null;
 
                     return (
                       <div key={idx} style={{ background: 'white', borderRadius: '24px', padding: '20px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
@@ -1197,14 +1338,23 @@ export default function AttendanceManagement() {
                       const firstLog = sortedDayLogs[0];
                       const lastLog = sortedDayLogs.length > 1 ? sortedDayLogs[sortedDayLogs.length - 1] : null;
 
+                      const checkHasPunchOut = (record) => {
+                        if (!record) return false;
+                        const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric;
+                        return outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00';
+                      };
+                      const hasDayPunchOut = sortedDayLogs.some(checkHasPunchOut);
+                      const dayPunchOutLog = [...sortedDayLogs].reverse().find(checkHasPunchOut) || lastLog || firstLog;
+                      const dayPunchOutVal = dayPunchOutLog?.out_time || dayPunchOutLog?.OUTTime || dayPunchOutLog?.PunchOut || dayPunchOutLog?.punch_time_out || dayPunchOutLog?.out_time_biometric || '----';
+
                       const log = firstLog ? {
                         ...firstLog,
                         punch_date: latestDate,
                         in_time: firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time || '----',
-                        out_time: (latestDate === todayStr && sortedDayLogs.length === 1) ? '----' : (lastLog?.out_time || lastLog?.OUTTime || lastLog?.PunchOut || lastLog?.punch_time || lastLog?.PunchIn || lastLog?.in_time || '----'),
+                        out_time: (latestDate === todayStr && !hasDayPunchOut) ? '----' : dayPunchOutVal,
                         in_location: firstLog?.punchin_location || firstLog?.in_location || '----',
-                        out_location: (latestDate === todayStr && sortedDayLogs.length === 1) ? '----' : (lastLog?.punchout_location || lastLog?.out_location || lastLog?.in_location || lastLog?.location || '----'),
-                        work_hrs: (latestDate === todayStr && sortedDayLogs.length === 1) ? '00:00' : (lastLog?.work_hrs || firstLog?.work_hrs || '00:00')
+                        out_location: (latestDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog?.punchout_location || dayPunchOutLog?.out_location || dayPunchOutLog?.in_location || dayPunchOutLog?.location || '----'),
+                        work_hrs: (latestDate === todayStr && !hasDayPunchOut) ? '00:00' : (dayPunchOutLog?.work_hrs || firstLog?.work_hrs || '00:00')
                       } : null;
 
                       const getCleanAttendance = (record) => {

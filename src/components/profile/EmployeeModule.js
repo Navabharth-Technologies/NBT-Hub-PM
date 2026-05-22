@@ -33,7 +33,8 @@ export default function EmployeeModule() {
         });
         if (response.ok) {
           const data = await response.json();
-          setEmployees(data);
+          const filtered = Array.isArray(data) ? data.filter(emp => String(emp.id || emp.EmpID || '').trim() !== '20250') : [];
+          setEmployees(filtered);
         }
       } catch (err) {
         console.error('Employee fetch error:', err);
@@ -69,29 +70,51 @@ export default function EmployeeModule() {
     doc.setTextColor(100, 116, 139);
     doc.text(`Total Staff Count: ${filteredEmployees.length}`, 14, 30);
     doc.text(`Report Type: Management Overview`, 14, 36);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 42);
+    doc.text(`Generated on: ${new Date().toLocaleString('en-GB')}`, 14, 42);
+
+    const cleanText = (str) => {
+      if (!str) return 'N/A';
+      return String(str)
+        .replace(/[\u200B-\u200D\uFEFF]/g, '') // remove zero-width spaces
+        .replace(/[^\x20-\x7E\s]/g, '') // remove non-ASCII/weird character spacing
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
 
     const tableColumn = ["ID", "Name", "Role", "Team", "Email", "Status"];
     const tableRows = filteredEmployees.map(emp => [
-      emp.id || 'N/A',
-      emp.name || 'N/A',
-      emp.role || 'N/A',
-      emp.team || 'N/A',
-      emp.email || 'N/A',
-      (emp.status || 'Active').toUpperCase()
+      cleanText(emp.id),
+      cleanText(emp.name),
+      cleanText(emp.role),
+      cleanText(emp.team),
+      cleanText(emp.email),
+      cleanText(emp.status || 'Active').toUpperCase()
     ]);
 
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 50,
-      styles: { fontSize: 9, cellPadding: 4, font: 'helvetica' },
+      styles: { 
+        fontSize: 8.5, 
+        cellPadding: { top: 5, bottom: 5, left: 3, right: 3 },
+        valign: 'middle',
+        overflow: 'linebreak'
+      },
+      columnStyles: {
+        0: { cellWidth: 15, halign: 'center' }, // ID
+        1: { cellWidth: 32 },                  // Name
+        2: { cellWidth: 35 },                  // Role
+        3: { cellWidth: 32 },                  // Team
+        4: { cellWidth: 54 },                  // Email
+        5: { cellWidth: 18, halign: 'center' }  // Status
+      },
       headStyles: { fillColor: [49, 99, 170], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [241, 245, 249] },
-      margin: { top: 50 }
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 12, right: 12 }
     });
 
-    doc.save('Employees_of_NBT_PManager.pdf');
+    doc.save('Employees_of_NBT.pdf');
   };
 
   return (
