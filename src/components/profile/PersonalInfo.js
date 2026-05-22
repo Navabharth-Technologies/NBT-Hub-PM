@@ -497,6 +497,156 @@ export default function PersonalInfo({ onBack }) {
       sanitizedValue = formatted;
     }
 
+    if (key === 'separation') {
+      const prevValue = form.separation || '';
+      const isDeleting = prevValue.length > value.length;
+      let clean = value.replace(/\D/g, '');
+
+      if (isDeleting && prevValue.endsWith('/') && !value.endsWith('/')) {
+        if (clean.length > 0) {
+          clean = clean.slice(0, -1);
+        }
+      }
+
+      // Max 8 digits
+      if (clean.length > 8) {
+        clean = clean.slice(0, 8);
+      }
+
+      // Restrict day (dd)
+      if (clean.length >= 1) {
+        const d1 = parseInt(clean.charAt(0), 10);
+        if (d1 > 3) {
+          clean = '0' + clean;
+        }
+      }
+      if (clean.length >= 2) {
+        let dd = clean.slice(0, 2);
+        const ddVal = parseInt(dd, 10);
+        if (ddVal > 31) {
+          dd = '31';
+        } else if (ddVal === 0) {
+          dd = '01';
+        }
+        clean = dd + clean.slice(2);
+      }
+
+      // Restrict month (mm)
+      if (clean.length >= 3) {
+        const m1 = parseInt(clean.charAt(2), 10);
+        if (m1 > 1) {
+          clean = clean.slice(0, 2) + '0' + clean.slice(2);
+        }
+      }
+      if (clean.length >= 4) {
+        let mm = clean.slice(2, 4);
+        const mmVal = parseInt(mm, 10);
+        if (mmVal > 12) {
+          mm = '12';
+        } else if (mmVal === 0) {
+          mm = '01';
+        }
+        clean = clean.slice(0, 2) + mm + clean.slice(4);
+      }
+
+      // Restrict year (yyyy) max 4 digits, ≤ 2090
+      if (clean.length >= 8) {
+        let yyyy = clean.slice(4, 8);
+        const yyyyVal = parseInt(yyyy, 10);
+        if (yyyyVal > 2090) {
+          yyyy = '2090';
+        }
+        clean = clean.slice(0, 4) + yyyy;
+      }
+
+      // Reconstruct with slashes dd/mm/yyyy
+      let formatted = '';
+      if (clean.length > 4) {
+        formatted = clean.slice(0, 2) + '/' + clean.slice(2, 4) + '/' + clean.slice(4);
+      } else if (clean.length > 2) {
+        formatted = clean.slice(0, 2) + '/' + clean.slice(2);
+      } else {
+        formatted = clean;
+      }
+
+      sanitizedValue = formatted;
+    }
+
+    if (key === 'doj') {
+      const prevValue = form.doj || '';
+      const isDeleting = prevValue.length > value.length;
+      let clean = value.replace(/\D/g, '');
+
+      if (isDeleting && prevValue.endsWith('/') && !value.endsWith('/')) {
+        if (clean.length > 0) {
+          clean = clean.slice(0, -1);
+        }
+      }
+
+      // Max 8 digits
+      if (clean.length > 8) {
+        clean = clean.slice(0, 8);
+      }
+
+      // Restrict day (dd)
+      if (clean.length >= 1) {
+        const d1 = parseInt(clean.charAt(0), 10);
+        if (d1 > 3) {
+          clean = '0' + clean;
+        }
+      }
+      if (clean.length >= 2) {
+        let dd = clean.slice(0, 2);
+        const ddVal = parseInt(dd, 10);
+        if (ddVal > 31) {
+          dd = '31';
+        } else if (ddVal === 0) {
+          dd = '01';
+        }
+        clean = dd + clean.slice(2);
+      }
+
+      // Restrict month (mm)
+      if (clean.length >= 3) {
+        const m1 = parseInt(clean.charAt(2), 10);
+        if (m1 > 1) {
+          clean = clean.slice(0, 2) + '0' + clean.slice(2);
+        }
+      }
+      if (clean.length >= 4) {
+        let mm = clean.slice(2, 4);
+        const mmVal = parseInt(mm, 10);
+        if (mmVal > 12) {
+          mm = '12';
+        } else if (mmVal === 0) {
+          mm = '01';
+        }
+        clean = clean.slice(0, 2) + mm + clean.slice(4);
+      }
+
+      // Restrict year (yyyy) max 4 digits, ≤ 2090
+      if (clean.length >= 8) {
+        let yyyy = clean.slice(4, 8);
+        const yyyyVal = parseInt(yyyy, 10);
+        if (yyyyVal > 2090) {
+          yyyy = '2090';
+        }
+        clean = clean.slice(0, 4) + yyyy;
+      }
+
+      // Reconstruct with slashes dd/mm/yyyy
+      let formatted = '';
+      if (clean.length > 4) {
+        formatted = clean.slice(0, 2) + '/' + clean.slice(2, 4) + '/' + clean.slice(4);
+      } else if (clean.length > 2) {
+        formatted = clean.slice(0, 2) + '/' + clean.slice(2);
+      } else {
+        formatted = clean;
+      }
+
+      sanitizedValue = formatted;
+    }
+
     if (key === 'personal_email' || key === 'official_email') {
       const atIndex = value.indexOf('@');
       if (atIndex !== -1) {
@@ -543,6 +693,9 @@ export default function PersonalInfo({ onBack }) {
       }
       if (key === 'aadhar_number' && sanitizedValue.length > 12) {
         sanitizedValue = sanitizedValue.substring(0, 12);
+      }
+      if (key === 'edu_completion_year' && sanitizedValue.length > 4) {
+        sanitizedValue = sanitizedValue.substring(0, 4);
       }
       if (key === 'bank_account_no' && sanitizedValue.length > 18) {
         sanitizedValue = sanitizedValue.substring(0, 18);
