@@ -85,6 +85,7 @@ export default function PMDashboard() {
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [leavesLoading, setLeavesLoading] = useState(true);
   const [attendanceStats, setAttendanceStats] = useState({ present: 0, leave: 0, late: 0 });
+  const [absentees, setAbsentees] = useState([]);
   const [teamUpdates, setTeamUpdates] = useState([]);
   const [projectSprints, setProjectSprints] = useState([]);
   const [upcomingBirthdays, setUpcomingBirthdays] = useState([]);
@@ -222,6 +223,7 @@ export default function PMDashboard() {
         setNewJoineesCount(totalActiveJoinees);
 
         // Fetch Leave Requests & All Metrics
+        let resolvedLeaves = [];
         const leavesRes = await fetch(API_ENDPOINTS.LEAVES_GET, {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
@@ -230,7 +232,7 @@ export default function PMDashboard() {
           const lList = Array.isArray(lData) ? lData : (lData?.data || lData?.all || lData?.leaves || lData?.requests || []);
 
           // Name Resolution for Leave Requests
-          const resolvedLeaves = (Array.isArray(lList) ? lList : []).map(req => {
+          resolvedLeaves = (Array.isArray(lList) ? lList : []).map(req => {
             const uid = String(req.user_id || req.userId || req.empId || '').trim();
             return {
               ...req,
@@ -248,12 +250,13 @@ export default function PMDashboard() {
         }
 
         // Fetch Real-time Biometric Attendance Logs for Daily Metrics
+        let masterLogs = [];
         const attLogsRes = await fetch(API_ENDPOINTS.ATTENDANCE_LOGS_GET, {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
         if (attLogsRes.ok) {
           const logData = await attLogsRes.json();
-          const masterLogs = logData.data || logData.attendance || logData.logs || logData;
+          masterLogs = logData.data || logData.attendance || logData.logs || logData;
           if (Array.isArray(masterLogs)) {
             const todayStr = new Date().toISOString().split('T')[0];
             const todayLogs = masterLogs.filter(l => {
@@ -268,6 +271,51 @@ export default function PMDashboard() {
             const lateToday = todayLogs.filter(l => String(l?.status || '').toUpperCase().includes('LATE')).length;
             setAttendanceStats(prev => ({ ...prev, present: uniquePresentToday, late: lateToday }));
           }
+        }
+
+        // Calculate daily absentees
+        const todayStr = new Date().toISOString().split('T')[0];
+        const presentIds = new Set();
+        if (Array.isArray(masterLogs)) {
+          const todayLogs = masterLogs.filter(l => {
+            let lDate = (l?.punch_date || l?.PunchDate || l?.date || '').split('T')[0].split(' ')[0];
+            if (lDate.includes('-') && lDate.split('-')[0].length !== 4) {
+              const parts = lDate.split('-');
+              if (parts.length === 3) lDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+            return lDate === todayStr;
+          });
+          todayLogs.forEach(l => {
+            const pid = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+            if (pid) presentIds.add(pid);
+          });
+        }
+
+        const activeLeavesToday = (resolvedLeaves || []).filter(r => {
+          const rStatus = String(r?.status || '').toUpperCase();
+          if (!['PENDING', 'APPROVED'].includes(rStatus)) return false;
+          let rDate = (r?.date || r?.start_date || '').split('T')[0];
+          if (rDate.includes('-') && rDate.split('-')[0].length !== 4) {
+            const parts = rDate.split('-');
+            if (parts.length === 3) rDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+          return rDate === todayStr;
+        });
+        const leaveUserIds = new Set(activeLeavesToday.map(r => String(r.user_id || r.userId || r.empId || '').trim()));
+
+        if (Array.isArray(currentUsers)) {
+          const todayAbsentees = currentUsers.filter(u => {
+            const uid = String(u.id || u.empId || u.employee_id || '').trim();
+            return uid && !presentIds.has(uid);
+          }).map(u => {
+            const uid = String(u.id || u.empId || u.employee_id || '').trim();
+            const isOnLeave = leaveUserIds.has(uid);
+            return {
+              ...u,
+              status: isOnLeave ? 'ON LEAVE' : 'ABSENT'
+            };
+          });
+          setAbsentees(todayAbsentees);
         }
 
         // Fetch Upcoming Birthdays for Dashboard Preview
@@ -844,82 +892,81 @@ export default function PMDashboard() {
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: winWidth < 768 ? '10px' : '15px' }}>
                 <div style={{ width: winWidth < 768 ? '38px' : '48px', height: winWidth < 768 ? '38px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '16px' : '22px', flexShrink: 0 }}>📅</div>
-                <h2 style={{ fontSize: winWidth < 768 ? '16px' : '22px', fontWeight: '950', color: '#1e293b', margin: 0, lineHeight: 1.2 }}>Leave/Attendance<br /> Management</h2>
+                <h2 style={{ fontSize: winWidth < 768 ? '16px' : '22px', fontWeight: '950', color: '#1e293b', margin: 0, lineHeight: 1.2 }}>Attendance Management</h2>
               </div>
 
             </div>
 
             <div style={{
               display: 'flex',
-              gap: winWidth < 768 ? '6px' : '20px',
               marginBottom: '32px',
               width: '100%',
-              boxSizing: 'border-box',
-              justifyContent: 'space-between'
+              boxSizing: 'border-box'
             }}>
-              {[
-                { label: 'Present', count: attendanceStats.present, bg: '#f0fdf4', border: '#dcfce7', color: '#15803d', countColor: '#166534' },
-                { label: 'Total Leaves', count: attendanceStats.leave, bg: '#fffbeb', border: '#fef3c7', color: '#b45309', countColor: '#92400e' }
-              ].map((stat, idx) => (
-                <div key={idx}
-                  onClick={(e) => {
-                    if (stat.label === 'Total Leaves') {
-                      e.stopPropagation();
-                      navigate('/leaves');
-                    } else if (stat.label === 'Present' || stat.label === 'Late Login') {
-                      e.stopPropagation();
-                      navigate('/attendance');
-                    }
-                  }}
-                  style={{
-                    padding: winWidth < 768 ? '10px 4px' : '24px',
-                    flex: 1,
-                    background: stat.bg,
-                    borderRadius: winWidth < 768 ? '12px' : '24px',
-                    border: `1px solid ${stat.border}`,
-                    textAlign: 'center',
-                    boxSizing: 'border-box',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.02)',
-                    minWidth: 0,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <div style={{ fontSize: winWidth < 768 ? '8px' : '11px', fontWeight: '900', color: stat.color, marginBottom: '2px', textTransform: 'uppercase', letterSpacing: winWidth < 768 ? '0px' : '1px' }}>{stat.label}</div>
-                  <div style={{ fontSize: winWidth < 768 ? '18px' : '36px', fontWeight: '950', color: stat.countColor, lineHeight: 1 }}>{stat.count || 0}</div>
-                </div>
-              ))}
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/attendance');
+                }}
+                style={{
+                  padding: winWidth < 768 ? '16px 8px' : '24px',
+                  flex: 1,
+                  background: '#f0fdf4',
+                  borderRadius: winWidth < 768 ? '16px' : '24px',
+                  border: '1px solid #dcfce7',
+                  textAlign: 'center',
+                  boxSizing: 'border-box',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)',
+                  minWidth: 0,
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{ fontSize: winWidth < 768 ? '10px' : '13px', fontWeight: '900', color: '#15803d', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: winWidth < 768 ? '0px' : '1px' }}>Present</div>
+                <div style={{ fontSize: winWidth < 768 ? '24px' : '36px', fontWeight: '950', color: '#166534', lineHeight: 1 }}>{attendanceStats.present || 0}</div>
+              </div>
             </div>
 
             <div style={{ marginBottom: '20px', flex: 1 }}>
-              <div style={{ fontSize: '12px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px' }}>Pending Requests</div>
+              <div style={{ fontSize: '12px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px' }}>Total Absents</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {leaveRequests.filter(r => String(r.status || '').toUpperCase().includes('PENDING')).slice(0, 3).length > 0 ? (
-                  leaveRequests.filter(r => String(r.status || '').toUpperCase().includes('PENDING')).slice(0, 3).map((req, rid) => (
-                    <div key={rid} onClick={(e) => { e.stopPropagation(); navigate(`/attendance/leave/${req.id}`); }} style={{
+                {absentees.length > 0 ? (
+                  absentees.map((abs, aid) => (
+                    <div key={aid} style={{
                       display: 'flex', alignItems: 'center', padding: winWidth < 768 ? '10px' : '16px',
                       borderRadius: winWidth < 768 ? '18px' : '24px', background: '#ffffff', border: '1px solid #cbd5e1',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)', cursor: 'pointer', transition: '0.2s', width: '100%', boxSizing: 'border-box',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)', width: '100%', boxSizing: 'border-box',
                       gap: winWidth < 768 ? '8px' : '12px'
                     }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>🕒</div>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fee2e2', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>👤</div>
                       <div style={{ flex: 1, overflow: 'hidden' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                          <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{req.employee_name || req.name}</div>
-                          <div style={{ padding: '3px 10px', background: '#eff6ff', color: '#2563eb', borderRadius: '50px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Pending</div>
+                          <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{abs.name || abs.employee_name}</div>
+                          <div style={{ 
+                            padding: '3px 10px', 
+                            background: abs.status === 'ON LEAVE' ? '#fffbeb' : '#fef2f2', 
+                            color: abs.status === 'ON LEAVE' ? '#d97706' : '#dc2626', 
+                            borderRadius: '50px', 
+                            fontSize: '10px', 
+                            fontWeight: '900', 
+                            textTransform: 'uppercase' 
+                          }}>
+                            {abs.status || 'Absent'}
+                          </div>
                         </div>
                         <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {req.leave_type || 'Leave'} • {(req.date || req.start_date || '').split('T')[0].split('-').reverse().join('-') || 'N/A'}
+                          {abs.role || abs.designation || 'Staff'} • {abs.empId || abs.id || 'N/A'}
                         </div>
                       </div>
-                      <div style={{ color: '#cbd5e1', fontSize: '18px', fontWeight: '300' }}>›</div>
                     </div>
                   ))
                 ) : (
-                  <div style={{ padding: '30px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px', border: '2px dashed #cbd5e1', borderRadius: '24px' }}>Zero Pending Requests</div>
+                  <div style={{ padding: '30px 20px', textAlign: 'center', color: '#16a34a', fontSize: '13px', border: '2px dashed #bbf7d0', borderRadius: '24px', background: '#f0fdf4', fontWeight: '700' }}>
+                    Zero Absents Today 🎉
+                  </div>
                 )}
               </div>
             </div>
