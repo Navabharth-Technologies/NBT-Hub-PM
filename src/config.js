@@ -88,6 +88,7 @@ export const API_ENDPOINTS = {
   REWARDS_LEADERBOARD: `${BASE_URL}/api/rewards/leaderboard`,
 
   ASSETS: `${BASE_URL}/api/assets`,
+  ASSETS_STOCK: `${BASE_URL}/api/assets-stock`,
   ASSET_UPDATE: (id) => `${BASE_URL}/api/assets/${id}`,
   ASSET_GET: `${BASE_URL}/api/assets`,
   HIERARCHY_REALIGN: `${BASE_URL}/api/hierarchy/realign`,

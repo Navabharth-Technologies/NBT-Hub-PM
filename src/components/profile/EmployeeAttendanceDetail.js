@@ -11,6 +11,69 @@ import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import './PMDashboard.css';
 
+const getFullStatusText = (status, inTime, outTime, workHrs) => {
+  let s = String(status || '').toUpperCase();
+  const hasIn = inTime && inTime !== '----' && inTime !== '--:--';
+  const hasOut = outTime && outTime !== '----' && outTime !== '--:--';
+
+  // If there's both check-in and check-out, let's check work hours for half-day
+  if (hasIn && hasOut) {
+    let hours = 0;
+    if (workHrs && workHrs !== '----') {
+      const parts = String(workHrs).split(':');
+      if (parts.length >= 2) {
+        hours = parseFloat(parts[0]) + parseFloat(parts[1]) / 60;
+      }
+    }
+    // Standard rule: If they worked between 0.05 hours and 5 hours, it's a Half Day!
+    if (hours > 0.05 && hours < 5.0) {
+      return 'Half Day';
+    }
+  }
+
+  // General mappings
+  if (s === 'P' || s === 'PRESENT') return 'Present';
+  if (s === 'A' || s === 'ABSENT') return 'Absent';
+  if (s === 'HD' || s === 'HALF_DAY' || s === 'HALF DAY') return 'Half Day';
+  if (s === 'WO' || s === 'WEEKLY OFF' || s === 'WEEKEND OFF') return 'Weekly Off';
+  if (s === 'NH' || s === 'HOLIDAY' || s === 'NATIONAL HOLIDAY') return 'Holiday';
+  if (s === 'L' || s === 'LATE') return 'Late';
+  if (s === 'IN OFFICE' || s === 'IN-OFFICE') return 'In Office';
+
+  // Fallbacks if not matched but has punch in
+  if (hasIn) {
+    if (hasOut) return 'Present';
+    return 'In Office';
+  }
+  return 'Absent';
+};
+
+const getStatusBadgeStyle = (statusText) => {
+  const s = String(statusText || '').toUpperCase();
+  if (s.includes('PRESENT')) {
+    return { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', dotBg: '#22c55e' };
+  }
+  if (s.includes('ABSENT')) {
+    return { color: '#ef4444', bg: '#fef2f2', border: '#fee2e2', dotBg: '#ef4444' };
+  }
+  if (s.includes('HALF')) {
+    return { color: '#ea580c', bg: '#fff7ed', border: '#ffedd5', dotBg: '#f97316' };
+  }
+  if (s.includes('WEEKLY') || s.includes('OFF') || s === 'WO') {
+    return { color: '#475569', bg: '#f8fafc', border: '#e2e8f0', dotBg: '#64748b' };
+  }
+  if (s.includes('HOLIDAY') || s === 'NH') {
+    return { color: '#4f46e5', bg: '#eef2ff', border: '#c7d2fe', dotBg: '#6366f1' };
+  }
+  if (s.includes('OFFICE') || s.includes('ONLINE')) {
+    return { color: '#0d9488', bg: '#f0fdf4', border: '#ccfbf1', dotBg: '#14b8a6' };
+  }
+  if (s.includes('LATE')) {
+    return { color: '#d97706', bg: '#fffbeb', border: '#fde68a', dotBg: '#f59e0b' };
+  }
+  return { color: '#2563eb', bg: '#eff6ff', border: '#dbeafe', dotBg: '#3b82f6' };
+};
+
 export default function EmployeeAttendanceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -407,15 +470,15 @@ export default function EmployeeAttendanceDetail() {
                   const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
                   const isHoliday = holidays.includes(dayMonth);
 
-                  let rawStatus = String(log.status || (log.in_time !== '----' ? 'PRESENT' : 'ABSENT')).toUpperCase();
-                  if ((!log.in_time || log.in_time === '----') || rawStatus === 'ABSENT') {
-                    if (isSunday) rawStatus = 'WO';
-                    else if (isHoliday) rawStatus = 'NH';
-                    else rawStatus = 'ABSENT';
+                  let resolvedStatus = String(log.status || (log.in_time !== '----' ? 'PRESENT' : 'ABSENT')).toUpperCase();
+                  if ((!log.in_time || log.in_time === '----') || resolvedStatus === 'ABSENT') {
+                    if (isSunday) resolvedStatus = 'WO';
+                    else if (isHoliday) resolvedStatus = 'NH';
+                    else resolvedStatus = 'ABSENT';
                   }
-                  const isPresent = rawStatus.includes('PRESENT') || rawStatus === 'P';
-                  const isWO = rawStatus === 'WO';
-                  const isNH = rawStatus === 'NH';
+
+                  const statusText = getFullStatusText(resolvedStatus, log.in_time, log.out_time, workHrs);
+                  const badgeStyle = getStatusBadgeStyle(statusText);
 
                   return (
                     <div key={idx} style={{ 
@@ -435,11 +498,11 @@ export default function EmployeeAttendanceDetail() {
                         </div>
                         <div style={{ 
                           padding: '6px 14px', borderRadius: '100px', 
-                          background: isPresent ? '#f0fdf4' : (isWO || isNH ? '#eff6ff' : '#fef2f2'), 
-                          color: isPresent ? '#16a34a' : (isWO || isNH ? '#3b82f6' : '#ef4444'),
-                          fontSize: '11px', fontWeight: '950', border: `1px solid ${isPresent ? '#bbf7d0' : (isWO || isNH ? '#dbeafe' : '#fee2e2')}`
+                          background: badgeStyle.bg, 
+                          color: badgeStyle.color,
+                          fontSize: '11px', fontWeight: '950', border: `1px solid ${badgeStyle.border}`
                         }}>
-                          {rawStatus}
+                          {statusText}
                         </div>
                       </div>
 
@@ -569,18 +632,17 @@ export default function EmployeeAttendanceDetail() {
                             const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
                             const isHoliday = holidays.includes(dayMonth);
 
-                            let rawStatus = String(log.status || (log.in_time !== '----' ? 'P' : 'A')).toUpperCase();
-                            
-                            if ((!log.in_time || log.in_time === '----') || rawStatus === 'A' || rawStatus === 'ABSENT') {
-                              if (isSunday) rawStatus = 'WO';
-                              else if (isHoliday) rawStatus = 'NH';
-                              else rawStatus = 'A';
+                            let resolvedStatus = String(log.status || (log.in_time !== '----' ? 'P' : 'A')).toUpperCase();
+                             
+                            if ((!log.in_time || log.in_time === '----') || resolvedStatus === 'A' || resolvedStatus === 'ABSENT') {
+                              if (isSunday) resolvedStatus = 'WO';
+                              else if (isHoliday) resolvedStatus = 'NH';
+                              else resolvedStatus = 'A';
                             }
-
-                            const isPresent = rawStatus === 'P' || rawStatus.includes('PRESENT');
-                            const isWO = rawStatus === 'WO';
-                            const isNH = rawStatus === 'NH';
-
+                             
+                            const statusText = getFullStatusText(resolvedStatus, log.in_time, log.out_time, resolveWorkHrs(log));
+                            const badgeStyle = getStatusBadgeStyle(statusText);
+ 
                             return (
                               <div style={{ 
                                   display: 'inline-flex', 
@@ -588,15 +650,15 @@ export default function EmployeeAttendanceDetail() {
                                   gap: '8px', 
                                   padding: '6px 14px', 
                                   borderRadius: '100px', 
-                                  background: isPresent ? '#f0fdf4' : (isWO || isNH ? '#eff6ff' : '#fef2f2'), 
-                                  border: `1.5px solid ${isPresent ? '#bbf7d0' : (isWO || isNH ? '#dbeafe' : '#fee2e2')}`,
-                                  color: isPresent ? '#16a34a' : (isWO || isNH ? '#3b82f6' : '#ef4444'),
+                                  background: badgeStyle.bg, 
+                                  border: `1.5px solid ${badgeStyle.border}`,
+                                  color: badgeStyle.color,
                                   fontSize: '11px',
                                   fontWeight: '900',
                                   whiteSpace: 'nowrap'
                                 }}>
-                                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isPresent ? '#22c55e' : (isWO || isNH ? '#3b82f6' : '#ef4444') }}></div>
-                                  {rawStatus}
+                                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: badgeStyle.dotBg }}></div>
+                                  {statusText}
                               </div>
                             );
                           })()}

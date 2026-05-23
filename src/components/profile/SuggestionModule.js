@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS, BASE_URL } from '../../config';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './PMDashboard.css';
 
 export default function SuggestionModule() {
@@ -12,6 +14,65 @@ export default function SuggestionModule() {
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const today = new Date().toLocaleDateString('en-GB');
+
+    // Title
+    doc.setFontSize(22);
+    doc.setTextColor(30, 41, 59);
+    doc.text('NBT Suggestions Hub Report', 14, 22);
+
+    // Subtitle
+    doc.setFontSize(11);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Total Submissions: ${submissions.length}`, 14, 30);
+    doc.text(`Report Type: Collaboration & Workflow Overview`, 14, 36);
+    doc.text(`Generated on: ${new Date().toLocaleString('en-GB')}`, 14, 42);
+
+    const cleanText = (str) => {
+      if (!str) return 'N/A';
+      return String(str)
+        .replace(/[\u200B-\u200D\uFEFF]/g, '') // remove zero-width spaces
+        .replace(/[^\x20-\x7E\s]/g, '') // remove non-ASCII
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+
+    const tableColumn = ["Submitted By", "Emp ID / Team", "Date", "Suggestion Content", "Engagement"];
+    const tableRows = submissions.map(s => [
+      cleanText(s.user),
+      cleanText(s.team),
+      cleanText(s.date),
+      cleanText(s.content),
+      cleanText(s.participation).toUpperCase()
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 50,
+      styles: { 
+        fontSize: 8.5, 
+        cellPadding: { top: 5, bottom: 5, left: 3, right: 3 },
+        valign: 'middle',
+        overflow: 'linebreak'
+      },
+      columnStyles: {
+        0: { cellWidth: 32 },                  // Submitted By
+        1: { cellWidth: 24 },                  // Emp ID / Team
+        2: { cellWidth: 24, halign: 'center' }, // Date (Expanded to prevent wrapping)
+        3: { cellWidth: 78 },                  // Suggestion Content
+        4: { cellWidth: 28, halign: 'center' }  // Engagement (Expanded to prevent header wrapping)
+      },
+      headStyles: { fillColor: [49, 99, 170], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 12, right: 12 }
+    });
+
+    doc.save(`Suggestions_Report_${today.replace(/\//g, '-')}.pdf`);
+  };
 
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -87,10 +148,27 @@ export default function SuggestionModule() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-color)' }}></div>
-              <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 'bold' }}></div>
-            </div>
+            <button 
+              onClick={handleExportPDF}
+              className="btn-outline" 
+              style={{ 
+                background: 'white', 
+                color: 'var(--primary-color)', 
+                border: '2px solid #cbd5e1', 
+                borderRadius: '12px', 
+                padding: '10px 18px', 
+                fontSize: '13px', 
+                fontWeight: '800', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+              }}
+            >
+              <Download size={16} /> Export PDF
+            </button>
           </div>
         </header>
 

@@ -16,6 +16,7 @@ export default function AssetsManagement() {
   const { user } = useAuth();
   const [employees, setEmployees] = useState([]);
   const [assets, setAssets] = useState({});
+  const [stockList, setStockList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDept, setSelectedDept] = useState('All');
@@ -29,6 +30,7 @@ export default function AssetsManagement() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
+  const [customAlert, setCustomAlert] = useState({ show: false, message: '', type: 'success' });
 
   // Asset Form State
   const [form, setForm] = useState({
@@ -133,6 +135,28 @@ export default function AssetsManagement() {
           };
         });
       } catch (e) { console.error('Cert merge error:', e); }
+
+      // 4. Fetch Stock Inventory
+      try {
+        const stockRes = await fetch(API_ENDPOINTS.ASSETS_STOCK || `${BASE_URL}/api/assets/stock`, { headers });
+        if (stockRes.ok) {
+          const stockData = await stockRes.json();
+          const list = Array.isArray(stockData) ? stockData : (stockData.recordset || stockData.data || []);
+          if (list.length > 0) {
+            const mappedList = list.map((item, idx) => ({
+              id: item.id || item.Id || item.stock_id || `STK-${String(idx + 1).padStart(3, '0')}`,
+              name: item.name || item.Name || item.item_name || 'Unknown Hardware',
+              category: item.category || item.Category || 'Others',
+              qty: Number(item.qty !== undefined ? item.qty : (item.quantity !== undefined ? item.quantity : 0)),
+              specs: item.specs || item.Specs || item.specification || 'No specs provided',
+              status: item.status || item.Status || (Number(item.qty || item.quantity || 0) <= 2 ? 'Low Stock' : 'In Stock')
+            }));
+            setStockList(mappedList);
+          }
+        }
+      } catch (e) {
+        console.error('Stock fetch failed:', e);
+      }
 
       console.log('Final Asset Map keys:', Object.keys(assetMap));
       setAssets(assetMap);
@@ -254,11 +278,11 @@ export default function AssetsManagement() {
       });
 
       if (response.ok) {
-        alert(`Certificate request ${status}! ✅`);
+        setCustomAlert({ show: true, message: `Certificate request ${status}! ✅`, type: 'success' });
         setEditModal({ show: false, employee: null, isReadOnly: false });
         fetchData();
       } else {
-        alert('Action failed. Please check backend connectivity.');
+        setCustomAlert({ show: true, message: 'Action failed. Please check backend connectivity.', type: 'error' });
       }
     } catch (err) {
       console.error('Certificate action error:', err);
@@ -407,7 +431,7 @@ export default function AssetsManagement() {
       }
     } catch (err) {
       console.error('Fatal Asset Sync Error:', err);
-      alert('Network failure connecting to the Asset Database.');
+      setCustomAlert({ show: true, message: 'Network failure connecting to the Asset Database.', type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -1146,21 +1170,7 @@ export default function AssetsManagement() {
             {/* Grid of Stock Items */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '5px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: winWidth < 500 ? '1fr' : (winWidth < 800 ? '1fr 1fr' : '1fr 1fr 1fr'), gap: '15px' }}>
-                {[
-                  { id: 'STK-001', name: 'MacBook Pro 16" (M3 Max, 36GB, 1TB)', category: 'Laptops', qty: 5, specs: 'Apple M3 Max, Space Black, Liquid Retina XDR', status: 'In Stock' },
-                  { id: 'STK-002', name: 'Dell XPS 15 9530', category: 'Laptops', qty: 3, specs: 'Intel i9, 32GB RAM, 1TB SSD, RTX 4070', status: 'In Stock' },
-                  { id: 'STK-003', name: 'Lenovo ThinkPad X1 Carbon Gen 11', category: 'Laptops', qty: 2, specs: 'Intel i7, 16GB RAM, 512GB SSD', status: 'Low Stock' },
-                  { id: 'STK-004', name: 'Logitech MX Keys S Keyboard', category: 'Keyboards', qty: 15, specs: 'Tactile quiet, backlit keys, Bluetooth/Logi Bolt', status: 'In Stock' },
-                  { id: 'STK-005', name: 'Keychron K2 Mechanical Keyboard', category: 'Keyboards', qty: 6, specs: 'Gateron Brown, RGB Backlit, 84-key', status: 'In Stock' },
-                  { id: 'STK-006', name: 'Logitech MX Master 3S Mouse', category: 'Mice', qty: 12, specs: '8K DPI, Quiet Clicks, Darkfield tracking', status: 'In Stock' },
-                  { id: 'STK-007', name: 'Apple Magic Mouse 2', category: 'Mice', qty: 8, specs: 'Wireless, Multi-Touch surface, Rechargeable', status: 'In Stock' },
-                  { id: 'STK-008', name: 'Alumode Adjustable Laptop Stand', category: 'Accessories', qty: 20, specs: 'Ergonomic aluminum, 6 levels adjustable', status: 'In Stock' },
-                  { id: 'STK-009', name: 'SanDisk Ultra 128GB USB 3.0', category: 'Accessories', qty: 35, specs: 'Dual drive USB Type-C & Type-A', status: 'In Stock' },
-                  { id: 'STK-010', name: 'iPhone 15 Pro 256GB', category: 'Mobiles', qty: 2, specs: 'Titanium Grey, A17 Pro Chip, 48MP camera', status: 'Low Stock' },
-                  { id: 'STK-011', name: 'Samsung Galaxy S24 Ultra', category: 'Mobiles', qty: 3, specs: '512GB, Titanium Yellow, S-Pen included', status: 'In Stock' },
-                  { id: 'STK-012', name: 'Logitech Brio 4K Webcam', category: 'Others', qty: 8, specs: '4K Ultra HD, HDR, RightLight 3 auto-focus', status: 'In Stock' },
-                  { id: 'STK-013', name: 'Jabra Evolve2 65 Headset', category: 'Others', qty: 10, specs: 'Noise cancelling, wireless bluetooth, charging stand', status: 'In Stock' },
-                ].filter(item => {
+                {stockList.filter(item => {
                   const matchesSearch = item.name.toLowerCase().includes(stockSearch.toLowerCase()) ||
                     item.specs.toLowerCase().includes(stockSearch.toLowerCase()) ||
                     item.id.toLowerCase().includes(stockSearch.toLowerCase());
@@ -1279,6 +1289,79 @@ export default function AssetsManagement() {
         </div>
       )}
 
+      {customAlert.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.45)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            width: '90%',
+            maxWidth: '380px',
+            borderRadius: '32px',
+            padding: '32px',
+            boxShadow: '0 20px 50px rgba(15, 23, 42, 0.15)',
+            border: '1.5px solid #f1f5f9',
+            textAlign: 'center',
+            fontFamily: "'Outfit', sans-serif"
+          }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '22px',
+              background: customAlert.type === 'error' ? '#fef2f2' : '#f0fdf4',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              border: `1.5px solid ${customAlert.type === 'error' ? '#fecaca' : '#bbf7d0'}`
+            }}>
+              {customAlert.type === 'error' ? (
+                <X size={32} color="#ef4444" />
+              ) : (
+                <ShieldCheck size={32} color="#10b981" />
+              )}
+            </div>
+            <h2 style={{
+              fontSize: '20px',
+              fontWeight: '950',
+              color: '#1e293b',
+              margin: '0 0 24px 0',
+              lineHeight: '1.4'
+            }}>
+              {customAlert.message}
+            </h2>
+            <button
+              onClick={() => setCustomAlert({ show: false, message: '', type: 'success' })}
+              style={{
+                width: '100%',
+                padding: '14px 24px',
+                borderRadius: '16px',
+                border: 'none',
+                background: customAlert.type === 'error' ? '#ef4444' : '#3163aa',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '900',
+                cursor: 'pointer',
+                boxShadow: `0 8px 20px ${customAlert.type === 'error' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(49, 99, 170, 0.2)'}`,
+                transition: 'all 0.2s'
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
       {showToast && (
         <div style={{
           position: 'fixed', top: '40px', left: '50%', transform: 'translateX(-50%)',
