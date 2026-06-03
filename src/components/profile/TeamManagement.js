@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
-import { API_ENDPOINTS } from '../../config';
+import { API_ENDPOINTS, BASE_URL } from '../../config';
 import './PMDashboard.css';
 
 const Icons = {
@@ -36,6 +36,16 @@ export default function TeamManagement() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(null);
   const [talentSearch, setTalentSearch] = useState('');
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedTeamForEdit, setSelectedTeamForEdit] = useState(null);
+  const [editTeamName, setEditTeamName] = useState('');
+  const [editTeamLead, setEditTeamLead] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedTeamForDelete, setSelectedTeamForDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -162,6 +172,137 @@ export default function TeamManagement() {
       alert(`Error: ${err.message}`);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEditTeam = (team) => {
+    setSelectedTeamForEdit(team);
+    setEditTeamName(team.name);
+    const currentLead = team.lead || (team.membersList || []).find(m => /lead|manager|head/i.test(m.role))?.name || '';
+    setEditTeamLead(currentLead);
+    setShowEditModal(true);
+  };
+
+  const handleSaveTeam = async () => {
+    if (!editTeamName.trim() || !user?.token || !selectedTeamForEdit) return;
+    setIsSaving(true);
+    try {
+      const response = await fetch(API_ENDPOINTS.TEAM_RENAME, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          oldName: selectedTeamForEdit.name,
+          newName: editTeamName,
+          lead: editTeamLead
+        })
+      });
+
+      if (response.ok) {
+        setTeamsData(prev => prev.map(t => t.id === selectedTeamForEdit.id ? { ...t, name: editTeamName, lead: editTeamLead } : t));
+        setShowEditModal(false);
+      } else {
+        const errorText = await response.text();
+        console.error('Rename error response:', errorText);
+        let errorMessage = 'Failed to update team.';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch { }
+        alert(errorMessage + ' Please try again.');
+      }
+    } catch (err) {
+      console.error('Save team error:', err);
+      alert('An error occurred while saving.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteTeam = async () => {
+    if (!user?.token || !selectedTeamForDelete) return;
+    setIsDeleting(true);
+    try {
+      console.log('DEBUG: Starting team deletion for:', selectedTeamForDelete.name);
+
+      const encodedTeamName = encodeURIComponent(selectedTeamForDelete.name);
+      const url1 = `${BASE_URL}/api/admin/teams/${encodedTeamName}`;
+      console.log('DEBUG: Attempt 1 - DELETE to:', url1);
+      let response = await fetch(url1, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      let responseText = await response.text();
+      console.log('DEBUG: Attempt 1 Response Status:', response.status);
+      console.log('DEBUG: Attempt 1 Response Text:', responseText);
+
+      if (!response.ok) {
+        const url2 = `${BASE_URL}/api/admin/teams/delete`;
+        console.log('DEBUG: Attempt 2 - DELETE to:', url2);
+        response = await fetch(url2, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user.token}`
+          },
+          body: JSON.stringify({ 
+            teamName: selectedTeamForDelete.name,
+            team_name: selectedTeamForDelete.name,
+            name: selectedTeamForDelete.name,
+            oldName: selectedTeamForDelete.name
+          })
+        });
+        responseText = await response.text();
+        console.log('DEBUG: Attempt 2 Response Status:', response.status);
+        console.log('DEBUG: Attempt 2 Response Text:', responseText);
+      }
+
+      if (!response.ok) {
+        const url3 = `${BASE_URL}/api/admin/teams/delete`;
+        console.log('DEBUG: Attempt 3 - POST to:', url3);
+        response = await fetch(url3, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user.token}`
+          },
+          body: JSON.stringify({ 
+            teamName: selectedTeamForDelete.name,
+            team_name: selectedTeamForDelete.name,
+            name: selectedTeamForDelete.name,
+            oldName: selectedTeamForDelete.name
+          })
+        });
+        responseText = await response.text();
+        console.log('DEBUG: Attempt 3 Response Status:', response.status);
+        console.log('DEBUG: Attempt 3 Response Text:', responseText);
+      }
+
+      if (response.ok) {
+        setTeamsData(prev => prev.filter(t => t.id !== selectedTeamForDelete.id));
+        setShowDeleteModal(false);
+      } else {
+        console.error('DEBUG: All deletion attempts failed.');
+        let errorMessage = 'Failed to delete team.';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          if (responseText && responseText.length < 100) {
+            errorMessage = responseText;
+          }
+        }
+        alert(errorMessage + ' Please try again.');
+      }
+    } catch (err) {
+      console.error('Delete team error:', err);
+      alert('An error occurred while deleting the team.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -524,10 +665,11 @@ export default function TeamManagement() {
                   height: '100%',
                   minHeight: isEditingAlignment 
                     ? (team.members > 0 ? (winWidth < 480 ? '240px' : '340px') : (winWidth < 480 ? '180px' : '240px'))
-                    : (team.members > 0 ? (winWidth < 480 ? '180px' : '260px') : (winWidth < 480 ? '140px' : '190px')),
+                    : (winWidth < 480 ? '300px' : '380px'),
                   justifyContent: 'flex-start',
                   position: 'relative',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'default'
                 }}
                 onMouseEnter={e => {
                   if (!isEditingAlignment) {
@@ -541,7 +683,6 @@ export default function TeamManagement() {
                     e.currentTarget.style.boxShadow = 'var(--shadow-md)';
                   }
                 }}
-                onClick={() => !isEditingAlignment && navigate(`/teams/${encodeURIComponent(team.id)}`)}
                 onDragOver={(e) => {
                   if (isEditingAlignment) {
                     e.preventDefault();
@@ -810,41 +951,120 @@ export default function TeamManagement() {
                   </div>
                 ) : (
                   <div className="normal-view animate-fade-in" style={{marginTop: '8px', display: 'flex', flexDirection: 'column', flex: 1}}>
-                    {/* FIXED HEIGHT DESCRIPTION */}
-                    <p style={{
-                      fontSize: '12px', 
-                      color: '#64748b', 
-                      marginBottom: winWidth < 480 ? '8px' : '12px', 
-                      lineHeight: '1.5',
-                      display: winWidth < 480 ? 'none' : '-webkit-box', // Hide on small mobile to save vertical space
-                      WebkitLineClamp: '2',
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      minHeight: winWidth < 480 ? '0' : '38px' 
-                    }} title={team.description}>
-                      {team.description || 'Active operations and management for this specific team unit.'}
-                    </p>
-                    
-                    {/* CONDITIONAL METRICS GRID (Only for teams with members) */}
-                    {team.members > 0 && (
-                      <div style={{display: 'grid', gridTemplateColumns: '1fr', gap: winWidth < 480 ? '4px' : '6px', marginBottom: winWidth < 480 ? '10px' : '12px'}}>
-                        <div style={{
-                          padding: winWidth < 480 ? '6px 8px' : '8px 12px', 
-                          background: '#f8fafc', 
-                          borderRadius: '12px', 
-                          textAlign: 'center',
-                          border: '1px solid #f1f5f9'
-                        }}>
-                          <div style={{fontSize: winWidth < 480 ? '14px' : '16px', fontWeight: '950', color: '#1e293b'}}>{team.members}</div>
-                          <div style={{fontSize: '8px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px'}}>Members</div>
+                    {/* INLINE MEMBERS ROSTER */}
+                    <div style={{fontSize: '11px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px'}}>
+                      Team Members
+                    </div>
+                    <div 
+                      className="roster-scrollbar"
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        maxHeight: '150px',
+                        overflowY: 'auto',
+                        paddingRight: '4px',
+                        marginBottom: '12px'
+                      }} 
+                    >
+                      {(team.membersList || [])
+                        .filter(m => String(m.name || '').trim().toLowerCase() !== String(team.lead || '').trim().toLowerCase())
+                        .map((m, mapIdx) => (
+                          <div 
+                            key={m.id || m.userid || mapIdx}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '6px 10px',
+                              background: '#f8fafc',
+                              border: '1px solid #f1f5f9',
+                              borderRadius: '8px',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.01)'
+                            }}
+                          >
+                            <div style={{
+                              width: '24px', height: '24px', borderRadius: '6px',
+                              background: '#e0f2fe', color: '#0369a1',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: '11px', fontWeight: 'bold'
+                            }}>{(m.name || 'M').charAt(0)}</div>
+                            <div style={{flex: 1, minWidth: 0}}>
+                              <div style={{fontWeight: '800', fontSize: '12px', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}} title={m.name}>{m.name}</div>
+                              <div style={{fontSize: '10px', color: '#64748b', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}} title={m.role}>{m.role || 'Member'}</div>
+                            </div>
+                          </div>
+                        ))}
+                      {(!team.membersList || team.membersList.filter(m => String(m.name || '').trim().toLowerCase() !== String(team.lead || '').trim().toLowerCase()).length === 0) && (
+                        <div style={{fontSize: '11px', color: '#94a3b8', textAlign: 'center', padding: '15px 0', fontWeight: '600'}}>
+                          No members assigned.
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
-                    <div style={{marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', paddingTop: winWidth < 480 ? '8px' : '10px', borderTop: '1px solid #f8fafc'}}>
-                      <span style={{color: '#3863a8', fontWeight: '800', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', transition: '0.2s transform'}} onMouseOver={(e) => e.currentTarget.style.transform = 'translateX(5px)'} onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(0)'}>
-                         <Icons.Arrow />
-                      </span>
+                    {/* ACTION BUTTONS FOOTER */}
+                    <div style={{
+                      marginTop: 'auto',
+                      display: 'flex',
+                      gap: '8px',
+                      paddingTop: '10px',
+                      borderTop: '1px solid #f1f5f9'
+                    }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditTeam(team);
+                        }}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          backgroundColor: '#eff6ff',
+                          color: '#3863a8',
+                          border: '1px solid #bfdbfe',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          fontWeight: '800',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#dbeafe'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#eff6ff'}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                        Edit
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTeamForDelete(team);
+                          setShowDeleteModal(true);
+                        }}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          backgroundColor: '#fee2e2',
+                          color: '#ef4444',
+                          border: '1px solid #fecaca',
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          fontWeight: '800',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fecaca'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        Delete
+                      </button>
                     </div>
                   </div>
                 )}
@@ -1094,6 +1314,166 @@ export default function TeamManagement() {
           </div>
         </div>
       )}
+
+      {/* EDIT TEAM MODAL */}
+      {showEditModal && selectedTeamForEdit && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div className="animate-slide-up" style={{
+            background: 'white', width: '100%', maxWidth: '450px', borderRadius: '32px',
+            padding: '40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            border: '3px solid #cbd5e1', position: 'relative'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+              <div>
+                <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Edit Team</h2>
+                <p style={{ fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Modify team identity and settings</p>
+              </div>
+              <button
+                onClick={() => setShowEditModal(false)}
+                style={{ background: '#f1f5f9', border: 'none', width: '40px', height: '40px', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '16px', fontWeight: 'bold' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '900', color: '#3863a8', textTransform: 'uppercase', letterSpacing: '1px', marginLeft: '4px' }}>Team Name</label>
+                <input
+                  type="text"
+                  value={editTeamName}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const cleanVal = val.replace(/[0-9]/g, '');
+                    setEditTeamName(cleanVal);
+                  }}
+                  placeholder="Enter team name..."
+                  style={{
+                    padding: '16px 20px', borderRadius: '16px', border: '2px solid #e2e8f0',
+                    fontSize: '16px', fontWeight: '700', color: '#1e293b', outline: 'none',
+                    transition: 'all 0.2s', background: '#f8fafc'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#3863a8'}
+                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '900', color: '#3863a8', textTransform: 'uppercase', letterSpacing: '1px', marginLeft: '4px' }}>Designated Team Lead</label>
+                <select
+                  value={editTeamLead}
+                  onChange={(e) => setEditTeamLead(e.target.value)}
+                  style={{
+                    padding: '16px 20px', borderRadius: '16px', border: '2px solid #e2e8f0',
+                    fontSize: '16px', fontWeight: '700', color: '#1e293b', outline: 'none',
+                    appearance: 'none', background: '#f8fafc', cursor: 'pointer'
+                  }}
+                >
+                  <option value="">Select a Leader...</option>
+                  {(selectedTeamForEdit?.membersList || []).map(m => (
+                    <option key={m.id || m.employee_id || m.employeeId} value={m.name}>{m.name} ({m.role || 'Member'})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  style={{
+                    flex: 1, padding: '16px', borderRadius: '16px', background: 'white',
+                    color: '#64748b', border: '1px solid #e2e8f0', fontWeight: '800',
+                    cursor: 'pointer', transition: 'all 0.2s'
+                  }}
+                >Cancel</button>
+                <button
+                  onClick={handleSaveTeam}
+                  disabled={isSaving}
+                  style={{
+                    flex: 2, padding: '16px', borderRadius: '16px', background: '#3863a8',
+                    color: 'white', border: 'none', fontWeight: '800',
+                    cursor: isSaving ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
+                    boxShadow: '0 10px 15px -3px rgba(56,99,168,0.3)',
+                    opacity: isSaving ? 0.7 : 1
+                  }}
+                >
+                  {isSaving ? 'Saving Changes...' : 'Save Updates'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE TEAM MODAL */}
+      {showDeleteModal && selectedTeamForDelete && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div className="animate-slide-up" style={{
+            background: 'white', width: '100%', maxWidth: '450px', borderRadius: '32px',
+            padding: '40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            border: '3px solid #cbd5e1', textAlign: 'center'
+          }}>
+            <div style={{
+              width: '64px', height: '64px', borderRadius: '50%',
+              background: '#fee2e2', color: '#ef4444',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px', fontSize: '28px'
+            }}>⚠️</div>
+            <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', margin: '0 0 10px 0' }}>Delete Team</h2>
+            <p style={{ fontSize: '15px', color: '#64748b', marginBottom: '30px', lineHeight: '1.5' }}>
+              Are you sure to delete <strong style={{color: '#1e293b'}}>{selectedTeamForDelete.name}</strong>?
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                style={{
+                  flex: 1, padding: '16px', borderRadius: '16px', background: 'white',
+                  color: '#64748b', border: '1px solid #e2e8f0', fontWeight: '800',
+                  cursor: 'pointer', transition: 'all 0.2s'
+                }}
+              >Cancel</button>
+              <button
+                onClick={handleDeleteTeam}
+                disabled={isDeleting}
+                style={{
+                  flex: 2, padding: '16px', borderRadius: '16px', background: '#ef4444',
+                  color: 'white', border: 'none', fontWeight: '800',
+                  cursor: isDeleting ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
+                  boxShadow: '0 10px 15px -3px rgba(239,68,68,0.3)',
+                  opacity: isDeleting ? 0.7 : 1
+                }}
+              >
+                {isDeleting ? 'Deleting...' : 'Ok, Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .roster-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .roster-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .roster-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+        .roster-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+      `}</style>
     </div>
   );
 }

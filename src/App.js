@@ -181,9 +181,9 @@ function App() {
           <AppRoutes />
           <style>{`
             html, body {
-              overflow-x: hidden;
+              overflow: auto;
               width: 100%;
-              position: relative;
+              position: static;
               margin: 0;
               padding: 0;
               touch-action: pan-y;

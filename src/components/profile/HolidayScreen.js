@@ -127,21 +127,22 @@ export default function HolidayScreen() {
           </p>
         </div>
 
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: winWidth < 768 ? '1fr' : winWidth < 1024 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '25px' }}>
+        <div style={{ width: '100%' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: winWidth < 768 ? '1fr' : winWidth < 1024 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '25px' }}>
             {loading ? (
               <div style={{ textAlign: 'center', gridColumn: '1/-1', padding: '60px', color: '#64748b' }}>Loading holidays...</div>
             ) : holidays.length > 0 ? (
               holidays.map((h, idx) => (
                 <div key={idx} style={{ 
-                  background: 'white', borderRadius: '24px', padding: '25px', 
+                  background: h.status === 'Passed' ? '#f8fafc' : 'white', borderRadius: '24px', padding: '25px', 
                   display: 'flex', alignItems: 'center', gap: '20px', 
-                  boxShadow: '0 15px 35px -5px rgba(0,0,0,0.05)', border: '1px solid rgba(241, 245, 249, 0.8)',
-                  transition: '0.3s transform', position: 'relative', overflow: 'hidden'
+                  boxShadow: h.status === 'Upcoming' ? '0 15px 35px -5px rgba(34,197,94,0.15)' : '0 4px 12px rgba(0,0,0,0.03)', border: h.status === 'Upcoming' ? '2px solid #22c55e' : '1px solid #e2e8f0',
+                  transition: '0.3s transform', position: 'relative', overflow: 'hidden',
+                  opacity: h.status === 'Passed' ? 0.6 : 1
                 }}>
                   <div style={{ 
                     width: '70px', height: '85px', borderRadius: '18px', 
-                    background: '#3863a8', color: 'white', display: 'flex', 
+                    background: h.status === 'Passed' ? '#94a3b8' : '#3863a8', color: 'white', display: 'flex', 
                     flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0
                   }}>
@@ -150,8 +151,8 @@ export default function HolidayScreen() {
                   </div>
                   
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', fontWeight: '800', color: '#3863a8', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>{h.dayName}</div>
-                    <h3 style={{ fontSize: '17px', fontWeight: '900', color: '#1e293b', margin: 0 }}>{h.holiday_name || h.name}</h3>
+                    <div style={{ fontSize: '12px', fontWeight: '800', color: h.status === 'Passed' ? '#94a3b8' : '#3863a8', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>{h.dayName}</div>
+                    <h3 style={{ fontSize: '17px', fontWeight: '900', color: h.status === 'Passed' ? '#64748b' : '#1e293b', margin: 0 }}>{h.holiday_name || h.name}</h3>
                   </div>
 
                   <div style={{ 

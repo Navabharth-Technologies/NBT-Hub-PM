@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { API_ENDPOINTS } from '../config';
+import { API_ENDPOINTS, BASE_URL } from '../config';
 import { useAuth } from './AuthContext';
 
 const ThreadContext = createContext();
@@ -18,7 +18,7 @@ export const ThreadProvider = ({ children }) => {
   useEffect(() => {
     if (user) {
       fetchThreads(user.id);
-      const interval = setInterval(() => fetchThreads(user.id, true), 30000);
+      const interval = setInterval(() => fetchThreads(user.id, true), 4000);
       return () => clearInterval(interval);
     }
   }, [user]);
@@ -34,6 +34,11 @@ export const ThreadProvider = ({ children }) => {
         const data = await res.json();
         const rawThreads = Array.isArray(data) ? data : (data.value || []);
 
+        let activeReactions = {};
+        try {
+          activeReactions = JSON.parse(localStorage.getItem('nbt_active_reactions') || '{}');
+        } catch { }
+
         const normalized = rawThreads.map(t => {
           const tid = t.id || t._id;
           const pending = pendingActionsRef.current[tid] || {};
@@ -41,7 +46,7 @@ export const ThreadProvider = ({ children }) => {
           // Use the secure user_reactions object from backend (Authorization token based)
           const reactions = t.user_reactions || {};
           const reactors = t.reactors || t.likes_list || t.reaction_list || [];
-          
+
           // CRITICAL: Match current user against both token-based reactions and raw reactor lists
           const currentUid = String(user?.employee_id || user?.id || '');
           const userLikedByList = Array.isArray(reactors) && reactors.some(r => {
@@ -49,9 +54,14 @@ export const ThreadProvider = ({ children }) => {
             return rid && rid === currentUid;
           });
 
-          const userLikedVal = Object.values(reactions).some(v => v === true) || userLikedByList;
-          const activeEmojiVal = Object.keys(reactions).find(k => reactions[k] === true) || (userLikedByList ? 'like' : null);
-          
+          const localActiveEmoji = activeReactions[tid];
+          const backendLikedVal = Object.values(reactions).some(v => v === true) || userLikedByList;
+          const backendActiveEmojiVal = Object.keys(reactions).find(k => reactions[k] === true) || (userLikedByList ? 'like' : null);
+
+          const hasLocalReact = localActiveEmoji !== undefined;
+          const userLikedVal = hasLocalReact ? (localActiveEmoji !== null) : backendLikedVal;
+          const activeEmojiVal = hasLocalReact ? localActiveEmoji : backendActiveEmojiVal;
+
           const userBadgeVal = !!(t.user_has_badged || t.userHasBadged || false);
           const badgeTypeVal = t.badge_type || t.badgeType || null;
           const badgeCountVal = Number(t.badge_count || t.badgeCount || 0);
@@ -66,11 +76,12 @@ export const ThreadProvider = ({ children }) => {
             '🎂': Number(t.cake_count || 0)
           };
 
-          const totalLikes = Object.values(displayReactions).reduce((a, b) => a + b, 0);
+          const totalLikes = displayReactions['❤️'];
 
           return {
             ...t,
             id: tid,
+            tagline: t.tagline || t.tagLine || t.tag_line || null,
             likes: pending.likes !== undefined ? pending.likes : totalLikes,
             likeCount: pending.likes !== undefined ? pending.likes : totalLikes,
             userLiked: pending.userLiked !== undefined ? pending.userLiked : userLikedVal,
@@ -111,10 +122,17 @@ export const ThreadProvider = ({ children }) => {
   const addPost = async (postData) => {
     try {
       let body;
-      let headers = {};
+      const headers = {
+        'Authorization': `Bearer ${user.token}`
+      };
 
       if (postData instanceof FormData) {
         body = postData;
+        const taglineVal = postData.get('tagline');
+        if (taglineVal) {
+          if (!postData.has('tagLine')) postData.append('tagLine', taglineVal);
+          if (!postData.has('tag_line')) postData.append('tag_line', taglineVal);
+        }
         // Do NOT set Content-Type for FormData; browser does it automatically with boundary
       } else {
         headers['Content-Type'] = 'application/json';
@@ -133,6 +151,8 @@ export const ThreadProvider = ({ children }) => {
           EmpID: user?.employee_id || user?.id,
           userName: user?.name,
           tagline: postData.tagline || '',
+          tagLine: postData.tagline || '',
+          tag_line: postData.tagline || '',
           content: postData.content || '',
           media: mediaData,
           mediaType: postData.mediaType
@@ -141,10 +161,7 @@ export const ThreadProvider = ({ children }) => {
 
       const res = await fetch(API_ENDPOINTS.THREADS, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        },
+        headers: headers,
         body: body
       });
 
@@ -161,9 +178,19 @@ export const ThreadProvider = ({ children }) => {
       return false;
     }
   };
-  
+
   const toggleReaction = async (threadId, userId, emoji = '❤️') => {
     if (!user?.token) return;
+
+    const emojiToNormalized = {
+      '❤️': 'heart', 'heart': 'heart', 'love': 'heart', 'like': 'heart',
+      '👍': 'thumbsup', 'thumbsup': 'thumbsup', 'thumb': 'thumbsup',
+      '😮': 'shocked', 'shocked': 'shocked', 'wow': 'shocked',
+      '😂': 'laugh', 'laugh': 'laugh', 'haha': 'laugh',
+      '🔥': 'fire', 'fire': 'fire', 'lit': 'fire',
+      '👏': 'clap', 'clap': 'clap', 'clapping': 'clap',
+      '🎂': 'cake', 'cake': 'cake', 'birthday': 'cake'
+    };
 
     const emojiFieldMap = {
       '❤️': 'heart_count', 'heart': 'heart_count', 'like': 'likes_count',
@@ -175,12 +202,39 @@ export const ThreadProvider = ({ children }) => {
       '🎂': 'cake_count', 'cake': 'cake_count'
     };
 
+    const normalizedEmoji = emojiToNormalized[emoji] || emoji;
+
+    const targetThread = threads.find(t => t.id === threadId);
+    let newUserLikedVal = true;
+    if (targetThread) {
+      const currentUserLiked = !!(targetThread.userLiked || targetThread.userHasLiked || targetThread.user_has_liked || targetThread.user_liked);
+      const currentActiveEmoji = targetThread.activeEmoji || 'like';
+      const normalizedActiveEmoji = emojiToNormalized[currentActiveEmoji] || currentActiveEmoji;
+      const isSameEmoji = normalizedActiveEmoji === normalizedEmoji;
+      if (currentUserLiked && isSameEmoji) {
+        newUserLikedVal = false;
+      }
+    }
+
+    try {
+      const activeReactions = JSON.parse(localStorage.getItem('nbt_active_reactions') || '{}');
+      if (newUserLikedVal) {
+        activeReactions[threadId] = emoji; // Save raw emoji symbol character (e.g. '👍')
+      } else {
+        delete activeReactions[threadId];
+      }
+      localStorage.setItem('nbt_active_reactions', JSON.stringify(activeReactions));
+    } catch (e) {
+      console.error(e);
+    }
+
     let updatedPending = {};
     setThreads(prev => prev.map(t => {
       if (t.id === threadId) {
         const currentUserLiked = !!(t.userLiked || t.userHasLiked || t.user_has_liked || t.user_liked);
         const currentActiveEmoji = t.activeEmoji || 'like';
-        const isSameEmoji = currentActiveEmoji === emoji;
+        const normalizedActiveEmoji = emojiToNormalized[currentActiveEmoji] || currentActiveEmoji;
+        const isSameEmoji = normalizedActiveEmoji === normalizedEmoji;
 
         // Use the highest available count as the base
         const baseCount = Math.max(
@@ -189,43 +243,54 @@ export const ThreadProvider = ({ children }) => {
           Number(t.likes_count || 0),
           Number(t.total_likes || 0)
         );
-        
+
+        const isHeartReaction = (em) => em === 'heart' || em === 'like' || em === '❤️';
+
         let newCount = baseCount;
         let newUserLiked = currentUserLiked;
-        
-        const field = emojiFieldMap[emoji];
-        const oldField = emojiFieldMap[currentActiveEmoji];
-        
+
+        const field = emojiFieldMap[normalizedEmoji];
+        const oldField = emojiFieldMap[normalizedActiveEmoji];
+
         let specificFields = {};
         if (field) {
-            if (currentUserLiked && isSameEmoji) {
-                newCount = Math.max(0, newCount - 1);
-                newUserLiked = false;
-                specificFields[field] = Math.max(0, (t[field] || 0) - 1);
-            } else if (currentUserLiked && !isSameEmoji) {
-                // Switching emoji
-                if (oldField) specificFields[oldField] = Math.max(0, (t[oldField] || 0) - 1);
-                specificFields[field] = (t[field] || 0) + 1;
-                newUserLiked = true;
-            } else {
-                newCount = newCount + 1;
-                newUserLiked = true;
-                specificFields[field] = (t[field] || 0) + 1;
+          if (currentUserLiked && isSameEmoji) {
+            if (isHeartReaction(normalizedActiveEmoji)) {
+              newCount = Math.max(0, newCount - 1);
             }
+            newUserLiked = false;
+            specificFields[field] = Math.max(0, (t[field] || 0) - 1);
+          } else if (currentUserLiked && !isSameEmoji) {
+            // Switching emoji
+            if (isHeartReaction(normalizedActiveEmoji) && !isHeartReaction(normalizedEmoji)) {
+              newCount = Math.max(0, newCount - 1);
+            } else if (!isHeartReaction(normalizedActiveEmoji) && isHeartReaction(normalizedEmoji)) {
+              newCount = newCount + 1;
+            }
+            if (oldField) specificFields[oldField] = Math.max(0, (t[oldField] || 0) - 1);
+            specificFields[field] = (t[field] || 0) + 1;
+            newUserLiked = true;
+          } else {
+            if (isHeartReaction(normalizedEmoji)) {
+              newCount = newCount + 1;
+            }
+            newUserLiked = true;
+            specificFields[field] = (t[field] || 0) + 1;
+          }
         }
 
         const newReactions = { ...(t.reactions || {}) };
         if (field) {
-            const displayEmoji = (emoji === 'like' || emoji === 'heart') ? '❤️' : emoji;
-            if (currentUserLiked && isSameEmoji) {
-                newReactions[displayEmoji] = Math.max(0, (newReactions[displayEmoji] || 0) - 1);
-            } else if (currentUserLiked && !isSameEmoji) {
-                const oldDisplayEmoji = (currentActiveEmoji === 'like' || currentActiveEmoji === 'heart') ? '❤️' : currentActiveEmoji;
-                newReactions[oldDisplayEmoji] = Math.max(0, (newReactions[oldDisplayEmoji] || 0) - 1);
-                newReactions[displayEmoji] = (newReactions[displayEmoji] || 0) + 1;
-            } else {
-                newReactions[displayEmoji] = (newReactions[displayEmoji] || 0) + 1;
-            }
+          const displayEmoji = (emoji === 'like' || emoji === 'heart' || emoji === '❤️') ? '❤️' : emoji;
+          if (currentUserLiked && isSameEmoji) {
+            newReactions[displayEmoji] = Math.max(0, (newReactions[displayEmoji] || 0) - 1);
+          } else if (currentUserLiked && !isSameEmoji) {
+            const oldDisplayEmoji = (currentActiveEmoji === 'like' || currentActiveEmoji === 'heart' || currentActiveEmoji === '❤️') ? '❤️' : currentActiveEmoji;
+            newReactions[oldDisplayEmoji] = Math.max(0, (newReactions[oldDisplayEmoji] || 0) - 1);
+            newReactions[displayEmoji] = (newReactions[displayEmoji] || 0) + 1;
+          } else {
+            newReactions[displayEmoji] = (newReactions[displayEmoji] || 0) + 1;
+          }
         }
 
         updatedPending = { likes: newCount, userLiked: newUserLiked, activeEmoji: newUserLiked ? emoji : null, ...specificFields, reactions: newReactions };
@@ -245,39 +310,50 @@ export const ThreadProvider = ({ children }) => {
     setPendingActions(prev => ({ ...prev, [threadId]: { ...prev[threadId], ...updatedPending } }));
 
     try {
-      await fetch(API_ENDPOINTS.THREAD_REACT(threadId), {
+      await fetch(`${BASE_URL}/api/posts/${threadId}/react`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
         },
-        body: JSON.stringify({ 
-          userId: user?.employee_id || user?.id,
-          user_id: user?.employee_id || user?.id,
-          employee_id: user?.employee_id || user?.id,
-          EmpID: user?.employee_id || user?.id,
+        body: JSON.stringify({
+          userId: user?.id || user?.employee_id || userId,
+          user_id: user?.id || user?.employee_id || userId,
+          employee_id: user?.id || user?.employee_id || userId,
+          EmpID: user?.id || user?.employee_id || userId,
           userName: user?.name,
-          reactionType: emoji, 
-          reaction_type: emoji,
-          type: emoji,
-          emoji: emoji === 'like' ? '❤️' : emoji
+          reaction: normalizedEmoji, // e.g. 'thumbsup'
+          emoji: emoji, // e.g. '👍'
+          type: normalizedEmoji, // e.g. 'thumbsup'
+          reactionType: emoji, // e.g. '👍'
+          reaction_type: emoji, // e.g. '👍'
+          reactionEmoji: emoji,
+          reaction_emoji: emoji,
+          emojiSymbol: emoji,
+          emoji_symbol: emoji,
+          symbol: emoji,
+          value: normalizedEmoji,
+          reactionVal: normalizedEmoji
         })
       });
-      setTimeout(() => fetchThreads(true), 1000);
+
+      setTimeout(() => fetchThreads(true), 500);
+
+      // Delay removing from pending actions to let background fetch complete
       setTimeout(() => {
         setPendingActions(prev => {
-            const next = { ...prev };
-            delete next[threadId];
-            return next;
+          const next = { ...prev };
+          delete next[threadId];
+          return next;
         });
       }, 15000);
-    } catch { 
-        setPendingActions(prev => {
-            const next = { ...prev };
-            delete next[threadId];
-            return next;
-        });
-        setTimeout(() => fetchThreads(true), 1000);
+    } catch {
+      setPendingActions(prev => {
+        const next = { ...prev };
+        delete next[threadId];
+        return next;
+      });
+      setTimeout(() => fetchThreads(true), 1000);
     }
   };
 
@@ -303,7 +379,7 @@ export const ThreadProvider = ({ children }) => {
       const uId = user?.id || user?.employee_id || userId;
       await fetch(API_ENDPOINTS.THREAD_BADGE(threadId), {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
         },
@@ -319,9 +395,9 @@ export const ThreadProvider = ({ children }) => {
       fetchThreads(user?.id, true);
       setTimeout(() => {
         setPendingActions(prev => {
-            const next = { ...prev };
-            delete next[threadId];
-            return next;
+          const next = { ...prev };
+          delete next[threadId];
+          return next;
         });
       }, 15000);
     } catch {
@@ -338,17 +414,17 @@ export const ThreadProvider = ({ children }) => {
     try {
       const res = await fetch(API_ENDPOINTS.THREAD_COMMENT(threadId), {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           userId: user?.id || user?.employee_id || user?.EmpID || user?.userId,
           user_id: user?.id || user?.employee_id || user?.EmpID || user?.userId,
           employee_id: user?.id || user?.employee_id || user?.EmpID || user?.userId,
           EmpID: user?.id || user?.employee_id || user?.EmpID || user?.userId,
           userName: user?.name,
-          content 
+          content
         })
       });
       if (res.ok) {
@@ -380,20 +456,30 @@ export const ThreadProvider = ({ children }) => {
     return [];
   };
 
-  const deletePost = async (id) => {
-    if (!user?.token) return;
+  const deletePost = async (id, postAuthorId = null) => {
+    if (!user?.token) return false;
+    const post = threads.find(t => t.id === id);
+    const authorId = postAuthorId || post?.userId || post?.user_id || post?.employee_id;
+    const finalUserId = authorId || user?.id || user?.employee_id || user?.EmpID;
     try {
       const res = await fetch(API_ENDPOINTS.THREAD_DELETE(id), {
         method: 'DELETE',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
-        }
+        },
+        body: JSON.stringify({
+          userId: finalUserId,
+          employee_id: finalUserId,
+          user_id: finalUserId
+        })
       });
       if (res.ok) {
-        await fetchThreads(undefined, true);
+        await fetchThreads(true);
+        return true;
       }
     } catch { }
+    return false;
   };
 
   const fetchSingleThread = async (id) => {
@@ -418,50 +504,82 @@ export const ThreadProvider = ({ children }) => {
     return [];
   };
 
-  const deleteComment = async (threadId, commentId) => {
-    if (!user?.token) return;
+  const deleteComment = async (threadId, commentId, commentAuthorId = null) => {
+    if (!user?.token) return false;
+    const finalUserId = commentAuthorId || user?.id || user?.employee_id || user?.EmpID;
     try {
       const res = await fetch(API_ENDPOINTS.COMMENT_DELETE(threadId, commentId), {
         method: 'DELETE',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.token}`
-        }
-      });
-      if (res.ok) await fetchThreads(undefined, true);
-    } catch { }
-  };
-
-  const updateComment = async (threadId, commentId, content) => {
-    if (!user?.token) return;
-    try {
-      const res = await fetch(API_ENDPOINTS.COMMENT_UPDATE(threadId, commentId), {
-        method: 'PUT',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
         },
         body: JSON.stringify({
-          content
+          userId: finalUserId,
+          employee_id: finalUserId,
+          user_id: finalUserId
         })
       });
-      if (res.ok) await fetchThreads(undefined, true);
+      if (res.ok) {
+        await fetchThreads(true);
+        return true;
+      }
     } catch { }
+    return false;
   };
 
-  const updatePost = async (id, content) => {
-    if (!user?.token) return;
+  const updateComment = async (threadId, commentId, content, commentAuthorId = null) => {
+    if (!user?.token) return false;
+    const finalUserId = commentAuthorId || user?.id || user?.employee_id || user?.EmpID;
     try {
-      const res = await fetch(API_ENDPOINTS.THREAD_UPDATE(id), {
+      const res = await fetch(API_ENDPOINTS.COMMENT_UPDATE(threadId, commentId), {
         method: 'PUT',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
         },
-        body: JSON.stringify({ content })
+        body: JSON.stringify({
+          content,
+          userId: finalUserId,
+          employee_id: finalUserId,
+          user_id: finalUserId
+        })
       });
-      if (res.ok) setThreads(threads.map(t => t.id === id ? { ...t, content } : t));
+      if (res.ok) {
+        await fetchThreads(true);
+        return true;
+      }
     } catch { }
+    return false;
+  };
+
+  const updatePost = async (id, contentText, postAuthorId = null) => {
+    if (!user?.token) return false;
+    const post = threads.find(t => t.id === id);
+    const authorId = postAuthorId || post?.userId || post?.user_id || post?.employee_id;
+    const finalUserId = authorId || user?.id || user?.employee_id || user?.EmpID;
+    try {
+      const actualContent = typeof contentText === 'object' && contentText !== null ? contentText.content : contentText;
+      const res = await fetch(API_ENDPOINTS.THREAD_UPDATE(id), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({
+          content: actualContent,
+          userId: finalUserId,
+          employee_id: finalUserId,
+          user_id: finalUserId
+        })
+      });
+      if (res.ok) {
+        setThreads(threads.map(t => t.id === id ? { ...t, content: actualContent } : t));
+        await fetchThreads(true);
+        return true;
+      }
+    } catch { }
+    return false;
   };
 
   return (

@@ -90,58 +90,120 @@ const QuizModule = ({ onBack }) => {
 
       const reData = reRes.ok ? await reRes.json() : [];
       const subData = subRes.ok ? await subRes.json() : [];
-      const scoreData = scoreRes.ok ? await scoreRes.json() : [];
+      
+      let scoreList = [];
+      let fetchSuccess = false;
+      if (scoreRes.ok) {
+        try {
+          const scoreData = await scoreRes.json();
+          scoreList = Array.isArray(scoreData) ? scoreData : (scoreData.data || []);
+          fetchSuccess = true;
+        } catch (e) {
+          console.error("Error parsing scoreData", e);
+        }
+      }
 
       const userList = [
         ...(Array.isArray(reData) ? reData : (reData.data || [])).map(u => ({ id: u.employee_id || u.id, name: u.employee_name || u.name })),
         ...(Array.isArray(subData) ? subData : (subData.data || [])).map(u => ({ id: u.employee_id || u.id, name: u.employee_name || u.name }))
       ];
 
-      let scoreList = Array.isArray(scoreData) ? scoreData : (scoreData.data || []);
-
       // Local Cache & Merge Strategy to prevent historical score loss when quiz is deleted
-      try {
-        let cachedQuizScores = [];
-        const localData = localStorage.getItem('nbt_historical_quiz_scores');
-        if (localData) {
-          const parsed = JSON.parse(localData);
-          if (Array.isArray(parsed)) {
-            cachedQuizScores = parsed;
+      if (fetchSuccess) {
+        try {
+          let cachedQuizScores = [];
+          const localData = localStorage.getItem('nbt_historical_quiz_scores');
+          if (localData) {
+            const parsed = JSON.parse(localData);
+            if (Array.isArray(parsed)) {
+              cachedQuizScores = parsed;
+            }
           }
+
+          // A robust helper to get local date string YYYY-MM-DD
+          const getLocalDateString = (dateVal) => {
+            const d = dateVal ? new Date(dateVal) : new Date();
+            if (isNaN(d.getTime())) {
+              const now = new Date();
+              const y = now.getFullYear();
+              const m = String(now.getMonth() + 1).padStart(2, '0');
+              const day = String(now.getDate()).padStart(2, '0');
+              return `${y}-${m}-${day}`;
+            }
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          };
+
+          const mergedMap = new Map();
+          // 1. Load historical cache first (all of it, no activeEmpIds filtering!)
+          cachedQuizScores.forEach(item => {
+            if (item) {
+              const empId = String(item.employee_id || item.user_id || item.userId || item.id || '');
+              if (empId) {
+                const score = Number(item.total_score || item.points || item.quiz_score || item.score || 0);
+                const originalDateStr = item.created_at || item.completion_date || item.date || null;
+                // Use 'cumulative' key for undated entries so they don't double-count with dated entries
+                const uniqueKey = originalDateStr
+                  ? `${empId}-${getLocalDateString(originalDateStr)}`
+                  : `${empId}-cumulative`;
+                
+                if (mergedMap.has(uniqueKey)) {
+                  const existing = mergedMap.get(uniqueKey);
+                  if (score > existing.points) {
+                    mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: originalDateStr });
+                  }
+                } else {
+                  mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: originalDateStr });
+                }
+              }
+            }
+          });
+
+          // 2. Overlay new active quiz scores from server
+          scoreList.forEach(item => {
+            if (item) {
+              const empId = String(item.employee_id || item.user_id || item.userId || item.id || '');
+              if (empId) {
+                const score = Number(item.total_score || item.points || item.quiz_score || item.score || 0);
+                const originalDateStr = item.created_at || item.completion_date || item.date || null;
+                // Undated server entries (cumulative totals) get a 'cumulative' key to avoid double-counting
+                const uniqueKey = originalDateStr
+                  ? `${empId}-${getLocalDateString(originalDateStr)}`
+                  : `${empId}-cumulative`;
+                
+                if (mergedMap.has(uniqueKey)) {
+                  const existing = mergedMap.get(uniqueKey);
+                  if (score > existing.points) {
+                    mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: originalDateStr });
+                  }
+                } else {
+                  mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: originalDateStr });
+                }
+              }
+            }
+          });
+
+          const mergedList = Array.from(mergedMap.values());
+          localStorage.setItem('nbt_historical_quiz_scores', JSON.stringify(mergedList));
+          scoreList = mergedList;
+        } catch (cacheErr) {
+          console.error("Local quiz score caching error:", cacheErr);
         }
-
-        const mergedMap = new Map();
-        // 1. Load historical cache first
-        cachedQuizScores.forEach(item => {
-          if (item) {
-            const empId = item.employee_id || item.user_id || item.userId || item.id || '';
-            const score = Number(item.total_score || item.points || item.quiz_score || item.score || 0);
-            const qId = item.quiz_id || item.quizId || '';
-            const date = item.created_at || item.completion_date || item.date || '';
-            const datePart = (date || '').split('T')[0];
-            const uniqueKey = `${empId}-${qId || 'default'}-${score}-${datePart}`;
-            mergedMap.set(uniqueKey, item);
+      } else {
+        // Fallback to cache if network fails
+        try {
+          const localData = localStorage.getItem('nbt_historical_quiz_scores');
+          if (localData) {
+            const parsed = JSON.parse(localData);
+            if (Array.isArray(parsed)) {
+              scoreList = parsed;
+            }
           }
-        });
-
-        // 2. Overlay new active quiz scores
-        scoreList.forEach(item => {
-          if (item) {
-            const empId = item.employee_id || item.user_id || item.userId || item.id || '';
-            const score = Number(item.total_score || item.points || item.quiz_score || item.score || 0);
-            const qId = item.quiz_id || item.quizId || '';
-            const date = item.created_at || item.completion_date || item.date || '';
-            const datePart = (date || '').split('T')[0];
-            const uniqueKey = `${empId}-${qId || 'default'}-${score}-${datePart}`;
-            mergedMap.set(uniqueKey, item);
-          }
-        });
-
-        const mergedList = Array.from(mergedMap.values());
-        localStorage.setItem('nbt_historical_quiz_scores', JSON.stringify(mergedList));
-        scoreList = mergedList;
-      } catch (cacheErr) {
-        console.error("Local quiz score caching error:", cacheErr);
+        } catch (cacheErr) {
+          console.error("Local quiz score cache fallback error:", cacheErr);
+        }
       }
 
       // 2. Map and Deduplicate precise quiz scores to exact employee name strings
@@ -256,6 +318,26 @@ const QuizModule = ({ onBack }) => {
       });
 
       if (response.ok) {
+        // Save submission locally with the current timestamp to enable date-wise filtering
+        try {
+          const localData = localStorage.getItem('nbt_historical_quiz_scores');
+          let cached = [];
+          if (localData) {
+            const parsed = JSON.parse(localData);
+            if (Array.isArray(parsed)) cached = parsed;
+          }
+          cached.push({
+            employee_id: user?.employee_id || user?.userId || user?.id,
+            points: totalPoints,
+            created_at: new Date().toISOString(),
+            note: 'Earned from Quiz Hub',
+            quiz_id: questions[0]?.quiz_id || questions[0]?.id || 'session'
+          });
+          localStorage.setItem('nbt_historical_quiz_scores', JSON.stringify(cached));
+        } catch (e) {
+          console.error("Failed to append quiz score to cache:", e);
+        }
+
         // Refresh EVERYTHING to reflect on dashboard
         await Promise.all([fetchScores(), fetchQuestions()]);
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Trophy, Star, Award, Zap, ArrowLeft, ShieldCheck, UserCheck, Flame, Edit, Trash2, Plus, Users, Search, ChevronRight, ChevronLeft, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AppHeader from './AppHeader';
@@ -12,6 +12,39 @@ const parsePoints = (val) => {
     const cleaned = String(val).replace(/,/g, '').trim();
     const num = Number(cleaned);
     return isNaN(num) ? 0 : num;
+};
+
+const parseToDate = (dateVal) => {
+    if (!dateVal) return null;
+    if (dateVal instanceof Date) return dateVal;
+    const str = String(dateVal).trim();
+    if (!str) return null;
+
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+        const normalized = str.includes(' ') ? str.replace(' ', 'T') : str;
+        const d = new Date(normalized);
+        if (!isNaN(d.getTime())) return d;
+    }
+
+    const dmY = str.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})/);
+    if (dmY) {
+        const day = parseInt(dmY[1], 10);
+        const month = parseInt(dmY[2], 10) - 1;
+        const year = parseInt(dmY[3], 10);
+        const timePart = str.split(/\s+/)[1] || '';
+        if (timePart) {
+            const t = timePart.split(':');
+            const h = parseInt(t[0] || 0, 10);
+            const m = parseInt(t[1] || 0, 10);
+            const s = parseInt(t[2] || 0, 10);
+            return new Date(year, month, day, h, m, s);
+        }
+        return new Date(year, month, day);
+    }
+
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) return d;
+    return null;
 };
 
 const formatPoints = (val) => {
@@ -65,6 +98,21 @@ export default function AwardsScreen() {
     const [showGrantModal, setShowGrantModal] = React.useState(false);
     const [showEditModal, setShowEditModal] = React.useState(false);
     const [selectedReward, setSelectedReward] = React.useState(null);
+    const [isMounted, setIsMounted] = React.useState(true);
+    React.useEffect(() => {
+        return () => { setIsMounted(false); };
+    }, []);
+
+    // Fix for React Router getting stuck when using browser's back button
+    React.useEffect(() => {
+        const handleHashChange = () => {
+            if (!window.location.hash.includes('awards') && document.getElementById('awards-screen-main')) {
+                window.location.reload();
+            }
+        };
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
+    }, []);
     const [employees, setEmployees] = React.useState([]);
     const [grantData, setGrantData] = React.useState({ employee_id: '', reward_name: '', points: 50, note: '' });
     const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -73,19 +121,8 @@ export default function AwardsScreen() {
     const [granting, setGranting] = React.useState(false);
     const [history, setHistory] = React.useState({ pm: [] });
     const [feedback, setFeedback] = React.useState(null);
-    const [startDate, setStartDate] = React.useState(() => {
-        const d = new Date();
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        return `${year}-${month}-01`;
-    });
-    const [endDate, setEndDate] = React.useState(() => {
-        const d = new Date();
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    });
+    const [startDate, setStartDate] = React.useState('');
+    const [endDate, setEndDate] = React.useState('');
     const [selectedHistoryUser, setSelectedHistoryUser] = React.useState(null);
     const [showAllFeed, setShowAllFeed] = React.useState(false);
     const [showRecipientDropdown, setShowRecipientDropdown] = React.useState(false);
@@ -108,6 +145,8 @@ export default function AwardsScreen() {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Removed fetchUserQuizCompletions effect - cumulative leaderboard handles it directly
     const [availableAwards] = React.useState([
         { id: 'visionary', title: "Visionary Lead", rep: 200, desc: "Acknowledge exceptional leadership and vision." },
         { id: 'achiever', title: "Goal Achiever", rep: 150, desc: "Recognize consistent goal hitting and performance." },
@@ -157,63 +196,153 @@ export default function AwardsScreen() {
 
             // Fetch Quiz Scores to aggregate
             let qList = [];
+            let fetchSuccess = false;
             try {
                 const qRes = await fetch(API_ENDPOINTS.QUIZ_LEADERBOARD, { headers: { 'Authorization': `Bearer ${user.token}` } });
                 if (qRes.ok) {
                     const qData = await qRes.json();
                     qList = Array.isArray(qData) ? qData : (qData.data || []);
+                    fetchSuccess = true;
                 }
             } catch (e) { }
 
-            // Local Cache & Merge Strategy to prevent historical score loss when quiz is deleted
+            // Fetch exact cumulative quiz points for all employees from backend database
+            let backendCumulativeQuizScores = [];
             try {
-                let cachedQuizScores = [];
-                const localData = localStorage.getItem('nbt_historical_quiz_scores');
-                if (localData) {
-                    const parsed = JSON.parse(localData);
-                    if (Array.isArray(parsed)) {
-                        cachedQuizScores = parsed;
+                const rewardsPromises = unique.map(async (emp) => {
+                    const empId = emp.id || emp.employee_id || emp.userId;
+                    if (!empId) return null;
+                    try {
+                        const res = await fetch(`${BASE_URL}/api/rewards/user/${empId}`, { headers: { 'Authorization': `Bearer ${user.token}` } });
+                        if (res.ok) {
+                            const data = await res.json();
+                            const quizPoints = parsePoints(data.quizPointsNum || data.quizPoints);
+                            if (quizPoints > 0) {
+                                return {
+                                    employee_id: String(empId),
+                                    points: quizPoints,
+                                    created_at: null // Cumulative
+                                };
+                            }
+                        }
+                    } catch (e) {
+                        console.error(`Failed to fetch rewards for user ${empId}:`, e);
                     }
+                    return null;
+                });
+                backendCumulativeQuizScores = (await Promise.all(rewardsPromises)).filter(Boolean);
+            } catch (e) {
+                console.error("Failed to fetch backend cumulative rewards:", e);
+            }
+
+            // Local Cache & Merge Strategy to prevent historical score loss when quiz is deleted
+            if (fetchSuccess || backendCumulativeQuizScores.length > 0) {
+                try {
+                    let cachedQuizScores = [];
+                    const localData = localStorage.getItem('nbt_historical_quiz_scores');
+                    if (localData) {
+                        const parsed = JSON.parse(localData);
+                        if (Array.isArray(parsed)) {
+                            cachedQuizScores = parsed;
+                        }
+                    }
+
+                    // A robust helper to get local date string YYYY-MM-DD
+                    const getLocalDateString = (dateVal) => {
+                        const d = dateVal ? new Date(dateVal) : new Date();
+                        if (isNaN(d.getTime())) {
+                            const now = new Date();
+                            const y = now.getFullYear();
+                            const m = String(now.getMonth() + 1).padStart(2, '0');
+                            const day = String(now.getDate()).padStart(2, '0');
+                            return `${y}-${m}-${day}`;
+                        }
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+
+                    const mergedMap = new Map();
+                    // 1. Load historical cache first (all of it, no activeEmpIds filtering!)
+                    cachedQuizScores.forEach(item => {
+                        if (item) {
+                            const empId = String(item.employee_id || item.user_id || item.userId || item.id || '');
+                            if (empId) {
+                                const score = parsePoints(item.total_score || item.points || item.quiz_score || item.score || 0);
+                                const originalDateStr = item.created_at || item.completion_date || item.date || null;
+                                // Use 'cumulative' key for undated entries so they don't double-count with dated entries
+                                const uniqueKey = originalDateStr
+                                    ? `${empId}-${getLocalDateString(originalDateStr)}`
+                                    : `${empId}-cumulative`;
+                                
+                                if (mergedMap.has(uniqueKey)) {
+                                    const existing = mergedMap.get(uniqueKey);
+                                    if (score > existing.points) {
+                                        mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: originalDateStr });
+                                    }
+                                } else {
+                                    mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: originalDateStr });
+                                }
+                            }
+                        }
+                    });
+
+                    // 2. Overlay new active quiz scores from server
+                    qList.forEach(item => {
+                        if (item) {
+                            const empId = String(item.employee_id || item.user_id || item.userId || item.id || '');
+                            if (empId) {
+                                const score = parsePoints(item.total_score || item.points || item.quiz_score || item.score || 0);
+                                const originalDateStr = item.created_at || item.completion_date || item.date || null;
+                                // Undated server entries (cumulative totals) get a 'cumulative' key to avoid double-counting
+                                const uniqueKey = originalDateStr
+                                    ? `${empId}-${getLocalDateString(originalDateStr)}`
+                                    : `${empId}-cumulative`;
+                                
+                                if (mergedMap.has(uniqueKey)) {
+                                    const existing = mergedMap.get(uniqueKey);
+                                    if (score > existing.points) {
+                                        mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: originalDateStr });
+                                    }
+                                } else {
+                                    mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: originalDateStr });
+                                }
+                            }
+                        }
+                    });
+
+                    // 3. Overlay the exact all-time cumulative scores from the backend
+                    backendCumulativeQuizScores.forEach(item => {
+                        const empId = item.employee_id;
+                        const uniqueKey = `${empId}-cumulative`;
+                        mergedMap.set(uniqueKey, item);
+                    });
+
+                    const mergedList = Array.from(mergedMap.values());
+                    localStorage.setItem('nbt_historical_quiz_scores', JSON.stringify(mergedList));
+                    qList = mergedList;
+                } catch (cacheErr) {
+                    console.error("Local quiz score caching error:", cacheErr);
                 }
-
-                const mergedMap = new Map();
-                // 1. Load historical cache first
-                cachedQuizScores.forEach(item => {
-                    if (item) {
-                        const empId = item.employee_id || item.user_id || item.userId || item.id || '';
-                        const score = parsePoints(item.total_score || item.points || item.quiz_score || item.score || 0);
-                        const qId = item.quiz_id || item.quizId || '';
-                        const date = item.created_at || item.completion_date || item.date || '';
-                        const datePart = (date || '').split('T')[0];
-                        const uniqueKey = `${empId}-${qId || 'default'}-${score}-${datePart}`;
-                        mergedMap.set(uniqueKey, item);
+            } else {
+                // Fallback to cache if network fails
+                try {
+                    const localData = localStorage.getItem('nbt_historical_quiz_scores');
+                    if (localData) {
+                        const parsed = JSON.parse(localData);
+                        if (Array.isArray(parsed)) {
+                            qList = parsed;
+                        }
                     }
-                });
-
-                // 2. Overlay new active quiz scores
-                qList.forEach(item => {
-                    if (item) {
-                        const empId = item.employee_id || item.user_id || item.userId || item.id || '';
-                        const score = parsePoints(item.total_score || item.points || item.quiz_score || item.score || 0);
-                        const qId = item.quiz_id || item.quizId || '';
-                        const date = item.created_at || item.completion_date || item.date || '';
-                        const datePart = (date || '').split('T')[0];
-                        const uniqueKey = `${empId}-${qId || 'default'}-${score}-${datePart}`;
-                        mergedMap.set(uniqueKey, item);
-                    }
-                });
-
-                const mergedList = Array.from(mergedMap.values());
-                localStorage.setItem('nbt_historical_quiz_scores', JSON.stringify(mergedList));
-                qList = mergedList;
-            } catch (cacheErr) {
-                console.error("Local quiz score caching error:", cacheErr);
+                } catch (cacheErr) {
+                    console.error("Local quiz score cache fallback error:", cacheErr);
+                }
             }
 
             setQuizScores(qList);
 
-            // Fetch Leaderboard for Banner (Top Recognition) - Pass fresh quiz scores to avoid state lag
-            await fetchLeaderboard(qList);
+            // Leaderboard relies on local state effect
 
         } catch (err) {
             console.error(err);
@@ -256,133 +385,181 @@ export default function AwardsScreen() {
         return emp ? (emp.name || emp.employee_name || 'Anonymous Member') : 'Anonymous Member';
     };
 
-    const fetchLeaderboard = async (overrideQuizScores = null) => {
-        if (!user?.token) return;
-        const activeQuizScores = overrideQuizScores || quizScores;
-        try {
-            const params = new URLSearchParams();
-            if (startDate) params.append('startDate', startDate);
-            if (endDate) params.append('endDate', endDate);
-
-            const res = await fetch(`${API_ENDPOINTS.LEADERBOARD_ALL}?${params.toString()}`, {
-                headers: { 'Authorization': `Bearer ${user.token}` }
-            });
-            if (res.ok) {
-                const resJson = await res.json();
-                const baseLeaderboard = Array.isArray(resJson.data) ? resJson.data : (Array.isArray(resJson) ? resJson : []);
-
-                // Merge quiz scores into leaderboard
-                const mergedMap = new Map();
-
-                // First add base reward points
-                baseLeaderboard.forEach(item => {
-                    const id = String(item.employee_id || item.id || item.userId);
-                    mergedMap.set(id, {
-                        id: isNaN(id) ? id : Number(id),
-                        name: item.name || item.employee_name || resolveEmployeeName(id),
-                        total_reward_points: parsePoints(item.total_reward_points || item.total_points || 0),
-                        total_quiz_points: 0
-                    });
-                });
-
-                // Then add quiz points
-                activeQuizScores.forEach(q => {
-                    const id = String(q.employee_id || q.user_id || q.userId || q.id);
-                    const score = parsePoints(q.total_score || q.points || q.quiz_score || q.score || 0);
-                    if (mergedMap.has(id)) {
-                        const existing = mergedMap.get(id);
-                        existing.total_quiz_points += score;
-                    } else {
-                        mergedMap.set(id, {
-                            id: isNaN(id) ? id : Number(id),
-                            name: resolveEmployeeName(id),
-                            total_reward_points: 0,
-                            total_quiz_points: score
-                        });
-                    }
-                });
-
-                const finalLeaderboard = Array.from(mergedMap.values()).map(item => {
-                    const empId = String(item.id);
-                    const emp = employees.find(e =>
-                        String(e.id) === empId ||
-                        String(e.employee_id) === empId ||
-                        String(e.userId) === empId ||
-                        String(e.emp_id) === empId
-                    );
-                    const total_points = item.total_reward_points + item.total_quiz_points;
-                    return {
-                        id: item.id,
-                        name: emp ? (emp.name || emp.employee_name || item.name) : item.name,
-                        role: emp ? (emp.designation || emp.role || 'Team Member') : 'Team Member',
-                        team: emp ? (emp.team || emp.department || 'Bytes Blasters✨') : 'Bytes Blasters✨',
-                        total_reward_points: item.total_reward_points,
-                        total_quiz_points: item.total_quiz_points,
-                        total_points: total_points
-                    };
-                });
-
-                // Sort descending by total_points
-                finalLeaderboard.sort((a, b) => b.total_points - a.total_points);
-
-                // Add ranks
-                const rankedLeaderboard = finalLeaderboard.map((item, index) => ({
-                    ...item,
-                    rank: String(index + 1)
-                }));
-
-                setLeaderboard(rankedLeaderboard);
-            }
-        } catch (err) {
-            console.error("Leaderboard fetch error:", err);
-            setLeaderboard([]);
+    const isSameEmployee = (id1, id2) => {
+        if (!id1 || !id2) return false;
+        if (String(id1) === String(id2)) return true;
+        
+        const emp1 = employees.find(e =>
+            String(e.id) === String(id1) ||
+            String(e.employee_id) === String(id1) ||
+            String(e.userId) === String(id1) ||
+            String(e.emp_id) === String(id1)
+        );
+        
+        const emp2 = employees.find(e =>
+            String(e.id) === String(id2) ||
+            String(e.employee_id) === String(id2) ||
+            String(e.userId) === String(id2) ||
+            String(e.emp_id) === String(id2)
+        );
+        
+        if (emp1 && emp2) {
+            const uid1 = String(emp1.id || emp1.employee_id || emp1.userId || emp1.emp_id);
+            const uid2 = String(emp2.id || emp2.employee_id || emp2.userId || emp2.emp_id);
+            if (uid1 === uid2) return true;
         }
+        
+        const s1 = String(id1);
+        const s2 = String(id2);
+        if (s1.endsWith(s2) || s2.endsWith(s1)) {
+            return true;
+        }
+        
+        return false;
     };
 
-    React.useEffect(() => {
-        fetchLeaderboard();
-    }, [startDate, endDate]);
+    /* fetchLeaderboard replaced by local effect */
 
     const combinedRewards = React.useMemo(() => {
-        const quizRewards = quizScores.map((q, index) => ({
-            id: `quiz-${q.employee_id || q.user_id || q.userId || q.id}-${q.id || index}`,
-            employee_id: q.employee_id || q.user_id || q.userId || q.id,
-            reward_name: 'Quiz Excellence',
-            points: parsePoints(q.total_score || q.points || q.quiz_score || q.score || 0),
-            created_at: q.created_at || q.completion_date || q.date || new Date().toISOString(),
-            note: 'Earned from Quiz Hub'
-        })).filter(q => q.points > 0);
+        const quizRewards = quizScores.map((q, index) => {
+            const hasDate = !!(q.created_at || q.completion_date || q.date);
+            return {
+                id: `quiz-${q.employee_id || q.user_id || q.userId || q.id}-${q.id || index}`,
+                employee_id: q.employee_id || q.user_id || q.userId || q.id,
+                reward_name: 'Quiz Excellence',
+                points: parsePoints(q.total_score || q.points || q.quiz_score || q.score || 0),
+                created_at: q.created_at || q.completion_date || q.date || null,
+                note: 'Earned from Quiz Hub',
+                isCumulative: !hasDate
+            };
+        }).filter(q => q.points > 0);
 
         return [...rewards, ...quizRewards];
     }, [rewards, quizScores]);
 
     const filteredRewards = combinedRewards.filter(r => {
-        if (!startDate && !endDate) return true;
-        const rDate = (r.created_at || r.date || "").split('T')[0];
-        if (!rDate) return true;
-        if (startDate && rDate < startDate) return false;
-        if (endDate && rDate > endDate) return false;
+        const rDate = parseToDate(r.created_at || r.date);
+        if (!rDate) return !startDate && !endDate;
+
+        if (startDate) {
+            const start = parseToDate(startDate);
+            if (start) {
+                const startOfDay = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0);
+                if (rDate < startOfDay) return false;
+            }
+        }
+
+        if (endDate) {
+            const end = parseToDate(endDate);
+            if (end) {
+                const endOfDay = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999);
+                if (rDate > endOfDay) return false;
+            }
+        }
+
         return true;
     });
 
-    const topContributor = React.useMemo(() => {
-        if (!filteredRewards || filteredRewards.length === 0) return leaderboard[0] || null;
+    React.useEffect(() => {
+        const mergedMap = new Map();
+        const userQuizRewards = {}; // id -> list of quiz rewards
 
-        const stats = Array.from(new Set(filteredRewards.map(r => r.employee_id))).map(id => {
-            const userRewards = filteredRewards.filter(r => String(r.employee_id) === String(id));
-            const totalRep = userRewards.reduce((sum, r) => sum + parsePoints(r.points), 0);
-            const emp = employees.find(e => String(e.id) === String(id) || String(e.employee_id) === String(id) || String(e.userId) === String(id));
+        filteredRewards.forEach(r => {
+            const rawId = String(r.employee_id || r.user_id || r.userId || r.id);
+            const emp = employees.find(e =>
+                String(e.id) === rawId ||
+                String(e.employee_id) === rawId ||
+                String(e.userId) === rawId ||
+                String(e.emp_id) === rawId
+            );
+            const id = emp ? String(emp.id || emp.employee_id || emp.userId || rawId) : rawId;
+            const isQuiz = String(r.id).startsWith('quiz-');
+
+            if (!mergedMap.has(id)) {
+                mergedMap.set(id, {
+                    id: isNaN(id) ? id : Number(id),
+                    name: resolveEmployeeName(id),
+                    total_reward_points: 0,
+                    total_quiz_points: 0
+                });
+            }
+
+            const existing = mergedMap.get(id);
+            if (isQuiz) {
+                if (!userQuizRewards[id]) userQuizRewards[id] = [];
+                userQuizRewards[id].push(r);
+            } else {
+                existing.total_reward_points += parsePoints(r.points);
+            }
+        });
+
+        // Resolve quiz points for each user to prevent duplicate/double counting of cumulative and dated scores
+        const isDateFilterActive = !!(startDate || endDate);
+        mergedMap.forEach((existing, id) => {
+            const qRewards = userQuizRewards[id] || [];
+            if (qRewards.length > 0) {
+                const cumulativeEntry = qRewards.find(q => q.isCumulative);
+                const datedEntries = qRewards.filter(q => !q.isCumulative);
+
+                if (isDateFilterActive) {
+                    // Sum up all dated quiz points in the range
+                    existing.total_quiz_points = datedEntries.reduce((sum, q) => sum + parsePoints(q.points), 0);
+                } else {
+                    if (cumulativeEntry) {
+                        // All-time: use cumulative entry if present
+                        existing.total_quiz_points = parsePoints(cumulativeEntry.points);
+                    } else {
+                        // Otherwise, sum dated entries
+                        existing.total_quiz_points = datedEntries.reduce((sum, q) => sum + parsePoints(q.points), 0);
+                    }
+                }
+            }
+        });
+
+        const finalLeaderboard = Array.from(mergedMap.values()).map(item => {
+            const empId = String(item.id);
+            const emp = employees.find(e =>
+                String(e.id) === empId ||
+                String(e.employee_id) === empId ||
+                String(e.userId) === empId ||
+                String(e.emp_id) === empId
+            );
+            const total_points = item.total_reward_points + item.total_quiz_points;
             return {
-                id,
-                name: resolveEmployeeName(id),
-                total_points: totalRep,
-                role: emp?.role || 'Team Member',
-                profile_picture: emp?.profile_picture || emp?.profile_pic || emp?.photo
+                id: item.id,
+                name: emp ? (emp.name || emp.employee_name || item.name) : item.name,
+                role: emp ? (emp.designation || emp.role || 'Team Member') : 'Team Member',
+                team: emp ? (emp.team || emp.department || 'Bytes Blasters✨') : 'Bytes Blasters✨',
+                total_reward_points: item.total_reward_points,
+                total_quiz_points: item.total_quiz_points,
+                total_points: total_points
             };
-        }).sort((a, b) => b.total_points - a.total_points);
+        });
 
-        return stats[0] || leaderboard[0] || null;
-    }, [filteredRewards, leaderboard, employees]);
+        finalLeaderboard.sort((a, b) => b.total_points - a.total_points);
+
+        const rankedLeaderboard = finalLeaderboard.map((item, index) => ({
+            ...item,
+            rank: String(index + 1)
+        }));
+
+        setLeaderboard(rankedLeaderboard.filter(item => item.total_points > 0));
+    }, [filteredRewards, employees, startDate, endDate]);
+
+
+    const topContributor = React.useMemo(() => {
+        if (!leaderboard || leaderboard.length === 0) return null;
+        const sortedLeaderboard = [...leaderboard].sort((a, b) => b.total_points - a.total_points);
+        const top = sortedLeaderboard[0];
+        const emp = employees.find(e => String(e.id) === String(top.id) || String(e.employee_id) === String(top.id) || String(e.userId) === String(top.id));
+        return {
+            id: top.id,
+            name: top.name || resolveEmployeeName(top.id),
+            total_points: top.total_points,
+            role: emp?.role || 'Team Member',
+            profile_picture: emp?.profile_picture || emp?.profile_pic || emp?.photo
+        };
+    }, [leaderboard, employees, resolveEmployeeName]);
 
     const handleGrantAward = async () => {
         if (!selectedEmployee) {
@@ -457,79 +634,57 @@ export default function AwardsScreen() {
         finally { setIsSubmitting(false); }
     };
 
+    const auditLogsCount = React.useMemo(() => {
+        if (!user) return 0;
+        return filteredRewards.filter(r => {
+            if (String(r.id).startsWith('quiz-')) return false;
+            const recipientName = resolveEmployeeName(r.employee_id).toLowerCase();
+            const giverName = resolveEmployeeName(r.granted_by).toLowerCase();
+            const rewardName = (r.reward_name || '').toLowerCase();
+            const search = auditSearch.toLowerCase();
+            return recipientName.includes(search) || giverName.includes(search) || rewardName.includes(search);
+        }).length;
+    }, [filteredRewards, user, auditSearch, resolveEmployeeName]);
+
     return (
-        <div style={{ minHeight: '100vh', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
+        <div id="awards-screen-main" style={{ minHeight: '100vh', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
             <AppHeader />
 
             <main style={{ flex: 1, padding: winWidth < 768 ? '100px 16px 40px' : '120px 26px 40px', width: '100%', boxSizing: 'border-box', marginTop: 0 }}>
                 <div style={{ width: '100%' }}>
 
-                    {/* Header Controls */}
-                    <div style={{ display: 'flex', flexDirection: winWidth < 600 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 600 ? 'flex-start' : 'flex-start', marginBottom: '32px', gap: '20px' }}>
+                    {/* â”€â”€ Header Controls â”€â”€ */}
+                    <div style={{ display: 'flex', flexDirection: winWidth < 600 ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px', gap: '20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <button
-                                onClick={() => navigate(-1)}
-                                style={{
-                                    background: 'white',
-                                    padding: '10px',
-                                    borderRadius: '12px',
-                                    border: '1px solid #e2e8f0',
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                            <button 
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    navigate('/dashboard', { replace: true });
+                                    setTimeout(() => {
+                                        if (window.location.hash.includes('dashboard') && document.getElementById('awards-screen-main')) {
+                                            window.location.reload();
+                                        }
+                                    }, 100);
                                 }}
+                                style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
                             >
                                 <ArrowLeft size={18} color="#64748b" />
                             </button>
                             <div>
-                                <h1 style={{ margin: 0, fontSize: winWidth < 768 ? '20px' : '24px', fontWeight: '950', color: '#0f172a', letterSpacing: '-0.5px' }}>Awards & Recognition</h1>
+                                <h1 style={{ margin: 0, fontSize: winWidth < 768 ? '20px' : '24px', fontWeight: '950', color: '#0f172a', letterSpacing: '-0.5px' }}>Awards &amp; Recognition</h1>
                                 <p style={{ margin: 0, fontSize: winWidth < 768 ? '11px' : '13px', color: '#94a3b8', fontWeight: '600' }}>Live achievements at NBT Hub</p>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', width: winWidth < 768 ? '100%' : 'auto', justifyContent: winWidth < 600 ? 'flex-start' : 'flex-start', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', background: '#f1f5f9', padding: '4px', borderRadius: '12px', width: winWidth < 480 ? '100%' : 'auto', overflowX: 'auto' }}>
-                                <button
-                                    onClick={() => setView('feed')}
-                                    style={{ flex: winWidth < 480 ? 1 : 'none', padding: winWidth < 480 ? '8px 4px' : '8px 16px', borderRadius: '8px', fontSize: winWidth < 480 ? '10px' : '12px', fontWeight: '800', border: 'none', background: view === 'feed' ? 'white' : 'transparent', color: view === 'feed' ? '#0f172a' : '#64748b', cursor: 'pointer', boxShadow: view === 'feed' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', whiteSpace: 'nowrap' }}>
-                                    Live Feed
-                                </button>
-
-                                <button
-                                    onClick={() => setView('points')}
-                                    style={{ flex: winWidth < 480 ? 1 : 'none', padding: winWidth < 480 ? '8px 4px' : '8px 16px', borderRadius: '8px', fontSize: winWidth < 480 ? '10px' : '12px', fontWeight: '800', border: 'none', background: view === 'points' ? 'white' : 'transparent', color: view === 'points' ? '#0f172a' : '#64748b', cursor: 'pointer', boxShadow: view === 'points' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none', whiteSpace: 'nowrap' }}>
-                                    Reward Points
-                                </button>
-                            </div>
-
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', width: winWidth < 768 ? '100%' : 'auto', alignItems: 'center' }}>
                             <button
                                 onClick={() => setView(view === 'audit' ? 'feed' : 'audit')}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '8px 16px',
-                                    borderRadius: '12px',
-                                    fontSize: '12px',
-                                    fontWeight: '800',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    background: view === 'audit' ? '#eff6ff' : 'white',
-                                    color: view === 'audit' ? '#2563eb' : '#64748b',
-                                    border: view === 'audit' ? '3px solid #3b82f6' : '3px solid #cbd5e1',
-                                    boxShadow: view === 'audit' ? '0 2px 4px rgba(59, 130, 246, 0.1)' : '0 2px 4px rgba(0,0,0,0.02)',
-                                    whiteSpace: 'nowrap',
-                                    height: '38px',
-                                    width: winWidth < 480 ? '100%' : 'auto',
-                                    justifyContent: 'center'
-                                }}>
-                                <ShieldCheck size={14} color={view === 'audit' ? '#2563eb' : '#64748b'} />
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s ease', background: view === 'audit' ? '#eff6ff' : 'white', color: view === 'audit' ? '#1e40af' : '#334155', border: view === 'audit' ? '1.5px solid #3b82f6' : '1.5px solid #cbd5e1', whiteSpace: 'nowrap', height: '38px', width: winWidth < 480 ? '100%' : 'auto', justifyContent: 'center' }}>
+                                <ShieldCheck size={14} />
                                 Team Audit
                             </button>
-
-                            {/* Date Filter Integrated into Top Bar */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '6px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', width: winWidth < 480 ? '100%' : 'auto', justifyContent: winWidth < 480 ? 'center' : 'flex-start' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '6px 12px', borderRadius: '12px', border: '1px solid #e2e8f0', width: winWidth < 480 ? '100%' : 'auto' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <span style={{ fontSize: '9px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase' }}>From</span>
                                     <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: '10px', fontWeight: '700', outline: 'none', width: '90px' }} />
@@ -540,38 +695,12 @@ export default function AwardsScreen() {
                                     <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: '10px', fontWeight: '700', outline: 'none', width: '90px' }} />
                                 </div>
                             </div>
-                            {(user?.role?.toUpperCase() === 'ADMIN' || user?.role?.toUpperCase() === 'MANAGER') && (
-                                <button
-                                    onClick={() => setShowGrantModal(true)}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: '8px', padding: winWidth < 480 ? '12px' : '10px 20px',
-                                        background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px',
-                                        fontSize: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15,23,42,0.3)',
-                                        width: winWidth < 480 ? '100%' : 'auto', justifyContent: 'center'
-                                    }}>
-                                    <Plus size={16} /> Grant Award
-                                </button>
-                            )}
                         </div>
                     </div>
 
-                    {/* High-Fidelity Top Banner */}
-                    <div style={{
-                        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                        borderRadius: '24px',
-                        padding: winWidth < 768 ? '30px 20px' : '30px 60px',
-                        display: 'grid',
-                        gridTemplateColumns: winWidth < 768 ? '1fr' : '1fr 1fr 1fr',
-                        gap: winWidth < 768 ? '30px' : '0',
-                        alignItems: 'center',
-                        boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.4)',
-                        marginBottom: '40px',
-                        position: 'relative',
-                        overflow: 'hidden'
-                    }}>
-                        <div style={{ position: 'absolute', top: '-50%', left: '-10%', width: '40%', height: '200%', background: 'radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, transparent 70%)', transform: 'rotate(-45deg)', opacity: 0.5 }}></div>
-
-                        {/* Current Rank */}
+                    {/* â”€â”€ Top Banner â”€â”€ */}
+                    <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderRadius: '24px', padding: winWidth < 768 ? '30px 20px' : '30px 60px', display: 'grid', gridTemplateColumns: winWidth < 768 ? '1fr' : '1fr 1fr 1fr', gap: winWidth < 768 ? '30px' : '0', alignItems: 'center', boxShadow: '0 25px 50px -12px rgba(15,23,42,0.4)', marginBottom: '40px', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', top: '-50%', left: '-10%', width: '40%', height: '200%', background: 'radial-gradient(circle, rgba(56,189,248,0.1) 0%, transparent 70%)', transform: 'rotate(-45deg)', opacity: 0.5 }}></div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '20px', borderRight: winWidth < 768 ? 'none' : '1.5px solid rgba(255,255,255,0.1)', borderBottom: winWidth < 768 ? '1.5px solid rgba(255,255,255,0.1)' : 'none', paddingBottom: winWidth < 768 ? '20px' : '0' }}>
                             <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.1)' }}>
                                 <Trophy size={winWidth < 768 ? 24 : 32} color="#facc15" />
@@ -581,274 +710,101 @@ export default function AwardsScreen() {
                                 <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '20px' : '24px', fontWeight: '950', color: '#ffffff' }}>Active Hub</h3>
                             </div>
                         </div>
-
-                        {/* Points Display */}
                         <div style={{ textAlign: winWidth < 768 ? 'left' : 'center', borderRight: winWidth < 768 ? 'none' : '1.5px solid rgba(255,255,255,0.1)', borderBottom: winWidth < 768 ? '1.5px solid rgba(255,255,255,0.1)' : 'none', paddingBottom: winWidth < 768 ? '20px' : '0' }}>
                             <p style={{ margin: '0 0 5px 0', fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Top Contributor Score</p>
                             <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '22px' : '28px', fontWeight: '950', color: '#facc15' }}>
-                                {topContributor ? formatPoints(topContributor.total_points) : "0"} <span style={{ fontSize: '18px' }}>REP</span>
+                                {topContributor ? formatPoints(topContributor.total_points) : '0'} <span style={{ fontSize: '18px' }}>REP</span>
                             </h3>
                         </div>
-
-                        {/* Leaderboard Score */}
                         <div style={{ textAlign: winWidth < 768 ? 'left' : 'right' }}>
                             <p style={{ margin: '0 0 5px 0', fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Top Recognition</p>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: winWidth < 768 ? 'flex-start' : 'flex-end', gap: '10px' }}>
                                 <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '950', color: '#ffffff' }}>
-                                    {topContributor ? topContributor.name : "Syncing..."}
+                                    {topContributor ? topContributor.name : 'Syncing...'}
                                 </h3>
                                 <Star size={20} color="#facc15" fill="#facc15" />
                             </div>
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: (winWidth < 1200 || view === 'audit') ? '1fr' : '1fr 380px', gap: '30px', alignItems: 'start' }}>
-                        <div style={{ background: '#f8fafc', borderRadius: '24px', padding: winWidth < 768 ? '15px' : '30px', border: '1.5px solid #f1f5f9' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-                                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>
-                                    {view === 'feed' ? 'Global Rewards' : view === 'audit' ? 'Team Recognition Audit' : 'Standard Recognition Tiers'}
-                                </h3>
-                                <div style={{ fontSize: '9px', fontWeight: '950', color: '#3863a8', background: '#e0f2fe', padding: '6px 12px', borderRadius: '10px', letterSpacing: '0.5px' }}>
-                                    {view === 'feed' ? `${selectedHistoryUser ? filteredRewards.filter(r => String(r.employee_id) === String(selectedHistoryUser)).length : filteredRewards.length} ENTRIES` : view === 'audit' ? `${filteredRewards.length} LOGS` : `${availableAwards.length} TIERS`}
+                    {/* â”€â”€ AUDIT VIEW â”€â”€ */}
+                    {view === 'audit' ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '30px', alignItems: 'start' }}>
+                            <div style={{ background: '#f8fafc', borderRadius: '24px', padding: winWidth < 768 ? '15px' : '30px', border: '1.5px solid #f1f5f9' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>Team Recognition Audit</h3>
                                 </div>
-                            </div>
-
-                            {loading ? (
-                                <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>⚡ Syncing database...</div>
-                            ) : view === 'feed' ? (
-                                <>
-                                    {!selectedHistoryUser ? (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                                <div>
-                                                    <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '1000', color: '#0f172a' }}>Recognition Glimpse</h2>
-                                                    <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#94a3b8', fontWeight: '700' }}>Aggregated results per member</p>
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                                    {Array.from(new Set(filteredRewards.map(r => r.employee_id))).length > 5 && (
-                                                        <button
-                                                            onClick={() => setShowAllFeed(!showAllFeed)}
-                                                            style={{
-                                                                background: 'none', border: 'none', color: '#3863a8', fontSize: '11px', fontWeight: '900', cursor: 'pointer', textTransform: 'uppercase', textDecoration: 'underline'
-                                                            }}>
-                                                            {showAllFeed ? 'View Less' : 'View All'}
-                                                        </button>
-                                                    )}
-                                                    <div style={{ fontSize: '12px', fontWeight: '800', color: '#3b82f6', background: '#eff6ff', padding: '6px 12px', borderRadius: '10px' }}>
-                                                        {Array.from(new Set(filteredRewards.map(r => r.employee_id))).length} Members Recognized
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {(() => {
-                                                const employeeStats = Array.from(new Set(filteredRewards.map(r => r.employee_id))).map(id => {
-                                                    const userRewards = filteredRewards.filter(r => String(r.employee_id) === String(id));
-                                                    const totalRep = userRewards.reduce((sum, r) => sum + parsePoints(r.points), 0);
-                                                    return { id, totalRep, userRewards };
-                                                }).sort((a, b) => b.totalRep - a.totalRep);
-
-                                                const displayedStats = showAllFeed ? employeeStats : employeeStats.slice(0, 5);
-
-                                                return displayedStats.map(({ id: empId, totalRep, userRewards }, index) => {
-                                                    const latest = userRewards.reduce((prev, current) => (new Date(prev.created_at || prev.date) > new Date(current.created_at || current.date)) ? prev : current, userRewards[0]);
-                                                    return (
-                                                        <div key={empId} onClick={() => setSelectedHistoryUser(empId)} style={{ background: 'white', padding: winWidth < 768 ? '16px' : '20px', borderRadius: winWidth < 768 ? '20px' : '24px', border: '3px solid #cbd5e1', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.3s ease' }}
-                                                            onMouseEnter={e => {
-                                                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                                                e.currentTarget.style.borderColor = '#3863a8';
-                                                                e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,0,0,0.05)';
-                                                            }}
-                                                            onMouseLeave={e => {
-                                                                e.currentTarget.style.transform = 'translateY(0)';
-                                                                e.currentTarget.style.borderColor = '#cbd5e1';
-                                                                e.currentTarget.style.boxShadow = 'none';
-                                                            }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '12px' : '15px' }}>
-                                                                <div style={{ width: winWidth < 768 ? '40px' : '45px', height: winWidth < 768 ? '40px' : '45px', borderRadius: '14px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid #cbd5e1', fontSize: '14px', fontWeight: '950', color: '#0369a1' }}>#{index + 1}</div>
-                                                                <div>
-                                                                    <div style={{ fontSize: winWidth < 768 ? '14px' : '15px', fontWeight: '1000', color: '#0f172a' }}>{resolveEmployeeName(empId)}</div>
-                                                                    <div style={{ fontSize: winWidth < 768 ? '10px' : '11px', color: '#64748b', fontWeight: '700' }}>
-                                                                        {userRewards.length} recognitions • {latest.reward_name || 'Excellence'}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div style={{ textAlign: 'right' }}>
-                                                                <div style={{ fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '1000', color: '#10b981' }}>+{formatPoints(totalRep)}</div>
-                                                                <div style={{ fontSize: '8px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>REP</div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                });
-                                            })()}
-                                        </div>
-                                    ) : (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                            <button onClick={() => setSelectedHistoryUser(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: '800' }}><ChevronLeft size={16} /> Back to Feed</button>
-                                            {filteredRewards.filter(r => String(r.employee_id) === String(selectedHistoryUser)).map((r, i) => (
-                                                <div key={i} style={{ padding: '20px', borderRadius: '24px', background: 'white', border: '3px solid #cbd5e1' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                        <div style={{ fontWeight: '1000' }}>{r.reward_name || 'Excellence'}</div>
-                                                        <div style={{ color: '#38bdf8', fontWeight: '1000' }}>+{formatPoints(r.points)} REP</div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </>
-                            ) : view === 'audit' ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    {/* Audit Search Bar */}
                                     <div style={{ position: 'relative', width: '100%' }}>
-                                        <input
-                                            type="text"
-                                            placeholder="Search by Recipient, Giver, or Recognition Tier..."
-                                            value={auditSearch}
-                                            onChange={e => setAuditSearch(e.target.value)}
-                                            style={{
-                                                width: '100%',
-                                                padding: '14px 20px 14px 50px',
-                                                borderRadius: '16px',
-                                                border: '3px solid #cbd5e1',
-                                                fontSize: '13px',
-                                                fontWeight: '600',
-                                                outline: 'none',
-                                                color: '#1e293b',
-                                                boxShadow: '0 4px 6px rgba(0,0,0,0.02)'
-                                            }}
-                                        />
+                                        <input type="text" placeholder="Search by Recipient, Giver, or Recognition Tier..." value={auditSearch} onChange={e => setAuditSearch(e.target.value)}
+                                            style={{ width: '100%', padding: '14px 20px 14px 50px', borderRadius: '16px', border: '1.5px solid #cbd5e1', fontSize: '13px', fontWeight: '600', outline: 'none', color: '#1e293b', boxShadow: '0 4px 6px rgba(0,0,0,0.02)', boxSizing: 'border-box' }} />
                                         <div style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
                                             <Search size={18} />
                                         </div>
-                                    </div>                                    {/* Stats Summary Cards for Audit */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: winWidth < 576 ? '1fr' : '1fr 1fr', gap: '15px' }}>
-                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '3px solid #cbd5e1' }}>
-                                            <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>Assigned points</div>
-                                            <div style={{ fontSize: '20px', fontWeight: '950', color: '#10b981' }}>
-                                                {(() => {
-                                                    const uid = user?.employee_id || user?.userId || user?.id;
-                                                    const myGrants = filteredRewards.filter(r => String(r.granted_by) === String(uid));
-                                                    return formatPoints(myGrants.reduce((sum, r) => sum + parsePoints(r.points), 0));
-                                                })()} REP
-                                            </div>
-                                        </div>
-                                        <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '3px solid #cbd5e1' }}>
-                                            <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>Employee of the month</div>
-                                            <div style={{ fontSize: '20px', fontWeight: '950', color: '#8b5cf6' }}>
-                                                {topContributor ? topContributor.name : "N/A"}
-                                            </div>
-                                        </div>
                                     </div>
-
-                                    {/* Audit Logs List */}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                         {(() => {
-                                            const uid = user?.employee_id || user?.userId || user?.id;
                                             const auditLogs = filteredRewards.filter(r => {
-                                                if (String(r.granted_by) !== String(uid)) return false;
-                                                const recipientName = resolveEmployeeName(r.employee_id).toLowerCase();
-                                                const giverName = resolveEmployeeName(r.granted_by).toLowerCase();
-                                                const rewardName = (r.reward_name || '').toLowerCase();
-                                                const search = auditSearch.toLowerCase();
-                                                return recipientName.includes(search) || giverName.includes(search) || rewardName.includes(search);
+                                                if (String(r.id).startsWith('quiz-')) return false;
+                                                const rn = resolveEmployeeName(r.employee_id).toLowerCase();
+                                                const gn = resolveEmployeeName(r.granted_by).toLowerCase();
+                                                const rwn = (r.reward_name || '').toLowerCase();
+                                                const s = auditSearch.toLowerCase();
+                                                return rn.includes(s) || gn.includes(s) || rwn.includes(s);
                                             });
-
                                             if (auditLogs.length === 0) {
                                                 return (
-                                                    <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', background: 'white', borderRadius: '24px', border: '3px solid #cbd5e1' }}>
+                                                    <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', background: 'white', borderRadius: '24px', border: '1.5px solid #f1f5f9' }}>
                                                         <ShieldCheck size={40} style={{ color: '#cbd5e1', marginBottom: '10px' }} />
                                                         <div style={{ fontWeight: '800', fontSize: '14px', color: '#64748b' }}>No audit records found matching your query.</div>
                                                     </div>
                                                 );
                                             }
-
                                             return auditLogs.map((r, i) => {
                                                 const canRevoke = user?.role?.toUpperCase() === 'ADMIN' || user?.role?.toUpperCase() === 'MANAGER' || String(r.granted_by) === String(user?.employee_id || user?.userId || user?.id);
                                                 return (
-                                                    <div
-                                                        key={r.id || i}
-                                                        style={{
-                                                            background: 'white',
-                                                            padding: winWidth < 768 ? '16px' : '24px',
-                                                            borderRadius: '24px',
-                                                            border: '3px solid #cbd5e1',
-                                                            display: 'flex',
-                                                            flexDirection: 'column',
-                                                            gap: '15px',
-                                                            transition: 'all 0.3s ease'
-                                                        }}
-                                                        onMouseEnter={e => {
-                                                            e.currentTarget.style.borderColor = '#3863a8';
-                                                            e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,0,0,0.05)';
-                                                        }}
-                                                        onMouseLeave={e => {
-                                                            e.currentTarget.style.borderColor = '#cbd5e1';
-                                                            e.currentTarget.style.boxShadow = 'none';
-                                                        }}
-                                                    >
-                                                        {/* Top row: Recipient Info & Points */}
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '950', fontSize: '16px' }}>
+                                                    <div key={r.id || i} style={{ background: 'white', padding: winWidth < 768 ? '12px' : '16px', borderRadius: '16px', border: '1.5px solid #cbd5e1', display: 'flex', flexDirection: 'column', gap: '10px', transition: 'all 0.3s ease' }}
+                                                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#3863a8'; e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.05)'; }}
+                                                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '950', fontSize: '14px' }}>
                                                                     {resolveEmployeeName(r.employee_id).charAt(0)}
                                                                 </div>
                                                                 <div>
-                                                                    <div style={{ fontSize: '15px', fontWeight: '1000', color: '#0f172a' }}>{resolveEmployeeName(r.employee_id)}</div>
-                                                                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>Recipient ID: {r.employee_id}</div>
+                                                                    <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a' }}>{resolveEmployeeName(r.employee_id)}</div>
+                                                                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Recipient ID: {r.employee_id}</div>
                                                                 </div>
                                                             </div>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                                <div style={{ background: '#ecfdf5', color: '#10b981', fontWeight: '1000', fontSize: '14px', padding: '6px 16px', borderRadius: '10px' }}>
-                                                                    +{formatPoints(r.points)} REP
-                                                                </div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <div style={{ background: '#ecfdf5', color: '#10b981', fontWeight: '900', fontSize: '12px', padding: '4px 12px', borderRadius: '8px' }}>+{formatPoints(r.points)} REP</div>
                                                                 {canRevoke && (
-                                                                    <button
-                                                                        onClick={() => handleDeleteReward(r.id)}
-                                                                        style={{
-                                                                            background: '#fef2f2',
-                                                                            border: 'none',
-                                                                            padding: '8px',
-                                                                            borderRadius: '10px',
-                                                                            cursor: 'pointer',
-                                                                            display: 'inline-flex',
-                                                                            alignItems: 'center',
-                                                                            justifyContent: 'center',
-                                                                            color: '#ef4444'
-                                                                        }}
-                                                                        title="Revoke Recognition"
-                                                                    >
-                                                                        <Trash2 size={16} />
+                                                                    <button onClick={() => handleDeleteReward(r.id)} style={{ background: '#fef2f2', border: 'none', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }} title="Revoke Recognition">
+                                                                        <Trash2 size={14} />
                                                                     </button>
                                                                 )}
                                                             </div>
                                                         </div>
-
-                                                        {/* Middle Row: Badge, Giver & Timestamp */}
-                                                        <div style={{ display: 'grid', gridTemplateColumns: winWidth < 768 ? '1fr' : '1fr 1fr', gap: '12px', background: '#f8fafc', padding: '12px 16px', borderRadius: '12px' }}>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: winWidth < 768 ? '1fr' : '1fr 1fr', gap: '10px', background: '#f8fafc', padding: '8px 12px', borderRadius: '10px' }}>
                                                             <div>
-                                                                <span style={{ fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Recognition Tier</span>
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '13px', color: '#1e293b' }}>
-                                                                    <Award size={14} color="#3b82f6" />
-                                                                    {r.reward_name || 'Excellence'}
+                                                                <span style={{ fontSize: '8px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Recognition Tier</span>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '800', fontSize: '12px', color: '#1e293b' }}>
+                                                                    <Award size={12} color="#3b82f6" />{r.reward_name || 'Excellence'}
                                                                 </div>
                                                             </div>
                                                             <div>
-                                                                <span style={{ fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Granted By</span>
-                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '13px', color: '#1e293b' }}>
-                                                                    <UserCheck size={14} color="#10b981" />
-                                                                    {resolveEmployeeName(r.granted_by)}
+                                                                <span style={{ fontSize: '8px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Granted By</span>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '800', fontSize: '12px', color: '#1e293b' }}>
+                                                                    <UserCheck size={12} color="#10b981" />{resolveEmployeeName(r.granted_by)}
                                                                 </div>
                                                             </div>
                                                         </div>
-
-                                                        {/* Reason Note */}
-                                                        {r.note && (
-                                                            <div style={{ fontSize: '12px', color: '#475569', fontWeight: '600', fontStyle: 'italic', borderLeft: '3px solid #cbd5e1', paddingLeft: '12px', margin: '4px 0' }}>
-                                                                "{r.note}"
-                                                            </div>
-                                                        )}
-
-                                                        {/* Timestamp */}
-                                                        <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textAlign: 'right' }}>
-                                                            Awarded on: {new Date(r.created_at || r.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                        {r.note && <div style={{ fontSize: '11px', color: '#475569', fontWeight: '600', fontStyle: 'italic', borderLeft: '3px solid #cbd5e1', paddingLeft: '10px', margin: '2px 0' }}>"{r.note}"</div>}
+                                                        <div style={{ fontSize: '9px', color: '#94a3b8', textAlign: 'right', fontWeight: '700' }}>
+                                                            Awarded on: {(() => {
+                                                                const d = parseToDate(r.created_at || r.date);
+                                                                return d ? d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
+                                                            })()}
                                                         </div>
                                                     </div>
                                                 );
@@ -856,250 +812,228 @@ export default function AwardsScreen() {
                                         })()}
                                     </div>
                                 </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                    {availableAwards.map((award, i) => (
-                                        <div key={award.id} onClick={() => { setSelectedAward(award); setGrantData({ ...grantData, reward_name: award.title, points: award.rep }); setShowGrantModal(true); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: winWidth < 768 ? '16px' : '24px', borderRadius: '24px', background: 'white', border: '3px solid #cbd5e1', cursor: 'pointer' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '12px' : '20px' }}>
-                                                <div style={{ width: winWidth < 768 ? '40px' : '50px', height: winWidth < 768 ? '40px' : '50px', borderRadius: '14px', background: i < 3 ? '#fff7ed' : '#f0f9ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i < 3 ? <Trophy size={winWidth < 768 ? 20 : 24} color="#f59e0b" /> : <Star size={winWidth < 768 ? 20 : 24} color="#3b82f6" />}</div>
-                                                <div>
-                                                    <div style={{ fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '1000' }}>{award.title}</div>
-                                                    <div style={{ fontSize: winWidth < 768 ? '10px' : '12px', color: '#64748b', fontWeight: '700' }}>{award.desc}</div>
-                                                </div>
-                                            </div>
-                                            <div style={{ background: '#eff6ff', padding: winWidth < 768 ? '6px 12px' : '10px 25px', borderRadius: '12px', color: '#2563eb', fontWeight: '1000', fontSize: winWidth < 768 ? '12px' : '14px' }}>{formatPoints(award.rep)} R</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                            </div>
                         </div>
 
-                        {/* Right Sidebar */}
-                        {view !== 'audit' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-                                <div style={{
-                                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                                    borderRadius: winWidth < 768 ? '30px' : '40px', padding: winWidth < 768 ? '40px 25px' : '50px 40px', color: 'white',
-                                    boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.4)',
-                                    position: 'relative', overflow: 'hidden',
-                                    minHeight: winWidth < 768 ? 'auto' : '520px', display: 'flex', flexDirection: 'column', justifyContent: 'center'
-                                }}>
-                                    {/* Decorative elements */}
-                                    <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '150px', height: '150px', background: 'rgba(56, 189, 248, 0.1)', borderRadius: '50%', filter: 'blur(40px)' }}></div>
-                                    <div style={{ position: 'absolute', bottom: '-20%', left: '-10%', width: '200px', height: '200px', background: 'rgba(250, 204, 21, 0.05)', borderRadius: '50%', filter: 'blur(60px)' }}></div>
+                    ) : (
+                        /* â”€â”€ DASHBOARD â€” Two-Column Layout â”€â”€ */
+                        <div style={{ display: 'grid', gridTemplateColumns: winWidth < 1024 ? '1fr' : '480px 1fr', gap: '24px', alignItems: 'start' }}>
 
-                                    <div style={{ position: 'relative', zIndex: 1 }}>
-                                        <div style={{ background: 'rgba(255,255,255,0.1)', width: '60px', height: '60px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: winWidth < 768 ? '20px' : '30px' }}>
-                                            <Trophy size={30} color="#facc15" />
-                                        </div>
-                                        <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '24px' : '28px', fontWeight: '1000', letterSpacing: '-0.8px', color: '#ffffff', lineHeight: '1.2' }}>Recognition Spotlight</h3>
-                                        <p style={{ margin: winWidth < 768 ? '10px 0 30px 0' : '15px 0 40px 0', fontSize: winWidth < 768 ? '14px' : '15px', color: '#94a3b8', fontWeight: '600', lineHeight: '1.7' }}>Celebrate the champions pushing our organization forward with exceptional dedication and vision.</p>
-
-                                        {topContributor && (
-                                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '25px', borderRadius: '24px', border: '1.5px solid rgba(255,255,255,0.1)', marginBottom: '40px' }}>
-                                                <div style={{ fontSize: '11px', fontWeight: '900', color: '#facc15', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '15px' }}>Top Contributor</div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                                                    <div style={{ width: '55px', height: '55px', borderRadius: '18px', background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                                                        {(() => {
-                                                            const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
-                                                            const empId = cleanId(topContributor.id || topContributor.employee_id);
-                                                            const rawPic = topContributor.profile_picture;
-                                                            const photoUrl = rawPic ? (rawPic.startsWith('http') || rawPic.startsWith('data:') ? rawPic : `${BASE_URL}${rawPic.startsWith('/') ? '' : '/'}${rawPic}`) : `${BASE_URL}/api/users/${empId}/photo`;
-                                                            return (
-                                                                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                                                                    <img
-                                                                        src={photoUrl}
-                                                                        alt=""
-                                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '18px' }}
-                                                                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                                                                    />
-                                                                    <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#facc15', color: '#0f172a', fontSize: '22px', fontWeight: '1000' }}>
-                                                                        {topContributor.name.charAt(0)}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })()}
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontSize: '17px', fontWeight: '900', color: '#ffffff' }}>{topContributor.name}</div>
-                                                        <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '700' }}>{formatPoints(topContributor.total_points)} Total Points</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <button
-                                            onClick={() => setShowGrantModal(true)}
-                                            style={{
-                                                width: '100%', padding: '22px', borderRadius: '25px', border: 'none',
-                                                background: '#ffffff', color: '#0f172a', fontWeight: '1000',
-                                                fontSize: '15px', cursor: 'pointer', transition: 'all 0.2s',
-                                                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-                                                textTransform: 'uppercase', letterSpacing: '0.8px'
-                                            }}>
-                                            Grant Recognition
-                                        </button>
+                            {/* LEFT: Grant Recognition */}
+                            <div style={{ background: 'linear-gradient(160deg, #0f172a 0%, #1a2744 100%)', borderRadius: '24px', padding: winWidth < 768 ? '24px 20px' : '32px 28px', border: '1.5px solid rgba(255,255,255,0.07)', boxShadow: '0 20px 40px rgba(15,23,42,0.25)', position: 'relative', overflow: 'hidden' }}>
+                                <div style={{ position: 'absolute', top: '-60px', right: '-40px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(56,189,248,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
+                                    <div style={{ background: 'rgba(250,204,21,0.15)', padding: '10px', borderRadius: '14px', border: '1px solid rgba(250,204,21,0.2)' }}>
+                                        <Trophy size={20} color="#facc15" />
+                                    </div>
+                                    <div>
+                                        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '950', color: '#ffffff', letterSpacing: '-0.3px' }}>Grant Recognition</h2>
+                                        <p style={{ margin: 0, fontSize: '11px', color: '#64748b', fontWeight: '600' }}>Award points to your team members</p>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </main>
 
-            {showGrantModal && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                    <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', minHeight: winWidth < 768 ? '350px' : '400px', background: 'white', borderRadius: '30px', padding: winWidth < 768 ? '25px' : '50px', width: '100%', maxWidth: '680px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <button onClick={() => setShowGrantModal(false)} style={{ position: 'absolute', top: winWidth < 768 ? '15px' : '25px', right: winWidth < 768 ? '15px' : '25px', background: 'none', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', color: '#64748b', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                            <X size={24} />
-                        </button>
-                        <h2 style={{ fontSize: '24px', fontWeight: '950', color: '#0f172a', marginBottom: '30px', textAlign: 'center' }}>Grant Recognition</h2>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, justifyContent: 'space-between' }}>
-                            <div style={{ position: 'relative' }} ref={recipientDropdownRef}>
-                                <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Select Recipient</label>
-                                <div
-                                    onClick={() => setShowRecipientDropdown(!showRecipientDropdown)}
-                                    style={{
-                                        width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #cbd5e1',
-                                        background: '#f8fafc', fontWeight: '700', cursor: 'pointer', display: 'flex',
-                                        justifyContent: 'space-between', alignItems: 'center'
-                                    }}>
-                                    <span>{selectedEmployee ? (selectedEmployee.name || selectedEmployee.employee_name) : 'Select Recipient...'}</span>
-                                    <ChevronRight size={18} style={{ transform: showRecipientDropdown ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                                    {/* Recipient Picker */}
+                                    <div style={{ position: 'relative' }} ref={recipientDropdownRef}>
+                                        <label style={{ fontSize: '10px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px', display: 'block' }}>Select Recipient</label>
+                                        <div onClick={() => setShowRecipientDropdown(!showRecipientDropdown)}
+                                            style={{ width: '100%', padding: '13px 16px', borderRadius: '14px', border: '1.5px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: selectedEmployee ? '#ffffff' : '#64748b', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', boxSizing: 'border-box' }}>
+                                            <span>{selectedEmployee ? (selectedEmployee.name || selectedEmployee.employee_name) : 'Choose a team member...'}</span>
+                                            <ChevronRight size={16} color="#64748b" style={{ transform: showRecipientDropdown ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />
+                                        </div>
+                                        {showRecipientDropdown && (
+                                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', borderRadius: '14px', border: '1.5px solid #f1f5f9', boxShadow: '0 16px 32px rgba(0,0,0,0.15)', zIndex: 100, marginTop: '8px', maxHeight: '240px', overflowY: 'auto' }}>
+                                                <div style={{ padding: '10px', position: 'sticky', top: 0, background: 'white', borderBottom: '1px solid #f1f5f9' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', borderRadius: '10px', padding: '0 10px' }}>
+                                                        <Search size={14} color="#94a3b8" />
+                                                        <input autoFocus placeholder="Search employee..." value={recipientSearch} onChange={e => setRecipientSearch(e.target.value)} onClick={e => e.stopPropagation()}
+                                                            style={{ width: '100%', padding: '10px 8px', border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '600', color: '#0f172a' }} />
+                                                    </div>
+                                                </div>
+                                                {employees.filter(emp => {
+                                                    const uid = user?.employee_id || user?.userId || user?.id;
+                                                    const empId = emp.id || emp.employee_id || emp.userId;
+                                                    const empName = emp.name || emp.employee_name || '';
+                                                    return String(empId) !== String(uid) && empName.toLowerCase().includes(recipientSearch.toLowerCase()) && empName !== 'Anish V N' && empName !== 'Dinesh';
+                                                }).map(emp => {
+                                                    const stableId = emp.id || emp.employee_id || emp.userId;
+                                                    return (
+                                                        <div key={stableId} onClick={() => { setSelectedEmployee(emp); setShowRecipientDropdown(false); setRecipientSearch(''); }}
+                                                            style={{ padding: '12px 15px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#1e293b', borderBottom: '1px solid #f8fafc' }}
+                                                            onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                            {emp.name || emp.employee_name || 'Anonymous'}
+                                                        </div>
+                                                    );
+                                                })}
+                                                {employees.length === 0 && <div style={{ padding: '20px', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>No employees found</div>}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Quick Select Tiers */}
+                                    <div>
+                                        <label style={{ fontSize: '10px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px', display: 'block' }}>Quick Select Tier</label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '8px' }}>
+                                            {availableAwards.map((award, i) => {
+                                                const isSelected = grantData.reward_name === award.title;
+                                                return (
+                                                    <div key={award.id} onClick={() => setGrantData({ ...grantData, reward_name: award.title, points: award.rep })}
+                                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: '12px', cursor: 'pointer', background: isSelected ? 'rgba(56,99,168,0.25)' : 'rgba(255,255,255,0.04)', border: `1.5px solid ${isSelected ? 'rgba(56,99,168,0.6)' : 'rgba(255,255,255,0.07)'}`, transition: 'all 0.15s ease' }}
+                                                        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                                                        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                            <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: i < 3 ? 'rgba(245,158,11,0.15)' : 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                {i < 3 ? <Trophy size={14} color="#f59e0b" /> : <Star size={14} color="#3b82f6" />}
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontSize: '12px', fontWeight: '800', color: '#ffffff' }}>{award.title}</div>
+                                                                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>{award.desc}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ fontSize: '13px', fontWeight: '950', color: '#facc15', whiteSpace: 'nowrap' }}>{formatPoints(award.rep)} R</div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {feedback && (
+                                        <div style={{ textAlign: 'center', fontSize: '12px', fontWeight: '800', padding: '10px 16px', borderRadius: '12px', background: feedback.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: feedback.type === 'success' ? '#10b981' : '#f87171', border: `1px solid ${feedback.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+                                            {feedback.msg}
+                                        </div>
+                                    )}
+
+                                    <button onClick={handleGrantAward} disabled={granting || !selectedEmployee || !grantData.reward_name}
+                                        style={{ width: '100%', padding: '16px', borderRadius: '16px', border: 'none', background: (!selectedEmployee || !grantData.reward_name) ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)', color: (!selectedEmployee || !grantData.reward_name) ? '#475569' : '#0f172a', fontWeight: '950', fontSize: '14px', cursor: (!selectedEmployee || !grantData.reward_name) ? 'not-allowed' : 'pointer', boxShadow: (!selectedEmployee || !grantData.reward_name) ? 'none' : '0 8px 20px rgba(250,204,21,0.25)', transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        <Zap size={16} />
+                                        {granting ? 'Granting...' : 'Confirm Grant'}
+                                    </button>
                                 </div>
+                            </div>
 
-                                {showRecipientDropdown && (
-                                    <div style={{
-                                        position: 'absolute', top: '100%', left: 0, right: 0, background: 'white',
-                                        borderRadius: '14px', border: '1.5px solid #f1f5f9', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                                        zIndex: 10, marginTop: '8px', maxHeight: '250px', overflowY: 'auto'
-                                    }}>
-                                        <div style={{ padding: '10px', position: 'sticky', top: 0, background: 'white', borderBottom: '1px solid #f1f5f9' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '10px', padding: '0 10px' }}>
-                                                <Search size={14} color="#64748b" />
-                                                <input
-                                                    autoFocus
-                                                    placeholder="Search employee..."
-                                                    value={recipientSearch}
-                                                    onChange={e => setRecipientSearch(e.target.value)}
-                                                    onClick={e => e.stopPropagation()}
-                                                    style={{ width: '100%', padding: '10px', border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '600' }}
-                                                />
+                            {/* RIGHT: Live Feed */}
+                            <div style={{ background: '#ffffff', borderRadius: '24px', padding: winWidth < 768 ? '20px' : '32px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+                                {!selectedHistoryUser ? (
+                                    <>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                            <div>
+                                                <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '950', color: '#0f172a', letterSpacing: '-0.4px' }}>Live Feed</h2>
+                                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#94a3b8', fontWeight: '600' }}>Recognition leaderboard by total points</p>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ fontSize: '11px', fontWeight: '800', color: '#3b82f6', background: '#eff6ff', padding: '6px 12px', borderRadius: '10px', whiteSpace: 'nowrap' }}>
+                                                    {leaderboard.filter(l => (l.total_points || 0) > 0).length} Members
+                                                </div>
                                             </div>
                                         </div>
-                                        {employees.filter(emp => {
-                                            const uid = user?.employee_id || user?.userId || user?.id;
-                                            const empId = emp.id || emp.employee_id || emp.userId;
-                                            const empName = emp.name || emp.employee_name || '';
-                                            return String(empId) !== String(uid) && 
-                                                   empName.toLowerCase().includes(recipientSearch.toLowerCase()) &&
-                                                   empName !== 'Anish V N' && 
-                                                   empName !== 'Dinesh';
-                                        }).map(emp => {
-                                            const stableId = emp.id || emp.employee_id || emp.userId;
-                                            return (
-                                                <div
-                                                    key={stableId}
-                                                    onClick={() => {
-                                                        setSelectedEmployee(emp);
-                                                        setShowRecipientDropdown(false);
-                                                        setRecipientSearch('');
-                                                    }}
-                                                    style={{ padding: '12px 15px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#1e293b', borderBottom: '1px solid #f8fafc' }}
-                                                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                                >
-                                                    {emp.name || emp.employee_name || 'Anonymous'}
+                                        <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '580px', overflowY: 'auto', paddingRight: '8px' }}>
+                                            {(() => {
+                                                const employeeStats = leaderboard.map(l => {
+                                                    const userRewards = filteredRewards.filter(r => String(r.employee_id) === String(l.id));
+                                                    return { id: l.id, name: l.name, totalRep: l.total_points, userRewards };
+                                                }).filter(stat => stat.totalRep > 0).sort((a, b) => b.totalRep - a.totalRep);
+                                                const displayedStats = employeeStats;
+                                                if (displayedStats.length === 0) {
+                                                    return (
+                                                        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
+                                                            <Trophy size={40} style={{ color: '#e2e8f0', marginBottom: '12px' }} />
+                                                            <div style={{ fontWeight: '800', fontSize: '14px', color: '#64748b' }}>No recognitions yet in this period.</div>
+                                                        </div>
+                                                    );
+                                                }
+                                                const rankColors = ['#f59e0b', '#94a3b8', '#b45309'];
+                                                return displayedStats.map(({ id: empId, name: empName, totalRep, userRewards }, index) => {
+                                                    const latest = userRewards.length > 0 ? userRewards.reduce((prev, cur) => {
+                                                        const dPrev = parseToDate(prev.created_at || prev.date);
+                                                        const dCur = parseToDate(cur.created_at || cur.date);
+                                                        if (!dPrev) return cur;
+                                                        if (!dCur) return prev;
+                                                        return dPrev > dCur ? prev : cur;
+                                                    }, userRewards[0]) : null;
+                                                    const isTop3 = index < 3;
+                                                    return (
+                                                        <div key={empId} onClick={() => setSelectedHistoryUser(empId)}
+                                                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: winWidth < 768 ? '14px' : '16px 20px', borderRadius: '16px', background: isTop3 ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)' : '#f8fafc', border: `1.5px solid ${isTop3 ? '#fde68a' : '#f1f5f9'}`, cursor: 'pointer', transition: 'all 0.2s ease' }}
+                                                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateX(4px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.06)'; }}
+                                                            onMouseLeave={e => { e.currentTarget.style.transform = 'translateX(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                                                                <div style={{ width: '38px', height: '38px', borderRadius: '12px', flexShrink: 0, background: isTop3 ? `${rankColors[index]}22` : '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '950', color: isTop3 ? rankColors[index] : '#64748b' }}>
+                                                                    {index === 0 ? <Trophy size={16} color={rankColors[0]} /> : `#${index + 1}`}
+                                                                </div>
+                                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0, background: `hsl(${(Number(empId) * 47) % 360}, 60%, 92%)`, color: `hsl(${(Number(empId) * 47) % 360}, 70%, 35%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', fontWeight: '950' }}>
+                                                                    {(empName || resolveEmployeeName(empId)).charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div>
+                                                                    <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a' }}>{empName || resolveEmployeeName(empId)}</div>
+                                                                    <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>
+                                                                        {userRewards.length} recognition{userRewards.length !== 1 ? 's' : ''} Â· {latest?.reward_name || 'Excellence'}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                                                <div style={{ fontSize: '17px', fontWeight: '950', color: '#10b981' }}>+{formatPoints(totalRep)}</div>
+                                                                <div style={{ fontSize: '9px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase' }}>REP</div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                });
+                                            })()}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                        <button onClick={() => setSelectedHistoryUser(null)} style={{ border: 'none', background: '#f8fafc', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#0f172a', fontWeight: '800', padding: '10px 16px', borderRadius: '12px', fontSize: '13px', alignSelf: 'flex-start' }}>
+                                            <ChevronLeft size={16} /> Back to Feed
+                                        </button>
+                                        <div style={{ fontSize: '16px', fontWeight: '950', color: '#0f172a', padding: '0 4px' }}>
+                                            {resolveEmployeeName(selectedHistoryUser)}'s Recognitions
+                                        </div>
+                                        {(() => {
+                                            const allUserHistory = filteredRewards.filter(r => isSameEmployee(r.employee_id, selectedHistoryUser));
+                                            
+                                            allUserHistory.sort((a, b) => {
+                                                const dA = parseToDate(a.created_at || a.date);
+                                                const dB = parseToDate(b.created_at || b.date);
+                                                if (!dA) return 1;
+                                                if (!dB) return -1;
+                                                return dB - dA;
+                                            });
+
+                                            return allUserHistory.map((r, i) => (
+                                                <div key={i} style={{ padding: '18px 20px', borderRadius: '16px', background: '#f8fafc', border: '1.5px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: '900', fontSize: '14px', color: '#0f172a' }}>{r.reward_name || 'Excellence'}</div>
+                                                        <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', marginTop: '3px' }}>
+                                                            {r.note || ''} · {(() => {
+                                                                const d = parseToDate(r.created_at || r.date);
+                                                                return d ? d.toLocaleDateString() : 'N/A';
+                                                            })()}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ fontSize: '16px', fontWeight: '950', color: '#10b981' }}>+{formatPoints(r.points)} REP</div>
                                                 </div>
-                                            );
-                                        })}
-                                        {employees.length === 0 && <div style={{ padding: '20px', textAlign: 'center', fontSize: '12px', color: '#94a3b8' }}>No employees found</div>}
+                                            ));
+                                        })()}
                                     </div>
                                 )}
                             </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                                <div style={{ position: 'relative' }} ref={rewardDropdownRef}>
-                                    <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Reward Name (Mandatory)</label>
-                                    <div
-                                        onClick={() => setShowRewardDropdown(!showRewardDropdown)}
-                                        style={{
-                                            width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #cbd5e1',
-                                            background: '#f8fafc', fontWeight: '700', cursor: 'pointer', display: 'flex',
-                                            justifyContent: 'space-between', alignItems: 'center'
-                                        }}>
-                                        <span>{grantData.reward_name || 'Select Reward...'}</span>
-                                        <ChevronRight size={18} style={{ transform: showRewardDropdown ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
-                                    </div>
-
-                                    {showRewardDropdown && (
-                                        <div style={{
-                                            position: 'absolute', top: '100%', left: 0, right: 0, background: 'white',
-                                            borderRadius: '14px', border: '1.5px solid #cbd5e1', boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                                            zIndex: 10, marginTop: '8px', maxHeight: '200px', overflowY: 'auto'
-                                        }}>
-                                            {rewardNames.map(name => (
-                                                <div
-                                                    key={name}
-                                                    onClick={() => {
-                                                        const pointsMap = {
-                                                            "Visionary Lead": 200,
-                                                            "Goal Achiever": 150,
-                                                            "Team Growth": 150,
-                                                            "Star Performer": 50,
-                                                            "Problem Solver": 30,
-                                                            "Collaborative Hero": 20
-                                                        };
-                                                        setGrantData({ ...grantData, reward_name: name, points: pointsMap[name] || grantData.points });
-                                                        setShowRewardDropdown(false);
-                                                    }}
-                                                    style={{ padding: '12px 15px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#1e293b', borderBottom: '1px solid #f8fafc' }}
-                                                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                                                >
-                                                    {name}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Points (REP)</label>
-                                    <input type="number" value={grantData.points} readOnly style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #cbd5e1', background: '#f8fafc', fontWeight: '700', outline: 'none', cursor: 'not-allowed' }} />
-                                </div>
-                            </div>
-                            {feedback && <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: '800', color: feedback.type === 'success' ? '#10b981' : '#ef4444' }}>{feedback.msg}</div>}
-                            <div style={{ display: 'flex', gap: '15px', marginTop: 'auto' }}>
-                                <button onClick={() => setShowGrantModal(false)} style={{ flex: 1, padding: '14px', borderRadius: '50px', border: '1.5px solid #cbd5e1', background: 'white', fontWeight: '900', cursor: 'pointer' }}>Cancel</button>
-                                <button onClick={handleGrantAward} disabled={granting} style={{ flex: 1, padding: '14px', borderRadius: '50px', border: '1.5px solid #0f172a', background: '#0f172a', color: 'white', fontWeight: '900', cursor: 'pointer' }}>{granting ? 'Granting...' : 'Confirm'}</button>
-                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
-            )}
+            </main>
 
+            {/* Edit Modal */}
             {showEditModal && selectedReward && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ background: 'white', borderRadius: '30px', padding: '40px', width: '90%', maxWidth: '500px' }}>
                         <h2 style={{ fontSize: '24px', fontWeight: '950', marginBottom: '30px', textAlign: 'center' }}>Modify Reward</h2>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <label style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Reward Name</label>
-                            <select
-                                value={selectedReward.reward_name || selectedReward.reward_type}
+                            <select value={selectedReward.reward_name || selectedReward.reward_type}
                                 onChange={e => {
-                                    const pointsMap = {
-                                        "Visionary Lead": 200,
-                                        "Goal Achiever": 150,
-                                        "Team Growth": 150,
-                                        "Star Performer": 50,
-                                        "Problem Solver": 30,
-                                        "Collaborative Hero": 20
-                                    };
-                                    setSelectedReward({
-                                        ...selectedReward,
-                                        reward_name: e.target.value,
-                                        points: pointsMap[e.target.value] || selectedReward.points
-                                    });
+                                    const pm = { "Visionary Lead": 200, "Goal Achiever": 150, "Team Growth": 150, "Star Performer": 50, "Problem Solver": 30, "Collaborative Hero": 20 };
+                                    setSelectedReward({ ...selectedReward, reward_name: e.target.value, points: pm[e.target.value] || selectedReward.points });
                                 }}
                                 style={{ width: '100%', padding: '14px', borderRadius: '14px', border: '1.5px solid #f1f5f9', background: '#f8fafc', fontWeight: '700', outline: 'none', marginBottom: '15px' }}>
                                 {rewardNames.map(name => <option key={name} value={name}>{name}</option>)}

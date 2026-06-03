@@ -189,16 +189,27 @@ export default function SuggestionModule() {
                 <div key={i} className="team-card" style={{ padding: '24px', borderLeft: '4px solid var(--primary-color)', cursor: 'default' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', fontSize: '16px', fontWeight: '900', color: '#315A9E' }}>
-                        {s.profile_pic ? (
-                          <img
-                            src={s.profile_pic.startsWith('http') || s.profile_pic.startsWith('data:') ? s.profile_pic : `${BASE_URL}${s.profile_pic.startsWith('/') ? '' : '/'}${s.profile_pic}`}
-                            alt="User"
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        ) : (
-                          s.user.charAt(0)
-                        )}
+                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', fontSize: '16px', fontWeight: '900', color: '#315A9E', position: 'relative' }}>
+                        {(() => {
+                          const isEmpId = /^\d+$/.test(String(s.team).trim());
+                          const finalPicUrl = s.profile_pic ? (s.profile_pic.startsWith('http') || s.profile_pic.startsWith('data:') ? s.profile_pic : `${BASE_URL}${s.profile_pic.startsWith('/') ? '' : '/'}${s.profile_pic}`) : (isEmpId ? `${BASE_URL}/api/users/${String(s.team).trim()}/photo` : null);
+                          return (
+                            <>
+                              {finalPicUrl && (
+                                <img
+                                  src={finalPicUrl}
+                                  alt="User"
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }}
+                                  onLoad={(e) => { if (e.target.nextSibling) e.target.nextSibling.style.display = 'none'; }}
+                                  onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                              )}
+                              <span>
+                                {s.user.charAt(0)}
+                              </span>
+                            </>
+                          );
+                        })()}
                       </div>
                       <div>
                         <span style={{ fontWeight: '800', color: 'var(--text-main)', fontSize: '15px', display: 'block' }}>{s.user}</span>

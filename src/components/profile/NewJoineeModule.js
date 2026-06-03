@@ -699,7 +699,6 @@ export default function NewJoineeModule() {
                     <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: `${joinee.color || '#3863a8'}15`, color: joinee.color || '#3863a8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: '900' }}>{joinee.name.charAt(0)}</div>
                     <div>
                       <h3 style={{ fontSize: '17px', fontWeight: '800' }}>{joinee.name}</h3>
-                      <div style={{ fontSize: '13px', color: '#64748b' }}>{joinee.role}</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -721,28 +720,32 @@ export default function NewJoineeModule() {
                     </button>
                   </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px', marginBottom: '20px' }}>
                   <div style={{ display: 'flex', gap: '10px', fontSize: '13px', alignItems: 'center' }}>
-                    <span style={{ color: '#94a3b8', minWidth: '110px' }}>Joining Date</span>
+                    <span style={{ color: '#475569', minWidth: '110px', fontWeight: '700' }}>Designation</span>
+                    <span style={{ fontWeight: '700', color: '#1e293b' }}>{joinee.role}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', fontSize: '13px', alignItems: 'center' }}>
+                    <span style={{ color: '#475569', minWidth: '110px', fontWeight: '700' }}>Joining Date</span>
                     <span style={{ fontWeight: '700', color: '#1e293b' }}>
                       {joinee.joining_date || joinee.joiningDate ? new Date(joinee.joining_date || joinee.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                     </span>
                   </div>
                   {(joinee.reporting_manager || joinee.reporting_manager_id || joinee.manager) && (
                     <div style={{ display: 'flex', gap: '10px', fontSize: '13px', alignItems: 'center' }}>
-                      <span style={{ color: '#94a3b8', minWidth: '110px' }}>Manager</span>
+                      <span style={{ color: '#475569', minWidth: '110px', fontWeight: '700' }}>Manager ID</span>
                       <span style={{ fontWeight: '700', color: '#0369a1' }}>{joinee.reporting_manager || joinee.reporting_manager_id || joinee.manager}</span>
                     </div>
                   )}
                   {(joinee.phone_number || joinee.phone) && (
                     <div style={{ display: 'flex', gap: '10px', fontSize: '13px', alignItems: 'center' }}>
-                      <span style={{ color: '#94a3b8', minWidth: '110px' }}>Phone</span>
+                      <span style={{ color: '#475569', minWidth: '110px', fontWeight: '700' }}>Phone</span>
                       <span style={{ fontWeight: '700', color: '#1e293b' }}>{joinee.phone_number || joinee.phone}</span>
                     </div>
                   )}
                   {joinee.duration && (
                     <div style={{ display: 'flex', gap: '10px', fontSize: '13px', alignItems: 'center' }}>
-                      <span style={{ color: '#94a3b8', minWidth: '110px' }}>Duration</span>
+                      <span style={{ color: '#475569', minWidth: '110px', fontWeight: '700' }}>Duration</span>
                       <span style={{ fontWeight: '700', color: '#f59e0b' }}>{joinee.duration} {joinee.is_intern ? 'Months' : 'Days'}</span>
                     </div>
                   )}

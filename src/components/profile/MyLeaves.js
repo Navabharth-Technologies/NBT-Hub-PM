@@ -483,10 +483,11 @@ export default function MyLeaves() {
                 <select
                   value={formData.leave_type}
                   onChange={e => setFormData({ ...formData, leave_type: e.target.value })}
-                  style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontWeight: '700', fontSize: '14px', outline: 'none' }}
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '2px solid #315A9E', backgroundColor: '#f8fafc', color: '#0f172a', fontWeight: '900', fontSize: '15px', outline: 'none', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(49, 90, 158, 0.1)' }}
                 >
-                  <option value="Casual Leave">Casual Leaves</option>
-                  <option value="LOP (Loss of Pay)">LOP Leaves</option>
+                  <option value="Casual Leave" style={{ fontWeight: '700' }}>Casual Leaves</option>
+                  <option value="LOP (Loss of Pay)" style={{ fontWeight: '700' }}>LOP Leaves</option>
+                  <option value="Earned Leave" style={{ fontWeight: '700', color: '#000' }}>Earned Leaves</option>
                 </select>
               </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Download, Calendar, Search, User, Info, FileText, Table, ChevronDown, CheckCircle, Clock, XCircle, AlertTriangle, UserCheck, X } from 'lucide-react';
+import { ArrowLeft, Download, Calendar, Search, User, Info, FileText, Table, ChevronDown, CheckCircle, Clock, XCircle, AlertTriangle, UserCheck, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -27,6 +27,7 @@ export default function LeaveManagement() {
   const dropdownRef = useRef(null);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [showAllLedger, setShowAllLedger] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [showLeaveEditModal, setShowLeaveEditModal] = useState(false);
   const [leaveEditData, setLeaveEditData] = useState({
@@ -98,7 +99,20 @@ export default function LeaveManagement() {
       });
       const data = await res.json();
       const list = Array.isArray(data) ? data : (data?.all || data?.data || data?.requests || []);
-      setLeaveRequests(list);
+      
+      const sortedList = [...list].sort((a, b) => {
+        const statusA = String(a.status || 'PENDING').toUpperCase().split(',')[0].trim();
+        const statusB = String(b.status || 'PENDING').toUpperCase().split(',')[0].trim();
+        const isPendingA = statusA.includes('PENDING');
+        const isPendingB = statusB.includes('PENDING');
+        if (isPendingA && !isPendingB) return -1;
+        if (!isPendingA && isPendingB) return 1;
+        const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+        const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      setLeaveRequests(sortedList);
     } finally { setLeavesLoading(false); }
   };
 
@@ -218,11 +232,8 @@ export default function LeaveManagement() {
                       ))}
                     </select>
                   </div>
-                  <button onClick={() => setShowAllLedger(!showAllLedger)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '12px', background: showAllLedger ? '#f1f5f9' : '#0f172a', color: showAllLedger ? '#475569' : 'white', border: 'none', fontWeight: '800', fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', height: '40px' }}>
-                    {showAllLedger ? 'View Less' : 'View All'}
-                  </button>
+                  </div>
                 </div>
-              </div>
               <div style={{ overflowX: 'auto', border: '1px solid #f1f5f9', borderRadius: '16px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                   <thead>
@@ -236,48 +247,149 @@ export default function LeaveManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(showAllLedger ? allEmployees : allEmployees.slice(0, 7)).map((emp, idx) => {
-                      const stats = allLeaveStats.find(s => String(s.employee_id || s.user_id) === String(emp.id));
-                      return (
-                        <tr key={idx} style={{ borderBottom: '1px solid #f8fafc', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
-                          <td style={{ padding: '12px 16px', fontWeight: '800', color: '#1e293b' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '950', overflow: 'hidden' }}>
-                                {(() => {
-                                  const pic = emp.profile_picture || emp.profile_pic || emp.photo || emp.ProfilePic || emp.Profile_Picture;
-                                  const photoUrl = pic ? (pic.startsWith('http') || pic.startsWith('data:') ? pic : `${BASE_URL}${pic.startsWith('/') ? '' : '/'}${pic}`) : `${BASE_URL}/api/users/${emp.id}/photo`;
+                    {(() => {
+                      const itemsPerPage = 9;
+                      const totalPages = Math.ceil(allEmployees.length / itemsPerPage);
+                      const activePage = Math.min(currentPage, Math.max(1, totalPages));
+                      const indexOfLastItem = activePage * itemsPerPage;
+                      const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+                      const currentEmployees = allEmployees.slice(indexOfFirstItem, indexOfLastItem);
 
-                                  return (
-                                    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                                      <img
-                                        src={photoUrl}
-                                        alt=""
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                                      />
-                                      <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#eef2ff', color: '#4f46e5' }}>
-                                        {String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}
+                      return currentEmployees.map((emp, idx) => {
+                        const stats = allLeaveStats.find(s => String(s.employee_id || s.user_id) === String(emp.id));
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid #f8fafc', background: idx % 2 === 0 ? 'white' : '#fafafa' }}>
+                            <td style={{ padding: '12px 16px', fontWeight: '800', color: '#1e293b' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '950', overflow: 'hidden' }}>
+                                  {(() => {
+                                    const pic = emp.profile_picture || emp.profile_pic || emp.photo || emp.ProfilePic || emp.Profile_Picture;
+                                    const photoUrl = pic ? (pic.startsWith('http') || pic.startsWith('data:') ? pic : `${BASE_URL}${pic.startsWith('/') ? '' : '/'}${pic}`) : `${BASE_URL}/api/users/${emp.id}/photo`;
+
+                                    return (
+                                      <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                        <img
+                                          src={photoUrl}
+                                          alt=""
+                                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                          onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                        />
+                                        <div style={{ display: 'none', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: '#eef2ff', color: '#4f46e5' }}>
+                                          {String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}
+                                        </div>
                                       </div>
-                                    </div>
-                                  );
-                                })()}
+                                    );
+                                  })()}
+                                </div>
+                                {emp.name || emp.full_name || emp.employee_name || emp.user_name || emp.userName || emp.fullName || 'Employee'}
                               </div>
-                              {emp.name || emp.full_name || emp.employee_name || emp.user_name || emp.userName || emp.fullName || 'Employee'}
-                            </div>
-                          </td>
-                          <td style={{ padding: '12px 16px', fontWeight: '700', color: '#000000' }}>#{emp.id}</td>
-                          <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{stats?.leaves_taken || 0}</td>
-                          <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{stats?.LOP || 0}</td>
-                          <td style={{ padding: '12px 16px', fontWeight: '950', color: '#16a34a' }}>{stats?.leaves_available || 0} Days</td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <button onClick={() => { setLeaveEditData({ empId: emp.id, empName: emp.name || emp.full_name || emp.employee_name || emp.user_name || emp.userName || emp.fullName || 'Employee', cl: stats?.leaves_taken || 0, lop: stats?.LOP || 0, month: new Date().getMonth() + 1, year: new Date().getFullYear(), available: stats?.leaves_available || 0, halfDays: stats?.half_day || 0, remark: '' }); setShowLeaveEditModal(true); }} style={{ background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '900', color: '#475569', cursor: 'pointer' }}>Edit</button>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            </td>
+                            <td style={{ padding: '12px 16px', fontWeight: '700', color: '#000000' }}>#{emp.id}</td>
+                            <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{stats?.leaves_taken || 0}</td>
+                            <td style={{ padding: '12px 16px', fontWeight: '800', color: '#000000' }}>{stats?.LOP || 0}</td>
+                            <td style={{ padding: '12px 16px', fontWeight: '950', color: '#16a34a' }}>{stats?.leaves_available || 0} Days</td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <button onClick={() => { setLeaveEditData({ empId: emp.id, empName: emp.name || emp.full_name || emp.employee_name || emp.user_name || emp.userName || emp.fullName || 'Employee', cl: stats?.leaves_taken || 0, lop: stats?.LOP || 0, month: new Date().getMonth() + 1, year: new Date().getFullYear(), available: stats?.leaves_available || 0, halfDays: stats?.half_day || 0, remark: '' }); setShowLeaveEditModal(true); }} style={{ background: '#f1f5f9', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: '900', color: '#475569', cursor: 'pointer' }}>Edit</button>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {(() => {
+                const itemsPerPage = 9;
+                const totalPages = Math.ceil(allEmployees.length / itemsPerPage);
+                const activePage = Math.min(currentPage, Math.max(1, totalPages));
+                const indexOfLastItem = activePage * itemsPerPage;
+                const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+
+                if (totalPages <= 1) return null;
+
+                return (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', padding: '10px 0', flexDirection: winWidth < 600 ? 'column' : 'row', gap: '12px' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+                      Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, allEmployees.length)} of {allEmployees.length} employees
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <button
+                        disabled={activePage === 1}
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        style={{
+                          padding: '8px 14px',
+                          borderRadius: '10px',
+                          border: '1.5px solid #e2e8f0',
+                          background: 'white',
+                          color: activePage === 1 ? '#cbd5e1' : '#0f172a',
+                          fontWeight: '800',
+                          fontSize: '12px',
+                          cursor: activePage === 1 ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <ChevronLeft size={14} /> Prev
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                        if (totalPages > 6 && Math.abs(page - activePage) > 1 && page !== 1 && page !== totalPages) {
+                          if (page === 2 || page === totalPages - 1) {
+                            return <span key={page} style={{ color: '#cbd5e1', padding: '0 4px' }}>...</span>;
+                          }
+                          return null;
+                        }
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            style={{
+                              minWidth: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              border: activePage === page ? 'none' : '1.5px solid #e2e8f0',
+                              background: activePage === page ? '#0f172a' : 'white',
+                              color: activePage === page ? 'white' : '#475569',
+                              fontWeight: '800',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            {page}
+                          </button>
+                        );
+                      })}
+                      <button
+                        disabled={activePage === totalPages}
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        style={{
+                          padding: '8px 14px',
+                          borderRadius: '10px',
+                          border: '1.5px solid #e2e8f0',
+                          background: 'white',
+                          color: activePage === totalPages ? '#cbd5e1' : '#0f172a',
+                          fontWeight: '800',
+                          fontSize: '12px',
+                          cursor: activePage === totalPages ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.2s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        Next <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: winWidth < 768 ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))', gap: '24px' }}>
@@ -347,8 +459,8 @@ export default function LeaveManagement() {
                         </div>
                         <span style={{ fontSize: '9px', fontWeight: '950', color: sColor, background: sBg, padding: '4px 10px', borderRadius: '100px', textTransform: 'uppercase' }}>{displayStatus}</span>
                       </div>
-                      <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '12px', fontWeight: '600' }}><Calendar size={14} /> {displayDate}</div>
-                      <div style={{ fontSize: '12px', color: '#475569', fontStyle: 'italic', background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #f1f5f9', flex: 1 }}>"{req.reason || 'No reason provided'}"</div>
+                      <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px', color: '#1e293b', fontSize: '13.5px', fontWeight: '800' }}><Calendar size={14} color="#1d4ed8" /> {displayDate}</div>
+                      <div style={{ fontSize: '13.5px', color: '#0f172a', fontWeight: '750', fontStyle: 'italic', background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px solid #cbd5e1', flex: 1 }}>"{req.reason || 'No reason provided'}"</div>
                     </div>
                   );
                 })

@@ -18,6 +18,7 @@ export default function TicketManagement() {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [priorityFilter, setPriorityFilter] = useState('All Priority');
   const [manageTicket, setManageTicket] = useState(null);
+  const [viewTicket, setViewTicket] = useState(null);
   const [manageResponse, setManageResponse] = useState('');
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [usersList, setUsersList] = useState([]);
@@ -118,7 +119,7 @@ export default function TicketManagement() {
 
     doc.setFontSize(22);
     doc.setTextColor(30, 41, 59);
-    doc.text('TITAN SUPPORT HUB', 14, 20);
+    doc.text('TICKET MANAGEMENT', 14, 20);
     
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
@@ -126,29 +127,33 @@ export default function TicketManagement() {
     doc.text(`Generated on: ${today}`, 14, 34);
 
     const tableColumn = ["Ticket ID", "Subject", "Requester", "Priority", "Status", "Created At"];
-    const tableRows = filteredTickets.map(t => {
+    const tableRows = filteredTickets.map((t, index) => {
       let dateVal = t.created_at || t.created_date || t.timestamp || t.time_stamp;
-      
-      // Handle cases where the date might be doubled/concatenated in the DB
       if (typeof dateVal === 'string' && dateVal.includes('Z20')) {
         dateVal = dateVal.split('Z')[0] + 'Z';
       }
 
       const parsedDate = dateVal ? new Date(dateVal) : null;
-      const formattedDate = (parsedDate && !isNaN(parsedDate.getTime())) 
-        ? parsedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') 
-        : (dateVal ? String(dateVal).split('T')[0] : 'N/A');
+      let formattedDate = 'Unknown';
+      if (parsedDate && !isNaN(parsedDate.getTime())) {
+        formattedDate = parsedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+      } else if (dateVal) {
+        formattedDate = String(dateVal).split('T')[0];
+      }
       
       const rName = t.requester || t.requester_name || t.user_name || t.member_name || 
                    usersList.find(u => String(u.id) === String(t.user_id || t.userId || t.employee_id))?.name || 
                    'Anonymous';
 
+      const statusStr = String(t.status || '').toUpperCase() === 'OPEN' ? 'Pending' : (t.status || 'Pending');
+      const priorityStr = (t.priority || 'NORMAL').toUpperCase();
+
       return [
-        t.id || t.ticket_id || 'N/A',
+        `#${t.id || t.ticket_id || index + 1}`,
         t.subject || t.title || 'Untitled',
         rName,
-        t.priority || 'Normal',
-        t.status || 'Open',
+        priorityStr,
+        statusStr,
         formattedDate
       ];
     });
@@ -160,10 +165,18 @@ export default function TicketManagement() {
       theme: 'grid',
       headStyles: { fillColor: [56, 99, 168], fontSize: 10, fontStyle: 'bold', halign: 'center' },
       styles: { fontSize: 8, cellPadding: 4, valign: 'middle' },
-      alternateRowStyles: { fillColor: [248, 250, 252] }
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        0: { cellWidth: 28 }, // Ticket ID
+        1: { cellWidth: 'auto' }, // Subject
+        2: { cellWidth: 40 }, // Requester
+        3: { cellWidth: 22, halign: 'center' }, // Priority
+        4: { cellWidth: 22, halign: 'center' }, // Status
+        5: { cellWidth: 30, halign: 'center' }  // Created At
+      }
     });
 
-    doc.save(`Titan_Ticket_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Ticket_Management_Report_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
@@ -209,18 +222,6 @@ export default function TicketManagement() {
 
         {/* Filters */}
         <div className="flex-responsive-stack" style={{ marginBottom: '32px', gap: '16px' }}>
-          <div style={{ flex: 1, position: 'relative', width: '100%' }}>
-             <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} size={18} />
-             <input 
-               type="text" 
-               placeholder="Search tickets..."
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-               style={{ width: '100%', padding: '14px 16px 14px 48px', borderRadius: '15px', border: '2px solid #eef2f6', background: 'white', outline: 'none', fontSize: '14px', boxSizing: 'border-box', transition: '0.2s', fontWeight: '600' }}
-               onFocus={(e) => e.target.style.borderColor = '#3863a8'}
-               onBlur={(e) => e.target.style.borderColor = '#eef2f6'}
-             />
-          </div>
           <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
             <select 
                 value={statusFilter}
@@ -300,9 +301,14 @@ export default function TicketManagement() {
                         </span>
                       </div>
 
-                      <div>
-                        <div style={{ fontWeight: '900', color: '#1e293b', fontSize: '16px', marginBottom: '6px', lineHeight: '1.4' }}>{ticket.subject || ticket.title || 'No Subject'}</div>
-                        <div style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.6' }}>{ticket.description || 'No description provided.'}</div>
+                      <div 
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          setViewTicket(ticket);
+                        }}
+                      >
+                        <div style={{ fontWeight: '900', color: '#3863a8', fontSize: '16px', marginBottom: '6px', lineHeight: '1.4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title="Click to view full subject">{ticket.subject || 'No Subject'}</div>
+                        <div style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ticket.description || 'No description provided.'}</div>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
@@ -375,8 +381,13 @@ export default function TicketManagement() {
                               {String(ticket.id || ticket.ticket_id || index + 1)}
                             </span>
                           </td>
-                          <td style={{ padding: '20px 25px' }}>
-                            <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '14px', maxWidth: '300px' }}>{ticket.subject || ticket.title || 'No Subject'}</div>
+                          <td 
+                            style={{ padding: '20px 25px', cursor: 'pointer' }}
+                            onClick={() => {
+                              setViewTicket(ticket);
+                            }}
+                          >
+                            <div style={{ fontWeight: '800', color: '#3863a8', fontSize: '14px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title="Click to view full subject">{ticket.subject || 'No Subject'}</div>
                             <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '300px' }}>{ticket.description || 'No description provided.'}</div>
                           </td>
                           <td style={{ padding: '20px 25px' }}>
@@ -564,6 +575,39 @@ export default function TicketManagement() {
               >
                 <Send size={18} /> Submit Response
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW TICKET MODAL */}
+      {viewTicket && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="animate-zoom-in" style={{ background: 'white', padding: '35px', borderRadius: '30px', width: '100%', maxWidth: '550px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '3px solid #cbd5e1', position: 'relative' }}>
+            
+            <button 
+              onClick={() => setViewTicket(null)}
+              style={{ position: 'absolute', right: '25px', top: '25px', width: '36px', height: '36px', borderRadius: '50%', background: '#f8fafc', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+              onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
+              onMouseOut={(e) => e.currentTarget.style.background = '#f8fafc'}
+            >
+              <X size={20} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '15px', background: '#eff6ff', color: '#1d4ed8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                <MessageCircle size={24} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: '22px', fontWeight: '900', color: '#1e293b', margin: 0, letterSpacing: '-0.5px' }}>View Ticket</h2>
+                <p style={{ fontSize: '13px', color: '#94a3b8', margin: '4px 0 0', fontWeight: '700' }}>#{viewTicket.id || 'TICKET'}</p>
+              </div>
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '25px', borderRadius: '20px', border: '1px solid #f1f5f9' }}>
+              <span style={{ fontSize: '11px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '10px' }}>Original Request</span>
+              <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#1e293b', margin: '0 0 6px 0' }}>{viewTicket.subject || 'No Subject'}</h3>
+              <p style={{ fontSize: '14px', color: '#64748b', margin: 0, lineHeight: '1.6', fontWeight: '500', whiteSpace: 'pre-wrap' }}>{viewTicket.description || 'No description provided.'}</p>
             </div>
           </div>
         </div>

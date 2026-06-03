@@ -19,7 +19,6 @@ export default function ThreadScreen() {
     const { user } = useAuth();
     
     const [fullscreenMedia, setFullscreenMedia] = useState(null);
-    const [tagline, setTagline] = useState('');
     const [newPost, setNewPost] = useState('');
     const [mediaFile, setMediaFile] = useState(null);
     const [mediaType, setMediaType] = useState(null); 
@@ -38,35 +37,118 @@ export default function ThreadScreen() {
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editCommentContent, setEditCommentContent] = useState('');
     const [winWidth, setWinWidth] = useState(window.innerWidth);
+
+    const [editMediaFile, setEditMediaFile] = useState(null);
+    const [editMediaType, setEditMediaType] = useState(null);
+    const [editMediaPreview, setEditMediaPreview] = useState(null);
+    const [editRemoveMedia, setEditRemoveMedia] = useState(false);
+    const editFileInputRef = useRef(null);
     const [reactorModal, setReactorModal] = useState(null); // { postId, emoji, users, count }
     const [loadingReactors, setLoadingReactors] = useState(false);
 
     useEffect(() => {
-        fetchProfiles();
         if (clearNotifications) clearNotifications();
         const handleResize = () => setWinWidth(window.innerWidth);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    useEffect(() => {
+        if (user?.token) {
+            fetchProfiles();
+        }
+    }, [user]);
+
     // Clear notifications in real-time as threads update while user is on this screen
     useEffect(() => {
         if (threads.length > 0 && clearNotifications) clearNotifications();
     }, [threads]);
 
+    useEffect(() => {
+        if (!activeCommentPost) return;
+        const interval = setInterval(async () => {
+            try {
+                const comments = await fetchComments(activeCommentPost);
+                setPostComments(prev => ({ ...prev, [activeCommentPost]: comments }));
+            } catch (err) {
+                console.error("Comments poll error:", err);
+            }
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [activeCommentPost, fetchComments]);
+
     const fetchProfiles = async () => {
+        if (!user?.token) return;
         try {
-            const resp = await fetch(API_ENDPOINTS.USERS);
+            // 1. Fetch from Users API
+            const resp = await fetch(API_ENDPOINTS.USERS, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            const map = {};
             if (resp.ok) {
                 const data = await resp.json();
                 const userList = Array.isArray(data) ? data : (data.value || []);
-                const map = {};
                 userList.forEach(u => {
-                    const uid = String(u.id || u.empId || u.userId || u.employee_id);
-                    if (uid) map[uid] = u;
+                    const idKey = String(u.id || u.empId || u.userId || u.employee_id || '').toLowerCase();
+                    const emailKey = String(u.email || '').toLowerCase();
+                    const nameKey = String(u.name || '').toLowerCase();
+                    
+                    const cleanUser = {
+                        ...u,
+                        profile_pic: u.profile_pic || u.profile_picture || u.profileImage || u.profilePicture || u.profile_image || u.avatar
+                    };
+                    
+                    if (idKey) map[idKey] = cleanUser;
+                    if (emailKey) map[emailKey] = cleanUser;
+                    if (nameKey) map[nameKey] = cleanUser;
                 });
-                setUserProfiles(map);
             }
+
+            // 2. Fetch from Employees API to enrich pictures & designations
+            try {
+                const empResp = await fetch(API_ENDPOINTS.EMPLOYEES || `${BASE_URL}/api/employees`, {
+                    headers: { 'Authorization': `Bearer ${user.token}` }
+                });
+                if (empResp.ok) {
+                    const empData = await empResp.json();
+                    const empList = Array.isArray(empData) ? empData : [];
+                    empList.forEach(emp => {
+                        const empId = String(emp.id || emp.employee_id || emp.empId || '').toLowerCase();
+                        const empEmail = String(emp.email || emp.official_email || emp.personal_email || '').toLowerCase();
+                        const empName = String(emp.name || emp.emp_name || '').toLowerCase();
+                        
+                        const pic = emp.profile_pic || emp.profile_picture || emp.photo || emp.ProfilePic || emp.Profile_Picture || emp.ProfilePicture || emp.profileImage || emp.profile_image;
+                        const designation = emp.designation || emp.role || emp.designation_name;
+                        
+                        const keys = [empId, empEmail, empName].filter(Boolean);
+                        keys.forEach(k => {
+                            if (map[k]) {
+                                map[k] = {
+                                    ...map[k],
+                                    profile_pic: pic || map[k].profile_pic,
+                                    profile_picture: pic || map[k].profile_picture,
+                                    designation: designation || map[k].designation || map[k].role,
+                                    name: map[k].name || emp.name || emp.emp_name,
+                                    email: map[k].email || emp.email || emp.official_email
+                                };
+                            } else {
+                                map[k] = {
+                                    ...emp,
+                                    profile_pic: pic,
+                                    profile_picture: pic,
+                                    designation: designation,
+                                    name: emp.name || emp.emp_name,
+                                    email: emp.email || emp.official_email
+                                };
+                            }
+                        });
+                    });
+                }
+            } catch (empErr) {
+                console.error("Employees enrich error:", empErr);
+            }
+
+            setUserProfiles(map);
         } catch (err) { console.error("Profiles error:", err); }
     };
 
@@ -75,7 +157,20 @@ export default function ThreadScreen() {
         if (!file) return;
         setMediaFile(file);
         setMediaType(file.type.startsWith('video') ? 'video' : 'image');
-        setMediaPreview(URL.createObjectURL(file));
+        const reader = new FileReader();
+        reader.onloadend = () => setMediaPreview(reader.result);
+        reader.readAsDataURL(file);
+    };
+
+    const handleEditFileSelect = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setEditMediaFile(file);
+        setEditMediaType(file.type.startsWith('video') ? 'video' : 'image');
+        const reader = new FileReader();
+        reader.onloadend = () => setEditMediaPreview(reader.result);
+        reader.readAsDataURL(file);
+        setEditRemoveMedia(false);
     };
 
     const clearMedia = () => {
@@ -93,13 +188,12 @@ export default function ThreadScreen() {
                 userId: user?.id,
                 user: user?.name || 'User',
                 role: user?.role?.toUpperCase() || 'EMPLOYEE',
-                tagline: tagline,
+                tagline: '',
                 content: newPost,
                 file: mediaFile,
                 mediaType: mediaType
             });
             setNewPost('');
-            setTagline('');
             clearMedia();
         } catch (err) {
             console.error("Post Error:", err);
@@ -314,7 +408,6 @@ export default function ThreadScreen() {
         <div style={styles.container}>
             {/* CREATE THREAD */}
             <div style={{ ...styles.card, borderTop: '5px solid #FDB913' }}>
-                <input style={styles.tagInput} placeholder="Add a tagline..." value={tagline} onChange={e => setTagline(e.target.value)} />
                 <textarea style={styles.mainInput} placeholder="Share an update with the team..." value={newPost} onChange={e => setNewPost(e.target.value)} />
 
                 <input type="file" ref={fileInputRef} onChange={handleFileSelect} hidden accept="image/*,video/*" />
@@ -355,22 +448,43 @@ export default function ThreadScreen() {
                 )}
             </AnimatePresence>
             {threads.map(post => {
-                const authorId = user?.id || user?.empId || user?.userId || user?.employee_id;
-                const uid = post.userId || post.user_id;
+                const authorId = user?.id || user?.empId || user?.userId || user?.employee_id || user?.email || user?.name;
+                const uid = post.userId || post.user_id || post.user_email || post.user_name || post.user;
                 const ts = post.createdAt || post.created_at;
-                
-                const authorIdMatch = authorId && uid && String(authorId) === String(uid);
-                const nameMatch = (user?.name && (post.userName || post.user)) && (user.name === (post.userName || post.user));
+                const authorIdMatch = authorId && uid && String(authorId).toLowerCase() === String(uid).toLowerCase();
+                const nameMatch = user?.name && (post.userName || post.user || post.user_name) && (String(user.name).toLowerCase() === String(post.userName || post.user || post.user_name).toLowerCase());
                 const isAuthor = authorIdMatch || nameMatch;
                 
-                const isLead = user?.role === 'TEAMLEADER' || user?.role === 'ADMIN' || user?.role === 'MANAGER';
                 const canManage = isAuthor;
+                const isHr = String(user?.role || '').toLowerCase().includes('hr') ||
+                             String(user?.designation || '').toLowerCase().includes('human resource') ||
+                             String(user?.designation || '').toLowerCase().includes('hr') ||
+                             String(user?.name || '').toLowerCase().includes('ravikumar');
+                const isPm = String(user?.role || '').toLowerCase().includes('pm') ||
+                             String(user?.designation || '').toLowerCase().includes('project manager') ||
+                             String(user?.designation || '').toLowerCase().includes('pm');
+                const isLead = user?.role === 'TEAMLEADER' || user?.role === 'ADMIN' || user?.role === 'MANAGER' || isHr || isPm;
                 const isEditing = editingPostId === post.id;
                 const pLiked = post.userHasLiked || false;
                 const pBadged = post.userHasBadged || false;
                 const likeCount = post.likeCount || 0;
                 const badgeCount = post.badgeCount || 0;
                 const commentCount = Math.max(post.commentCount || 0, (postComments[post.id] || []).length);
+
+                const getActiveReactionChar = (activeEmoji, pLiked) => {
+                  if (!activeEmoji) return pLiked ? '❤️' : null;
+                  const nameToEmoji = {
+                    'heart': '❤️', 'love': '❤️', 'like': '❤️', 'heart_count': '❤️', 'likes_count': '❤️', '❤️': '❤️',
+                    'thumbsup': '👍', 'thumbsup_count': '👍', '👍': '👍',
+                    'shocked': '😮', 'shocked_count': '😮', '😮': '😮',
+                    'laugh': '😂', 'laugh_count': '😂', '😂': '😂',
+                    'fire': '🔥', 'fire_count': '🔥', '🔥': '🔥',
+                    'clap': '👏', 'clap_count': '👏', '👏': '👏',
+                    'cake': '🎂', 'cake_count': '🎂', '🎂': '🎂'
+                  };
+                  return nameToEmoji[String(activeEmoji).toLowerCase()] || activeEmoji;
+                };
+                const activeReaction = getActiveReactionChar(post.activeEmoji, pLiked);
 
                 return (
                     <div key={post.id} style={styles.threadCard}
@@ -381,15 +495,31 @@ export default function ThreadScreen() {
                         
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div style={{ display: 'flex', gap: '15px' }}>
-                                <div style={{ width: '48px', height: '48px', borderRadius: '15px', backgroundColor: '#0B1E3F', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, boxShadow: '0 4px 12px rgba(11, 30, 63, 0.15)' }}>
+                                <div style={{ width: '48px', height: '48px', borderRadius: '15px', backgroundColor: '#0B1E3F', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, boxShadow: '0 4px 12px rgba(11, 30, 63, 0.15)', position: 'relative' }}>
                                     {(() => {
-                                        const profile = userProfiles[uid] || Object.values(userProfiles).find(p => p.name === (post.userName || post.user));
-                                        const pic = profile?.profileImage || profile?.profilePicture || profile?.profile_image || profile?.profile_picture || profile?.avatar || post.userImage;
-                                        if (pic) {
-                                            const src = pic.startsWith('http') ? pic : `${BASE_URL}${pic.startsWith('/') ? pic : '/' + pic}`;
-                                            return <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />;
-                                        }
-                                        return (profile?.name || post.userName || post.user || '?').charAt(0).toUpperCase();
+                                        const lookupKey = String(uid || '').toLowerCase();
+                                        const profile = userProfiles[lookupKey] || 
+                                                        userProfiles[String(post.userName || post.user || '').toLowerCase()] ||
+                                                        Object.values(userProfiles).find(p => String(p.name || '').toLowerCase() === String(post.userName || post.user || '').toLowerCase());
+                                        const pic = profile?.profile_pic || profile?.profile_picture || profile?.profileImage || profile?.profilePicture || profile?.profile_image || profile?.avatar || profile?.photo || post.userImage;
+                                        const empIdForPhoto = profile?.employee_id || profile?.id || profile?.empId || post.userId || post.user_id;
+                                        const finalPicUrl = pic ? (pic.startsWith('http') ? pic : `${BASE_URL}${pic.startsWith('/') ? pic : '/' + pic}`) : (empIdForPhoto ? `${BASE_URL}/api/users/${empIdForPhoto}/photo` : null);
+                                        return (
+                                            <>
+                                                {finalPicUrl && (
+                                                    <img 
+                                                        src={finalPicUrl} 
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} 
+                                                        alt="" 
+                                                        onLoad={(e) => { if (e.target.nextSibling) e.target.nextSibling.style.display = 'none'; }}
+                                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                                    />
+                                                )}
+                                                <span>
+                                                    {(profile?.name || post.userName || post.user || '?').charAt(0).toUpperCase()}
+                                                </span>
+                                            </>
+                                        );
                                     })()}
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -404,6 +534,9 @@ export default function ThreadScreen() {
                                         onClick={() => {
                                             setEditingPostId(post.id);
                                             setEditContent(post.content);
+                                            setEditMediaFile(null);
+                                            setEditMediaPreview(null);
+                                            setEditRemoveMedia(false);
                                         }} 
                                         style={{ border: 'none', background: '#f8fafc', color: '#315A9E', padding: '10px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                         title="Edit post"
@@ -411,7 +544,7 @@ export default function ThreadScreen() {
                                         <Edit3 size={16} />
                                     </button>
                                     <button 
-                                        onClick={() => deletePost(post.id)} 
+                                        onClick={() => deletePost(post.id, post.userId || post.user_id || post.employee_id)} 
                                         style={{ border: 'none', background: '#fef2f2', color: '#ef4444', padding: '10px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                         title="Delete post"
                                     >
@@ -429,18 +562,62 @@ export default function ThreadScreen() {
                                         value={editContent}
                                         onChange={(e) => setEditContent(e.target.value)}
                                     />
+                                    <input type="file" ref={editFileInputRef} onChange={handleEditFileSelect} hidden accept="image/*,video/*" />
+                                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                                        <div style={styles.mediaBtn} onClick={() => editFileInputRef.current?.click()}>
+                                            <ImageIcon size={18} color="#10b981" /> Replace Photo/Video
+                                        </div>
+                                        {(editMediaPreview || post.media_url || post.mediaUrl || post.media || post.image) && !editRemoveMedia && (
+                                            <div style={{ ...styles.mediaBtn, color: '#ef4444' }} onClick={() => { setEditRemoveMedia(true); setEditMediaFile(null); setEditMediaPreview(null); }}>
+                                                <Trash2 size={18} color="#ef4444" /> Remove Media
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {(editMediaPreview && !editRemoveMedia) && (
+                                        <div style={{ marginTop: '10px', position: 'relative', borderRadius: '15px', overflow: 'hidden', maxWidth: '300px' }}>
+                                            <XCircle size={24} color="white" style={{ position: 'absolute', top: '10px', right: '10px', cursor: 'pointer', zIndex: 10 }} onClick={() => { setEditMediaFile(null); setEditMediaPreview(null); }} />
+                                            {editMediaType === 'video' ? (<video src={editMediaPreview} controls style={{ width: '100%', display: 'block' }} />) : (<img src={editMediaPreview} alt="" style={{ width: '100%', display: 'block' }} />)}
+                                        </div>
+                                    )}
+
+                                    {(!editMediaPreview && !editRemoveMedia) && (() => {
+                                        const mediaPath = post.media_url || post.mediaUrl || post.media || post.image;
+                                        if (!mediaPath || typeof mediaPath !== 'string') return null;
+                                        const isVideo = post.media_type === 'video' || post.mediaType === 'video' || mediaPath.toLowerCase().includes('video') || mediaPath.endsWith('.mp4');
+                                        let src = mediaPath.startsWith('data:') ? mediaPath : `${BASE_URL}${mediaPath}`;
+                                        return (
+                                            <div style={{ marginTop: '10px', borderRadius: '15px', overflow: 'hidden', maxWidth: '300px', opacity: 0.5 }}>
+                                                {isVideo ? (<video src={src} controls style={{ width: '100%', display: 'block' }} />) : (<img src={src} style={{ width: '100%', display: 'block' }} alt="" />)}
+                                            </div>
+                                        );
+                                    })()}
+
                                     <div style={{ display: 'flex', gap: '10px' }}>
                                         <button 
-                                            onClick={() => {
-                                                updatePost(post.id, editContent);
+                                            onClick={async () => {
+                                                await updatePost(post.id, {
+                                                    content: editContent,
+                                                    file: editMediaFile,
+                                                    mediaType: editMediaType,
+                                                    removeMedia: editRemoveMedia
+                                                }, post.userId || post.user_id || post.employee_id);
                                                 setEditingPostId(null);
+                                                setEditMediaFile(null);
+                                                setEditMediaPreview(null);
+                                                setEditRemoveMedia(false);
                                             }}
                                             style={{ backgroundColor: '#315A9E', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '10px', fontWeight: '900', cursor: 'pointer' }}
                                         >
                                             SAVE
                                         </button>
                                         <button 
-                                            onClick={() => setEditingPostId(null)}
+                                            onClick={() => {
+                                                setEditingPostId(null);
+                                                setEditMediaFile(null);
+                                                setEditMediaPreview(null);
+                                                setEditRemoveMedia(false);
+                                            }}
                                             style={{ background: 'none', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '8px 20px', borderRadius: '10px', fontWeight: '900', cursor: 'pointer' }}
                                         >
                                             CANCEL
@@ -453,7 +630,7 @@ export default function ThreadScreen() {
                         </div>
 
                         {/* Support multiple field names and direct base64/relative URLs with type safety */}
-                        {(() => {
+                        {!isEditing && (() => {
                             const mediaPath = post.media_url || post.mediaUrl || post.media || post.image;
                             if (!mediaPath || typeof mediaPath !== 'string') return null;
                             const isVideo = post.media_type === 'video' || post.mediaType === 'video' || mediaPath.includes('video') || mediaPath.endsWith('.mp4');
@@ -475,7 +652,7 @@ export default function ThreadScreen() {
                                 // Only render actual emoji reactions — skip metadata keys like 'like', 'badge', 'total', 'count'
                                 if (!EMOJI_LIST.includes(emoji)) return null;
                                 if (!count || count <= 0) return null;
-                                const hasReacted = post.userReactions?.[emoji] === true;
+                                const hasReacted = activeReaction === emoji;
                                 return (
                                     <div 
                                         key={emoji} 
@@ -498,27 +675,24 @@ export default function ThreadScreen() {
                                 onMouseEnter={() => setActiveEmojiPicker(post.id)}
                                 onMouseLeave={() => setActiveEmojiPicker(null)}
                                 style={{
-                                    ...styles.action(pLiked, '#ef4444'),
+                                    ...styles.action(!!activeReaction, '#ef4444'),
                                     padding: '12px 25px',
                                     borderRadius: '15px',
-                                    boxShadow: pLiked ? '0 5px 15px rgba(239, 68, 68, 0.3)' : 'none',
+                                    boxShadow: activeReaction ? '0 5px 15px rgba(239, 68, 68, 0.3)' : 'none',
                                     minWidth: '120px',
                                     justifyContent: 'center'
                                 }}
                             >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Heart size={20} fill={pLiked ? "white" : "none"} stroke={pLiked ? "white" : "#ef4444"} strokeWidth={2.5} /> 
+                                    {activeReaction ? (
+                                        <span style={{ fontSize: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            {activeReaction}
+                                        </span>
+                                    ) : (
+                                        <Heart size={20} fill="none" stroke="#ef4444" strokeWidth={2.5} />
+                                    )}
                                     <span style={{ fontWeight: '900', textTransform: 'uppercase', fontSize: '14px' }}>
-                                        {pLiked ? 'LIKED' : 'LIKE'} 
-                                    </span>
-                                    <span 
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            openReactorsModal(post, 'like');
-                                        }}
-                                        style={{ marginLeft: '4px', cursor: 'help', textDecoration: pLiked ? 'none' : 'underline', opacity: 0.9 }}
-                                    >
-                                        ({likeCount})
+                                        {activeReaction ? 'REACTED' : 'LIKE'} 
                                     </span>
                                 </div>
 
@@ -595,32 +769,51 @@ export default function ThreadScreen() {
                                                 
                                                 return (
                                                     <div key={c.id} style={{ display: 'flex', gap: '12px' }}>
-                                                        <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#315A9E', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '1000', flexShrink: 0, boxShadow: '0 4px 10px rgba(49, 90, 158, 0.2)', overflow: 'hidden' }}>
+                                                        <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#315A9E', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '1000', flexShrink: 0, boxShadow: '0 4px 10px rgba(49, 90, 158, 0.2)', overflow: 'hidden', position: 'relative' }}>
                                                             {(() => {
-                                                                const pic = profile?.profileImage || profile?.profilePicture || profile?.profile_image || profile?.profile_picture || profile?.avatar;
-                                                                if (pic) {
-                                                                    const src = pic.startsWith('http') ? pic : `${BASE_URL}${pic.startsWith('/') ? pic : '/' + pic}`;
-                                                                    return <img src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />;
-                                                                }
-                                                                return cUser.charAt(0).toUpperCase();
+                                                                const pic = profile?.profile_pic || profile?.profile_picture || profile?.profileImage || profile?.profilePicture || profile?.profile_image || profile?.avatar || profile?.photo;
+                                                                const empIdForPhoto = profile?.employee_id || profile?.id || profile?.empId || cUid;
+                                                                const finalPicUrl = pic ? (pic.startsWith('http') ? pic : `${BASE_URL}${pic.startsWith('/') ? pic : '/' + pic}`) : (empIdForPhoto ? `${BASE_URL}/api/users/${empIdForPhoto}/photo` : null);
+                                                                return (
+                                                                    <>
+                                                                        {finalPicUrl && (
+                                                                            <img 
+                                                                                src={finalPicUrl} 
+                                                                                style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} 
+                                                                                alt="" 
+                                                                                onLoad={(e) => { if (e.target.nextSibling) e.target.nextSibling.style.display = 'none'; }}
+                                                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                                                            />
+                                                                        )}
+                                                                        <span>
+                                                                            {cUser.charAt(0).toUpperCase()}
+                                                                        </span>
+                                                                    </>
+                                                                );
                                                             })()}
                                                         </div>
                                                         <div style={{ flex: 1, padding: '15px', background: 'white', borderRadius: '20px', border: '3px solid #cbd5e1', position: 'relative' }}>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                                                                 <span style={{ fontSize: '12px', fontWeight: '1000', color: '#0B1E3F' }}>{cUser}</span>
-                                                                {editingCommentId !== c.id && (
-                                                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                                                {editingCommentId !== c.id && (isMyComment || isLead) && (
+                                                                    <div style={{ display: 'flex', gap: '5px' }}>
                                                                         <button
                                                                             onClick={() => { setEditingCommentId(c.id); setEditCommentContent(cText); }}
                                                                             title="Edit comment"
-                                                                            style={{ border: 'none', background: '#f0f7ff', color: '#315A9E', padding: '5px 8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                            style={{ border: 'none', background: '#f8fafc', color: '#315A9E', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
                                                                         >
                                                                             <Edit3 size={13} />
                                                                         </button>
                                                                         <button
-                                                                            onClick={async () => { await deleteComment(post.id, c.id); const updated = await fetchComments(post.id); setPostComments(prev => ({ ...prev, [post.id]: updated })); }}
+                                                                            onClick={async () => {
+                                                                                const success = await deleteComment(post.id, c.id, c.userId || c.user_id || c.employee_id || c.EmpID);
+                                                                                if (success) {
+                                                                                    const updated = await fetchComments(post.id);
+                                                                                    setPostComments(prev => ({ ...prev, [post.id]: updated }));
+                                                                                }
+                                                                            }}
                                                                             title="Delete comment"
-                                                                            style={{ border: 'none', background: '#fef2f2', color: '#ef4444', padding: '5px 8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                            style={{ border: 'none', background: '#fef2f2', color: '#ef4444', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
                                                                         >
                                                                             <Trash2 size={13} />
                                                                         </button>
@@ -637,7 +830,14 @@ export default function ThreadScreen() {
                                                                         autoFocus
                                                                     />
                                                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                                                        <button onClick={() => { updateComment(post.id, c.id, editCommentContent); setEditingCommentId(null); }} style={{ fontSize: '11px', fontWeight: '900', color: 'white', background: '#315A9E', border: 'none', padding: '6px 15px', borderRadius: '8px', cursor: 'pointer' }}>UPDATE</button>
+                                                                        <button onClick={async () => {
+                                                                            const success = await updateComment(post.id, c.id, editCommentContent, c.userId || c.user_id || c.employee_id || c.EmpID);
+                                                                            if (success) {
+                                                                                const updated = await fetchComments(post.id);
+                                                                                setPostComments(prev => ({ ...prev, [post.id]: updated }));
+                                                                                setEditingCommentId(null);
+                                                                            }
+                                                                        }} style={{ fontSize: '11px', fontWeight: '900', color: 'white', background: '#315A9E', border: 'none', padding: '6px 15px', borderRadius: '8px', cursor: 'pointer' }}>UPDATE</button>
                                                                         <button onClick={() => setEditingCommentId(null)} style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', background: 'none', border: '1.5px solid #e2e8f0', padding: '6px 15px', borderRadius: '8px', cursor: 'pointer' }}>CANCEL</button>
                                                                     </div>
                                                                 </div>

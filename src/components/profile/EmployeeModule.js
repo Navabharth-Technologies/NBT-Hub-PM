@@ -185,19 +185,19 @@ export default function EmployeeModule() {
 
         {/* Employee Grid */}
         <section className="dashboard-section animate-fade-in" style={{padding: '0', background: 'transparent', border: 'none', boxShadow: 'none'}}>
-            <div style={{
-               display: 'grid', 
-               gridTemplateColumns: winWidth > 1400 
-                ? 'repeat(4, 1fr)' 
-                : (winWidth > 1100 ? 'repeat(3, 1fr)' : `repeat(auto-fit, minmax(${winWidth < 480 ? '100%' : '300px'}, 1fr))`), 
-               gap: '24px', 
-               justifyContent: 'center',
+             <div style={{
+                display: 'grid', 
+                gridTemplateColumns: winWidth > 1400 
+                 ? 'repeat(3, 1fr)' 
+                 : (winWidth > 1100 ? 'repeat(2, 1fr)' : `repeat(auto-fit, minmax(${winWidth < 480 ? '100%' : '350px'}, 1fr))`), 
+                gap: '32px', 
+                justifyContent: 'center',
                width: '100%',
                maxWidth: '100%',
                margin: '0 auto'
             }}>
               {filteredEmployees.map((emp, i) => (
-                <div key={i} className="team-card" style={{background: 'white', padding: winWidth < 480 ? '12px' : '20px', position: 'relative', overflow: 'hidden'}}>
+                <div key={i} className="team-card" style={{background: 'white', padding: winWidth < 480 ? '12px' : '20px', position: 'relative', overflow: 'hidden', border: '1px solid #1e3a8a'}}>
                    <div style={{display: 'flex', alignItems: 'center', gap: winWidth < 480 ? '10px' : '12px', marginBottom: winWidth < 480 ? '10px' : '15px'}}>
                       <div style={{
                         width: winWidth < 480 ? '38px' : '48px', 

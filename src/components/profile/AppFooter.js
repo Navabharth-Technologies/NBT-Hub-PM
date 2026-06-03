@@ -21,7 +21,7 @@ const FooterIcons = {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
   ),
   Leaves: () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 2H8a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/><path d="M8 18h8"/><path d="M8 14h8"/><path d="M8 10h4"/><path d="M12 2v4"/><path d="M12 18v4"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 2H8a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z" /><path d="M8 18h8" /><path d="M8 14h8" /><path d="M8 10h4" /><path d="M12 2v4" /><path d="M12 18v4" /></svg>
   )
 };
 
@@ -45,7 +45,7 @@ export default function AppFooter({ onCreateTeam }) {
     if (!user?.token) return;
     try {
       const uid = user?.id || user?.userId || user?.employee_id;
-      
+
       const [leaveRes, ticketRes, notifRes] = await Promise.all([
         fetch(API_ENDPOINTS.LEAVES_GET, { headers: { 'Authorization': `Bearer ${user.token}` } }).catch(() => null),
         fetch(API_ENDPOINTS.SUPPORT_TICKETS, { headers: { 'Authorization': `Bearer ${user.token}` } }).catch(() => null),
@@ -163,10 +163,10 @@ export default function AppFooter({ onCreateTeam }) {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <FooterIcons.Dashboard /> },
     { name: 'View tickets', path: '/tickets', icon: <FooterIcons.Tickets /> },
-    { name: 'Create', path: '/dashboard', icon: <FooterIcons.Add />, isAction: true },
+    { name: 'Add Course', path: '/courses', icon: <FooterIcons.Add /> },
     { name: 'Leaves', path: '/leaves', icon: <FooterIcons.Leaves /> },
     { name: 'Thread', path: '/engagement', icon: <FooterIcons.Thread /> },
-    { name: 'Attendance', path: '/attendance', icon: <FooterIcons.Attendance /> },
+    { name: 'Profile', path: '/performance', icon: <FooterIcons.Attendance /> },
   ];
 
   const handleNavClick = (item) => {
@@ -193,10 +193,6 @@ export default function AppFooter({ onCreateTeam }) {
                 <button className="add-menu-item" onClick={(e) => { e.stopPropagation(); navigate('/courses'); setShowAddMenu(false); }}>
                   <span className="add-menu-icon">📚</span>
                   <span>Add Course</span>
-                </button>
-                <button className="add-menu-item" onClick={(e) => { e.stopPropagation(); navigate('/suggestions'); setShowAddMenu(false); }}>
-                  <span className="add-menu-icon">💡</span>
-                  <span>Review Suggestions</span>
                 </button>
               </div>
             )}

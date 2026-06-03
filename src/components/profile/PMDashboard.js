@@ -6,7 +6,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useThread } from '../../context/ThreadContext';
 import { API_ENDPOINTS } from '../../config';
 import TaskNotification from './TaskNotification';
+import { Calendar, ArrowRight, Clock, ChevronRight, User } from 'lucide-react';
 import './PMDashboard.css';
+
 
 // Mock icons as SVG components or simple strings for now
 const Icons = {
@@ -19,6 +21,60 @@ const Icons = {
   Asset: () => <span>📦</span>,
   Add: () => <span>+</span>,
   Quiz: () => <span>🎮</span>,
+};
+
+const parseLogDate = (log) => {
+  const rawDate = log?.punch_date || log?.PunchDate || log?.date || log?.created_at || '';
+  if (!rawDate) return '';
+  const dateStr = String(rawDate).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    if (dateStr.includes('T') || dateStr.includes(' ')) {
+      try {
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
+      } catch (e) { }
+    }
+    return dateStr.split('T')[0].split(' ')[0];
+  }
+  const dmyRegex = /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/;
+  const match = dateStr.match(dmyRegex);
+  if (match) {
+    const day = match[1].padStart(2, '0');
+    const month = match[2].padStart(2, '0');
+    const year = match[3];
+    return `${year}-${month}-${day}`;
+  }
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  } catch (e) { }
+  return '';
+};
+
+const parseTimeStr = (tStr) => {
+  if (!tStr || tStr === '----' || tStr === '--:--' || tStr.includes('00:00')) return -1;
+  let s = String(tStr).trim();
+  let isPM = s.toUpperCase().includes('PM');
+  let isAM = s.toUpperCase().includes('AM');
+  s = s.replace(/[^\d:]/g, '');
+  let parts = s.split(':');
+  if (parts.length < 2) return -1;
+  let h = parseInt(parts[0], 10);
+  let m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return -1;
+  if (isPM && h < 12) h += 12;
+  if (isAM && h === 12) h = 0;
+  return h * 60 + m;
 };
 
 export default function PMDashboard() {
@@ -84,7 +140,8 @@ export default function PMDashboard() {
   const [newJoineesCount, setNewJoineesCount] = useState(0);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [leavesLoading, setLeavesLoading] = useState(true);
-  const [attendanceStats, setAttendanceStats] = useState({ present: 0, leave: 0, late: 0 });
+  const [attendanceStats, setAttendanceStats] = useState({ present: 0, onLeave: 0, late: 0, halfDay: 0 });
+  const [lateLogins, setLateLogins] = useState([]);
   const [absentees, setAbsentees] = useState([]);
   const [teamUpdates, setTeamUpdates] = useState([]);
   const [projectSprints, setProjectSprints] = useState([]);
@@ -223,104 +280,151 @@ export default function PMDashboard() {
         }
         setNewJoineesCount(totalActiveJoinees);
 
-        // Fetch Leave Requests & All Metrics
-        let resolvedLeaves = [];
-        const leavesRes = await fetch(API_ENDPOINTS.LEAVES_GET, {
-          headers: { 'Authorization': `Bearer ${user.token}` }
-        });
-        if (leavesRes.ok) {
-          const lData = await leavesRes.json();
-          const lList = Array.isArray(lData) ? lData : (lData?.data || lData?.all || lData?.leaves || lData?.requests || []);
+      // Fetch Real-time Attendance Logs for Dashboard Metrics
+      const outerToday = new Date();
+      const outerTodayStr = `${outerToday.getFullYear()}-${String(outerToday.getMonth() + 1).padStart(2, '0')}-${String(outerToday.getDate()).padStart(2, '0')}`;
 
-          // Name Resolution for Leave Requests
-          resolvedLeaves = (Array.isArray(lList) ? lList : []).map(req => {
-            const uid = String(req.user_id || req.userId || req.empId || '').trim();
-            return {
-              ...req,
-              employee_name: userLookup[uid] || req.employee_name || req.name || 'Member'
-            };
-          });
-          setLeaveRequests(resolvedLeaves);
+      const attLogsRes = await fetch(`${API_ENDPOINTS.ATTENDANCE_LOGS_GET}?startDate=${outerTodayStr}&endDate=${outerTodayStr}`, {
+        headers: { 'Authorization': `Bearer ${user.token}` }
+      });
+      let masterLogs = [];
+      if (attLogsRes.ok) {
+        const logData = await attLogsRes.json();
+        const rawLogs = logData.data || logData.attendance || logData.logs || (Array.isArray(logData) ? logData : []);
+        masterLogs = Array.isArray(rawLogs) ? rawLogs.filter(l => String(l?.user_id || l?.Empcode || l?.EmpID || '').trim() !== '20250') : [];
 
-          // Derive metrics safely - using includes to handle 'PENDING,PENDING' or varied formats
-          // Count all active leaves (Pending + Approved)
-          const onLeaveCount = Array.isArray(lList) ? lList.filter(r =>
-            ['PENDING', 'APPROVED'].includes(String(r?.status || '').toUpperCase())
-          ).length : 0;
-          setAttendanceStats(prev => ({ ...prev, leave: onLeaveCount }));
-        }
-
-        // Fetch Real-time Biometric Attendance Logs for Daily Metrics
-        let masterLogs = [];
-        const attLogsRes = await fetch(API_ENDPOINTS.ATTENDANCE_LOGS_GET, {
-          headers: { 'Authorization': `Bearer ${user.token}` }
-        });
-        if (attLogsRes.ok) {
-          const logData = await attLogsRes.json();
-          const rawLogs = logData.data || logData.attendance || logData.logs || logData;
-          masterLogs = Array.isArray(rawLogs) ? rawLogs.filter(l => String(l?.user_id || l?.Empcode || l?.EmpID || '').trim() !== '20250') : [];
-          if (masterLogs.length > 0 || Array.isArray(rawLogs)) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const todayLogs = masterLogs.filter(l => {
-              let lDate = (l?.punch_date || l?.PunchDate || l?.date || '').split('T')[0].split(' ')[0];
-              if (lDate.includes('-') && lDate.split('-')[0].length !== 4) {
-                const parts = lDate.split('-');
-                if (parts.length === 3) lDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-              }
-              return lDate === todayStr;
-            });
-            const uniquePresentToday = new Set(todayLogs.map(l => l?.user_id || l?.Empcode || l?.EmpID)).size;
-            const lateToday = todayLogs.filter(l => String(l?.status || '').toUpperCase().includes('LATE')).length;
-            setAttendanceStats(prev => ({ ...prev, present: uniquePresentToday, late: lateToday }));
-          }
-        }
-
-        // Calculate daily absentees
-        const todayStr = new Date().toISOString().split('T')[0];
-        const presentIds = new Set();
         if (Array.isArray(masterLogs)) {
+          const today = new Date();
+          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
           const todayLogs = masterLogs.filter(l => {
-            let lDate = (l?.punch_date || l?.PunchDate || l?.date || '').split('T')[0].split(' ')[0];
-            if (lDate.includes('-') && lDate.split('-')[0].length !== 4) {
-              const parts = lDate.split('-');
-              if (parts.length === 3) lDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            }
+            const lDate = parseLogDate(l);
             return lDate === todayStr;
           });
+          const presentIds = new Set();
           todayLogs.forEach(l => {
-            const pid = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
-            if (pid) presentIds.add(pid);
+            const punchIn = l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time;
+            const hasValidPunchIn = punchIn && punchIn !== '----' && punchIn !== '--:--' && punchIn !== '00:00';
+            const status = String(l?.status || l?.Status || '').toUpperCase();
+            const isPresent = hasValidPunchIn || status.includes('PRESENT') || status.includes('IN OFFICE') || status.includes('HALF') || status.includes('LATE') || status === 'P';
+            
+            if (isPresent && !status.includes('ABSENT')) {
+               const pid = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+               if (pid) presentIds.add(pid);
+            }
           });
-        }
+          const uniquePresentToday = presentIds.size;
+          const lateTodayLogs = todayLogs.filter(l => {
+            const st = String(l?.status || '').toUpperCase();
+            if (st.includes('LATE') || st === 'L') return true;
+            const pIn = parseTimeStr(l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time);
+            return (pIn !== -1 && pIn > (9 * 60 + 30));
+          });
+          const lateToday = lateTodayLogs.length;
+          const halfDayToday = todayLogs.filter(l => {
+            const st = String(l?.status || '').toUpperCase().trim();
+            console.log(`[HalfDay Check] User: ${l?.employee_name || l?.name || l?.user_id}, Status: '${st}'`);
+            if (st === 'HALF_DAY' || st === 'HD' || st === 'HALF DAY' || st === 'HALF-DAY') return true;
+            const pIn = parseTimeStr(l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time);
+            const pOut = parseTimeStr(l?.out_time || l?.OUTTime || l?.PunchOut || l?.punch_time_out || l?.out_time_biometric);
+            if (pIn !== -1 && pIn > (13 * 60 + 30)) return true;
+            if (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60)) return true;
+            return false;
+          }).length;
+          setAttendanceStats(prev => ({ ...prev, present: uniquePresentToday, late: lateToday, halfDay: halfDayToday }));
 
-        const activeLeavesToday = (resolvedLeaves || []).filter(r => {
-          const rStatus = String(r?.status || '').toUpperCase();
-          if (!['PENDING', 'APPROVED'].includes(rStatus)) return false;
-          let rDate = (r?.date || r?.start_date || '').split('T')[0];
-          if (rDate.includes('-') && rDate.split('-')[0].length !== 4) {
-            const parts = rDate.split('-');
-            if (parts.length === 3) rDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-          }
-          return rDate === todayStr;
-        });
-        const leaveUserIds = new Set(activeLeavesToday.map(r => String(r.user_id || r.userId || r.empId || '').trim()));
-
-        if (Array.isArray(currentUsers)) {
-          const todayAbsentees = currentUsers.filter(u => {
-            const uid = String(u.id || u.empId || u.employee_id || '').trim();
-            return uid && !presentIds.has(uid);
-          }).map(u => {
-            const uid = String(u.id || u.empId || u.employee_id || '').trim();
-            const isOnLeave = leaveUserIds.has(uid);
+          const processedLate = lateTodayLogs.map(l => {
+            const uid = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+            const name = l?.employee_name || l?.name || l?.EmpName || (uid && userLookup[uid]) || 'Employee';
+            const time = l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time || 'N/A';
             return {
-              ...u,
-              status: isOnLeave ? 'ON LEAVE' : 'ABSENT'
+              id: uid,
+              name: name,
+              time: time,
+              status: l?.status || 'LATE'
             };
           });
-          setAbsentees(todayAbsentees);
+          setLateLogins(processedLate);
         }
+      }
 
-        // Fetch Upcoming Birthdays for Dashboard Preview
+      // Fetch Leave Requests & All Metrics
+      setLeavesLoading(true);
+      const leavesRes = await fetch(API_ENDPOINTS.LEAVES_GET, {
+        headers: { 'Authorization': `Bearer ${user.token}` }
+      });
+      let resolvedLeaves = [];
+      if (leavesRes.ok) {
+        const lData = await leavesRes.json();
+        const lList = Array.isArray(lData) ? lData : (lData?.leaves || lData?.all || lData?.data || lData?.requests || []);
+
+        // Name Resolution for Leave Requests
+        resolvedLeaves = (Array.isArray(lList) ? lList : []).map(r => {
+          if (!r.employee_name && !r.name) {
+            const uid = String(r.userId || r.user_id || r.employee_id || r.empId || '').trim();
+            if (uid && userLookup[uid]) {
+              r.employee_name = userLookup[uid];
+            }
+          }
+          return r;
+        });
+        setLeaveRequests(resolvedLeaves);
+
+        // Count all active leaves (Pending + Approved)
+        const totalActiveLeaves = resolvedLeaves.filter(r =>
+          ['PENDING', 'APPROVED'].includes(String(r.status || '').toUpperCase())
+        ).length;
+        setAttendanceStats(prev => ({ ...prev, onLeave: totalActiveLeaves }));
+      }
+
+      // Calculate daily absentees
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const presentIds = new Set();
+      if (Array.isArray(masterLogs)) {
+        const todayLogs = masterLogs.filter(l => {
+          const lDate = parseLogDate(l);
+          return lDate === todayStr;
+        });
+        todayLogs.forEach(l => {
+          const punchIn = l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time;
+          const hasValidPunchIn = punchIn && punchIn !== '----' && punchIn !== '--:--' && punchIn !== '00:00';
+          const status = String(l?.status || l?.Status || '').toUpperCase();
+          const isPresent = hasValidPunchIn || status.includes('PRESENT') || status.includes('HALF') || status.includes('LATE') || status === 'P';
+          
+          if (isPresent && !status.includes('ABSENT')) {
+             const pid = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+             if (pid) presentIds.add(pid);
+          }
+        });
+      }
+
+      const activeLeavesToday = (resolvedLeaves || []).filter(r => {
+        const rStatus = String(r?.status || '').toUpperCase();
+        if (!['PENDING', 'APPROVED'].includes(rStatus)) return false;
+        let rDate = r?.date || r?.start_date || '';
+        if (rDate) {
+          rDate = parseLogDate({ punch_date: rDate });
+        }
+        return rDate === todayStr;
+      });
+      const leaveUserIds = new Set(activeLeavesToday.map(r => String(r.user_id || r.userId || r.empId || '').trim()));
+
+      if (Array.isArray(currentUsers)) {
+        const todayAbsentees = currentUsers.filter(u => {
+          const uid = String(u.id || u.empId || u.employee_id || '').trim();
+          return uid && !presentIds.has(uid);
+        }).map(u => {
+          const uid = String(u.id || u.empId || u.employee_id || '').trim();
+          const isOnLeave = leaveUserIds.has(uid);
+          return {
+            ...u,
+            status: isOnLeave ? 'ON LEAVE' : 'ABSENT'
+          };
+        });
+        setAbsentees(todayAbsentees);
+      }
+
+      // Fetch Upcoming Birthdays for Dashboard Preview
         try {
           const bRes = await fetch(API_ENDPOINTS.BIRTHDAYS, {
             headers: { 'Authorization': `Bearer ${user.token}` }
@@ -385,7 +489,7 @@ export default function PMDashboard() {
   const dynamicMetrics = [
     { label: 'Total Teams', value: teams?.length || 'View', icon: <Icons.Teams />, color: '#6366f1', trend: 'Live', trendUp: true, path: '/teams' },
     { label: 'Total Employess', value: employeesCount || 'View', icon: <Icons.Employees />, color: '#8b5cf6', trend: 'Live', trendUp: true, path: '/employees' },
-    { label: 'Personal Information', value: 'Manage', icon: <Icons.Employees />, color: '#315A9E', trend: 'Active', trendUp: true, path: '/personal-info' },
+    { label: 'Suggestions', value: 'Manage', icon: <span>💡</span>, color: '#315A9E', trend: 'Active', trendUp: true, path: '/suggestions' },
 
     { label: 'Assets Management', value: 'Manage', icon: <span>📦</span>, color: '#f59e0b', trend: 'New', trendUp: true, path: '/assets' },
     { label: 'New Joinee', value: newJoineesCount || 'View', icon: <span>✨</span>, color: '#0ea5e9', trend: 'This Month', trendUp: true, path: '/new-joinees' },
@@ -583,7 +687,7 @@ export default function PMDashboard() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div>
-              <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '950', color: '#0f172a', margin: '0', letterSpacing: '-1px' }}>Dashboard</h1>
+              <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '950', color: '#0f172a', margin: '0', letterSpacing: '-1px' }}>Anish's Dashboard</h1>
               <p style={{ color: '#64748b', fontSize: winWidth < 768 ? '12px' : '14px', fontWeight: '700', margin: '4px 0 0 0' }}>Strength and scale • {teams.length} Active Teams</p>
             </div>
           </div>
@@ -593,7 +697,7 @@ export default function PMDashboard() {
               <button
                 className="btn-primary"
                 onClick={() => setShowAssignDropdown(!showAssignDropdown)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '8px 16px', whiteSpace: 'nowrap' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '12px 24px', fontSize: '15px', whiteSpace: 'nowrap' }}
               >
                 <Icons.Add /> {winWidth < 400 ? 'Task' : 'Assign Task'}
               </button>
@@ -602,7 +706,7 @@ export default function PMDashboard() {
                 <div
                   className="animate-slide-up"
                   style={{
-                    position: 'absolute', top: '50px', left: winWidth < 600 ? '0' : 'auto', right: 0, width: winWidth < 480 ? '100%' : '200px', background: 'white',
+                    position: 'absolute', top: 'calc(100% + 8px)', left: winWidth < 600 ? '0' : 'auto', right: 0, width: winWidth < 480 ? '100%' : '200px', background: 'white',
                     border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 20px 25px rgba(0,0,0,0.15)',
                     zIndex: 2100, padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px'
                   }}
@@ -801,7 +905,6 @@ export default function PMDashboard() {
                             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{team.members || 0} Operatives</div>
                           </div>
                         </div>
-                        <div style={{ padding: '4px 10px', borderRadius: '8px', background: '#eff6ff', color: '#3863a8', fontSize: '10px', fontWeight: '900' }}> {team.id}</div>
                       </div>
                     </div>
                   ))}
@@ -874,45 +977,41 @@ export default function PMDashboard() {
           </section>
 
           {/* Column 3: Attendance Analytics */}
-          <section className="dashboard-section animate-fade-in" style={{
-            animationDelay: '0.7s',
-            cursor: 'pointer',
-            borderRadius: winWidth < 768 ? '35px' : '32px',
-            padding: winWidth < 768 ? '12px' : '32px',
-            width: winWidth < 500 ? '320px' : '100%',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-            boxSizing: 'border-box',
-            overflow: 'hidden'
-          }}>
+          <section 
+            className="dashboard-section animate-fade-in" 
+            style={{ 
+              animationDelay: '0.7s',
+              borderRadius: winWidth < 768 ? '35px' : '32px',
+              padding: winWidth < 768 ? '12px' : '32px',
+              width: winWidth < 500 ? '320px' : '100%',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              boxSizing: 'border-box',
+              overflow: 'hidden'
+            }}
+          >
             <div style={{
               display: 'flex',
+              flexDirection: winWidth < 640 ? 'column' : 'row',
               justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              marginBottom: winWidth < 768 ? '20px' : '25px',
-              width: '100%'
+              alignItems: winWidth < 640 ? 'stretch' : 'center',
+              marginBottom: '20px',
+              gap: '12px'
             }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: winWidth < 768 ? '10px' : '15px' }}>
-                <div style={{ width: winWidth < 768 ? '38px' : '48px', height: winWidth < 768 ? '38px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '16px' : '22px', flexShrink: 0 }}>📅</div>
-                <h2 style={{ fontSize: winWidth < 768 ? '16px' : '22px', fontWeight: '950', color: '#1e293b', margin: 0, lineHeight: 1.2 }}>Attendance Management</h2>
-              </div>
-
+              <h2 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><Calendar size={20} color="#3863a8" />Attendance Management</h2>
+              <button 
+                className="btn-view-all btn-blue"
+                onClick={(e) => { e.stopPropagation(); navigate('/attendance'); }}
+              >
+                View All <ArrowRight size={14} />
+              </button>
             </div>
 
-            <div style={{
-              display: 'flex',
-              marginBottom: '32px',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}>
+            {/* Attendance Quick Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px', width: '100%', boxSizing: 'border-box' }}>
               <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate('/attendance');
-                }}
                 style={{
                   padding: winWidth < 768 ? '16px 8px' : '24px',
-                  flex: 1,
                   background: '#f0fdf4',
                   borderRadius: winWidth < 768 ? '16px' : '24px',
                   border: '1px solid #dcfce7',
@@ -923,63 +1022,110 @@ export default function PMDashboard() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   boxShadow: '0 4px 10px rgba(0,0,0,0.02)',
-                  minWidth: 0,
-                  cursor: 'pointer'
+                  minWidth: 0
                 }}
               >
                 <div style={{ fontSize: winWidth < 768 ? '10px' : '13px', fontWeight: '900', color: '#15803d', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: winWidth < 768 ? '0px' : '1px' }}>Present</div>
                 <div style={{ fontSize: winWidth < 768 ? '24px' : '36px', fontWeight: '950', color: '#166534', lineHeight: 1 }}>{attendanceStats.present || 0}</div>
               </div>
+
+              <div
+                style={{
+                  padding: winWidth < 768 ? '16px 8px' : '24px',
+                  background: '#fef2f2',
+                  borderRadius: winWidth < 768 ? '16px' : '24px',
+                  border: '1px solid #fee2e2',
+                  textAlign: 'center',
+                  boxSizing: 'border-box',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)',
+                  minWidth: 0
+                }}
+              >
+                <div style={{ fontSize: winWidth < 768 ? '10px' : '13px', fontWeight: '900', color: '#dc2626', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: winWidth < 768 ? '0px' : '1px' }}>Absent</div>
+                <div style={{ fontSize: winWidth < 768 ? '24px' : '36px', fontWeight: '950', color: '#991b1b', lineHeight: 1 }}>{absentees.length || 0}</div>
+              </div>
+
+              <div
+                style={{
+                  padding: winWidth < 768 ? '16px 8px' : '24px',
+                  background: '#fff7ed',
+                  borderRadius: winWidth < 768 ? '16px' : '24px',
+                  border: '1px solid #ffedd5',
+                  textAlign: 'center',
+                  boxSizing: 'border-box',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.02)',
+                  minWidth: 0
+                }}
+              >
+                <div style={{ fontSize: winWidth < 768 ? '10px' : '13px', fontWeight: '900', color: '#ea580c', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: winWidth < 768 ? '0px' : '1px' }}>Half Days</div>
+                <div style={{ fontSize: winWidth < 768 ? '24px' : '36px', fontWeight: '950', color: '#c2410c', lineHeight: 1 }}>{attendanceStats.halfDay || 0}</div>
+              </div>
             </div>
 
-            <div style={{ marginBottom: '20px', flex: 1 }}>
-              <div style={{ fontSize: '12px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '15px' }}>Total Absents</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {absentees.length > 0 ? (
-                  absentees.map((abs, aid) => (
-                    <div key={aid} style={{
-                      display: 'flex', alignItems: 'center', padding: winWidth < 768 ? '10px' : '16px',
-                      borderRadius: winWidth < 768 ? '18px' : '24px', background: '#ffffff', border: '1px solid #cbd5e1',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)', width: '100%', boxSizing: 'border-box',
-                      gap: winWidth < 768 ? '8px' : '12px'
+            {/* Late Logins List */}
+            <div style={{ marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Clock size={16} color="#7e22ce" /> Late Logins ({lateLogins.length})
+                </h3>
+                {lateLogins.length > 0 && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); navigate('/attendance'); }} 
+                    style={{ background: 'transparent', border: 'none', color: '#3863a8', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}
+                  >
+                    View All <ChevronRight size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {lateLogins.length > 0 ? (
+                  lateLogins.slice(0, 3).map((late, idx) => (
+                    <div key={idx} style={{
+                      display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
+                      borderRadius: '16px', background: '#faf5ff', border: '1px solid #e9d5ff',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.01)'
                     }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#fee2e2', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>👤</div>
-                      <div style={{ flex: 1, overflow: 'hidden' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                          <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{abs.name || abs.employee_name}</div>
-                          <div style={{ 
-                            padding: '3px 10px', 
-                            background: abs.status === 'ON LEAVE' ? '#fffbeb' : '#fef2f2', 
-                            color: abs.status === 'ON LEAVE' ? '#d97706' : '#dc2626', 
-                            borderRadius: '50px', 
-                            fontSize: '10px', 
-                            fontWeight: '900', 
-                            textTransform: 'uppercase' 
-                          }}>
-                            {abs.status || 'Absent'}
-                          </div>
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {abs.role || abs.designation || 'Staff'} • {abs.empId || abs.id || 'N/A'}
-                        </div>
+                      <div style={{ background: '#f3e8ff', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <User size={16} color="#7e22ce" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '850', color: '#1e293b' }}>{late.name}</div>
+                        <div style={{ fontSize: '11px', color: '#6b21a8', fontWeight: '700' }}>ID: {late.id}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '900', color: '#7e22ce' }}>{late.time}</div>
+                        <div style={{ fontSize: '9px', color: '#a855f7', fontWeight: '850', textTransform: 'uppercase' }}>LATE</div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div style={{ padding: '30px 20px', textAlign: 'center', color: '#16a34a', fontSize: '13px', border: '2px dashed #bbf7d0', borderRadius: '24px', background: '#f0fdf4', fontWeight: '700' }}>
-                    Zero Absents Today 🎉
+                  <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', border: '1px dashed #e2e8f0', borderRadius: '16px' }}>
+                    No late logins recorded today
                   </div>
                 )}
               </div>
             </div>
-
           </section>
 
           {/* Upcoming Birthdays Section */}
           <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.8s', cursor: 'pointer', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }} onClick={() => navigate('/birthdays')}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 className="section-title">🎂 Upcoming Birthdays</h2>
-              <button className="btn-ghost" style={{ fontSize: '12px', background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer' }}>View All</button>
+              <button 
+                className="btn-view-all btn-pink"
+                onClick={(e) => { e.stopPropagation(); navigate('/birthdays'); }}
+              >
+                View All <ArrowRight size={14} />
+              </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1017,7 +1163,12 @@ export default function PMDashboard() {
           <section className="dashboard-section animate-fade-in" style={{ animationDelay: '1.0s', cursor: 'pointer', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }} onClick={() => navigate('/holidays')}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 className="section-title">🏖️ List of Holidays</h2>
-              <button className="btn-ghost" style={{ fontSize: '12px', background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer' }}>View All</button>
+              <button 
+                className="btn-view-all btn-teal"
+                onClick={(e) => { e.stopPropagation(); navigate('/holidays'); }}
+              >
+                View All <ArrowRight size={14} />
+              </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1035,8 +1186,15 @@ export default function PMDashboard() {
                     <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>{holiday.day || holiday.d?.toLocaleDateString('en-US', { weekday: 'long' }) || 'Holiday'}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '14px', fontWeight: '950', color: '#3863a8' }}>{holiday.date || holiday.d?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
-                    <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '800' }}>2026</div>
+                    <div style={{ fontSize: '14px', fontWeight: '950', color: '#3863a8' }}>
+                      {holiday.d ? (() => {
+                        const day = String(holiday.d.getDate()).padStart(2, '0');
+                        const month = String(holiday.d.getMonth() + 1).padStart(2, '0');
+                        const year = holiday.d.getFullYear();
+                        return `${day}-${month}-${year}`;
+                      })() : (holiday.date || '')}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '800' }}>{holiday.d ? holiday.d.getFullYear() : '2026'}</div>
                   </div>
                 </div>
               )) : (
@@ -1052,7 +1210,7 @@ export default function PMDashboard() {
 
       {/* CREATE TEAM MODAL */}
       {showCreateTeam && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000, padding: winWidth >= 768 ? '80px 20px 100px' : '20px' }}>
           <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '480px', borderRadius: '40px', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative' }}>
             <button onClick={() => setShowCreateTeam(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: '#f8fafc', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#64748b' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '16px' }}>
@@ -1089,14 +1247,14 @@ export default function PMDashboard() {
 
       {/* TO TEAM LEAD MODAL */}
       {showLeadModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000, padding: winWidth >= 768 ? '80px 20px 100px' : '20px' }}>
           <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '520px', borderRadius: '40px', padding: '25px 40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative' }}>
             <button onClick={() => setShowLeadModal(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: '#f8fafc', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#64748b' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <div style={{ width: '60px', height: '60px', borderRadius: '20px', backgroundColor: '#fff7ed', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 10px' }}>👑</div>
               <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.5px' }}>Assign to Team Lead</h2>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: '60vh', overflowY: 'auto', padding: '5px 15px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: winWidth >= 768 ? 'calc(100vh - 410px)' : '60vh', overflowY: 'auto', padding: '5px 15px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b', paddingLeft: '15px' }}>SELECT TEAM LEAD</label>
                 <select value={leadTask.assigneeId} onChange={(e) => setLeadTask({ ...leadTask, assigneeId: e.target.value })} style={{ width: '100%', padding: '16px 25px', borderRadius: '20px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '15px', fontWeight: '600', outline: 'none', color: '#1e293b', cursor: 'pointer' }}>
@@ -1134,14 +1292,14 @@ export default function PMDashboard() {
 
       {/* TO EMPLOYEE MODAL */}
       {showEmployeeModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000, padding: winWidth >= 768 ? '80px 20px 100px' : '20px' }}>
           <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '520px', borderRadius: '40px', padding: '25px 40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative' }}>
             <button onClick={() => setShowEmployeeModal(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: '#f8fafc', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#64748b' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <div style={{ width: '60px', height: '60px', borderRadius: '20px', backgroundColor: '#f5f3ff', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 10px' }}>👤</div>
               <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.5px' }}>Assign to Employee</h2>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: '60vh', overflowY: 'auto', padding: '5px 15px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: winWidth >= 768 ? 'calc(100vh - 410px)' : '60vh', overflowY: 'auto', padding: '5px 15px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b', paddingLeft: '15px' }}>SELECT EMPLOYEE</label>
                 <select value={employeeTask.assigneeId} onChange={(e) => setEmployeeTask({ ...employeeTask, assigneeId: e.target.value })} style={{ width: '100%', padding: '16px 25px', borderRadius: '20px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '15px', fontWeight: '600', outline: 'none', color: '#1e293b', cursor: 'pointer' }}>

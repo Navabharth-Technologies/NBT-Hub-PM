@@ -20,7 +20,6 @@ export default function EngagementModule() {
     const { user } = useAuth();
     
     const [fullscreenMedia, setFullscreenMedia] = useState(null);
-    const [tagline, setTagline] = useState('');
     const [newPost, setNewPost] = useState('');
     const [mediaFile, setMediaFile] = useState(null);
     const [mediaType, setMediaType] = useState(null); 
@@ -40,12 +39,23 @@ export default function EngagementModule() {
     const [editCommentContent, setEditCommentContent] = useState('');
     const [winWidth, setWinWidth] = useState(window.innerWidth);
 
+    const [editMediaFile, setEditMediaFile] = useState(null);
+    const [editMediaType, setEditMediaType] = useState(null);
+    const [editMediaPreview, setEditMediaPreview] = useState(null);
+    const [editRemoveMedia, setEditRemoveMedia] = useState(false);
+    const editFileInputRef = useRef(null);
+
     useEffect(() => {
-        fetchProfiles();
         const handleResize = () => setWinWidth(window.innerWidth);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    useEffect(() => {
+        if (user?.token) {
+            fetchProfiles();
+        }
+    }, [user]);
 
     // AUTO-FETCH COMMENT COUNTS ON LOAD
     useEffect(() => {
@@ -68,18 +78,77 @@ export default function EngagementModule() {
     }, [threads, fetchComments]);
 
     const fetchProfiles = async () => {
+        if (!user?.token) return;
         try {
-            const resp = await fetch(API_ENDPOINTS.USERS || `${BASE_URL}/api/users`);
+            // 1. Fetch from Users API
+            const resp = await fetch(API_ENDPOINTS.USERS || `${BASE_URL}/api/users`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            const map = {};
             if (resp.ok) {
                 const data = await resp.json();
                 const userList = Array.isArray(data) ? data : (data.value || []);
-                const map = {};
                 userList.forEach(u => {
-                    const uid = String(u.id || u.empId || u.userId || u.employee_id);
-                    if (uid) map[uid] = u;
+                    const idKey = String(u.id || u.empId || u.userId || u.employee_id || '').toLowerCase();
+                    const emailKey = String(u.email || '').toLowerCase();
+                    const nameKey = String(u.name || '').toLowerCase();
+                    
+                    const cleanUser = {
+                        ...u,
+                        profile_pic: u.profile_pic || u.profile_picture || u.profileImage || u.profilePicture || u.profile_image || u.avatar
+                    };
+                    
+                    if (idKey) map[idKey] = cleanUser;
+                    if (emailKey) map[emailKey] = cleanUser;
+                    if (nameKey) map[nameKey] = cleanUser;
                 });
-                setUserProfiles(map);
             }
+
+            // 2. Fetch from Employees API to enrich pictures & designations
+            try {
+                const empResp = await fetch(API_ENDPOINTS.EMPLOYEES || `${BASE_URL}/api/employees`, {
+                    headers: { 'Authorization': `Bearer ${user.token}` }
+                });
+                if (empResp.ok) {
+                    const empData = await empResp.json();
+                    const empList = Array.isArray(empData) ? empData : [];
+                    empList.forEach(emp => {
+                        const empId = String(emp.id || emp.employee_id || emp.empId || '').toLowerCase();
+                        const empEmail = String(emp.email || emp.official_email || emp.personal_email || '').toLowerCase();
+                        const empName = String(emp.name || emp.emp_name || '').toLowerCase();
+                        
+                        const pic = emp.profile_pic || emp.profile_picture || emp.photo || emp.ProfilePic || emp.Profile_Picture || emp.ProfilePicture || emp.profileImage || emp.profile_image;
+                        const designation = emp.designation || emp.role || emp.designation_name;
+                        
+                        const keys = [empId, empEmail, empName].filter(Boolean);
+                        keys.forEach(k => {
+                            if (map[k]) {
+                                map[k] = {
+                                    ...map[k],
+                                    profile_pic: pic || map[k].profile_pic,
+                                    profile_picture: pic || map[k].profile_picture,
+                                    designation: designation || map[k].designation || map[k].role,
+                                    name: map[k].name || emp.name || emp.emp_name,
+                                    email: map[k].email || emp.email || emp.official_email
+                                };
+                            } else {
+                                map[k] = {
+                                    ...emp,
+                                    profile_pic: pic,
+                                    profile_picture: pic,
+                                    designation: designation,
+                                    name: emp.name || emp.emp_name,
+                                    email: emp.email || emp.official_email
+                                };
+                            }
+                        });
+                    });
+                }
+            } catch (empErr) {
+                console.error("Employees enrich error:", empErr);
+            }
+
+            setUserProfiles(map);
         } catch (err) { console.error("Profiles error:", err); }
     };
 
@@ -91,6 +160,17 @@ export default function EngagementModule() {
         const reader = new FileReader();
         reader.onloadend = () => setMediaPreview(reader.result);
         reader.readAsDataURL(file);
+    };
+
+    const handleEditFileSelect = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setEditMediaFile(file);
+        setEditMediaType(file.type.startsWith('video') ? 'video' : 'image');
+        const reader = new FileReader();
+        reader.onloadend = () => setEditMediaPreview(reader.result);
+        reader.readAsDataURL(file);
+        setEditRemoveMedia(false);
     };
 
     const clearMedia = () => {
@@ -106,7 +186,7 @@ export default function EngagementModule() {
         try {
             const payload = {
                 content: newPost,
-                tagline: tagline,
+                tagline: '',
                 user: user?.name || 'User',
                 user_name: user?.name || 'User',
                 role: user?.role?.toUpperCase() || 'EMPLOYEE',
@@ -119,7 +199,6 @@ export default function EngagementModule() {
             const success = await addPost(payload);
             if (success) {
                 setNewPost('');
-                setTagline('');
                 clearMedia();
                 // Optional success notification
             } else {
@@ -225,41 +304,9 @@ export default function EngagementModule() {
             <AppHeader />
             
             <main style={styles.container}>
-                {/* BACK BUTTON */}
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'flex-start', 
-                    width: '100%',
-                    position: 'sticky', 
-                    top: winWidth < 768 ? '70px' : '85px', 
-                    zIndex: 1000, 
-                    backgroundColor: '#f8fafc', 
-                    paddingTop: '10px',
-                    marginTop: '-10px',
-                    paddingBottom: '5px' 
-                }}>
-                    <button
-                        onClick={() => navigate(-1)}
-                        style={{
-                            background: 'white',
-                            padding: '10px',
-                            borderRadius: '12px',
-                            border: '1px solid #e2e8f0',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                            marginBottom: '20px'
-                        }}
-                    >
-                        <ArrowLeft size={18} color="#64748b" />
-                    </button>
-                </div>
 
                 {/* CREATE THREAD */}
                 <div style={{ ...styles.card, borderTop: '5px solid #FDB913' }}>
-                    <input style={styles.tagInput} placeholder="Add a tagline..." value={tagline} onChange={e => setTagline(e.target.value)} />
                     <textarea style={styles.mainInput} placeholder="Share an update with the team..." value={newPost} onChange={e => setNewPost(e.target.value)} />
 
                     <input type="file" ref={fileInputRef} onChange={handleFileSelect} hidden accept="image/*,video/*" />
@@ -287,12 +334,32 @@ export default function EngagementModule() {
 
                 {/* THREAD FEED */}
                 {threads.map(post => {
-                    const authorId = user?.email || user?.name;
-                    const uid = post.user_email || post.user_id || post.userId;
-                    const isAuthor = String(uid) === String(authorId) || post.user_name === user?.name;
-                    const pLiked = post.userLiked || false;
+                    const authorId = user?.id || user?.empId || user?.userId || user?.employee_id || user?.email || user?.name;
+                    const uid = post.userId || post.user_id || post.user_email || post.user_name || post.user;
                     const ts = post.createdAt || post.created_at;
+                    const authorIdMatch = authorId && uid && String(authorId).toLowerCase() === String(uid).toLowerCase();
+                    const nameMatch = user?.name && (post.userName || post.user || post.user_name) && (String(user.name).toLowerCase() === String(post.userName || post.user || post.user_name).toLowerCase());
+                    const isAuthor = authorIdMatch || nameMatch;
+                    
+                    const canManage = isAuthor;
                     const isEditing = editingPostId === post.id;
+                    const pLiked = post.userHasLiked || false;
+                    const isHr = String(user?.role || '').toLowerCase().includes('hr') ||
+                                 String(user?.designation || '').toLowerCase().includes('human resource') ||
+                                 String(user?.designation || '').toLowerCase().includes('hr') ||
+                                 String(user?.name || '').toLowerCase().includes('ravikumar');
+                    const isPm = String(user?.role || '').toLowerCase().includes('pm') ||
+                                 String(user?.designation || '').toLowerCase().includes('project manager') ||
+                                 String(user?.designation || '').toLowerCase().includes('pm');
+                    const isLead = user?.role === 'TEAMLEADER' || user?.role === 'ADMIN' || user?.role === 'MANAGER' || isHr || isPm;
+
+                    const lookupKey = String(uid || '').toLowerCase();
+                    const profile = userProfiles[lookupKey] || 
+                                    userProfiles[String(post.user_name || '').toLowerCase()] || 
+                                    userProfiles[String(post.user_email || '').toLowerCase()] ||
+                                    userProfiles[String(post.user_id || '').toLowerCase()] ||
+                                    userProfiles[String(post.userId || '').toLowerCase()];
+                    const profilePic = profile?.profile_pic || profile?.profile_picture || profile?.profileImage || profile?.profilePicture || profile?.profile_image || profile?.avatar;
 
                     return (
                         <div key={post.id} style={styles.threadCard}>
@@ -300,41 +367,55 @@ export default function EngagementModule() {
                             
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <div style={{ display: 'flex', gap: '15px' }}>
-                                    <div style={{ width: '50px', height: '50px', borderRadius: '15px', backgroundColor: '#f1f5f9', border: '1px solid #315A9E', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', fontSize: '18px', fontWeight: '900', color: '#315A9E' }}>
-                                        {userProfiles[uid]?.profile_pic || userProfiles[uid]?.profile_picture ? (
-                                            <img 
-                                                src={getFullUrl(userProfiles[uid]?.profile_pic || userProfiles[uid]?.profile_picture)} 
-                                                alt="User" 
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                            />
-                                        ) : (
-                                            userProfiles[uid]?.name?.charAt(0) || post.user_name?.charAt(0) || 'U'
-                                        )}
+                                    <div style={{ width: '50px', height: '50px', borderRadius: '15px', backgroundColor: '#f1f5f9', border: '1px solid #315A9E', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', fontSize: '18px', fontWeight: '900', color: '#315A9E', position: 'relative' }}>
+                                        {(() => {
+                                            const empIdForPhoto = profile?.employee_id || profile?.id || profile?.empId || post.user_id || post.userId;
+                                            const finalPicUrl = profilePic ? getFullUrl(profilePic) : (empIdForPhoto ? `${BASE_URL}/api/users/${empIdForPhoto}/photo` : null);
+                                            return (
+                                                <>
+                                                    {finalPicUrl && (
+                                                        <img 
+                                                            src={finalPicUrl} 
+                                                            alt="User" 
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} 
+                                                            onLoad={(e) => { if (e.target.nextSibling) e.target.nextSibling.style.display = 'none'; }}
+                                                            onError={(e) => { e.target.style.display = 'none'; }}
+                                                        />
+                                                    )}
+                                                    <span>
+                                                        {profile?.name?.charAt(0) || post.user_name?.charAt(0) || 'U'}
+                                                    </span>
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '16px', fontWeight: '900', color: '#0B1E3F' }}>{userProfiles[uid]?.name || post.user_name || 'Member'}</div>
-                                        <div style={{ fontSize: '11px', color: '#315A9E', fontWeight: '800', textTransform: 'uppercase' }}>{userProfiles[uid]?.role || post.user_role || 'Member'} • {formatTime(ts)}</div>
+                                        <div style={{ fontSize: '16px', fontWeight: '900', color: '#0B1E3F' }}>{profile?.name || post.user_name || 'Member'}</div>
+                                        <div style={{ fontSize: '11px', color: '#315A9E', fontWeight: '800', textTransform: 'uppercase' }}>{profile?.designation || profile?.role || post.user_role || 'Member'} • {formatTime(ts)}</div>
                                     </div>
                                 </div>
 
-                                {isAuthor && (
+                                {canManage && (
                                     <div style={{ display: 'flex', gap: '5px' }}>
                                         <button 
-                                            className="btn-ghost"
                                             onClick={() => {
                                                 setEditingPostId(post.id);
                                                 setEditContent(post.content);
+                                                setEditMediaFile(null);
+                                                setEditMediaPreview(null);
+                                                setEditRemoveMedia(false);
                                             }} 
-                                            style={{ color: '#315A9E' }}
+                                            style={{ border: 'none', background: '#f8fafc', color: '#315A9E', padding: '10px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                            title="Edit post"
                                         >
-                                            <Edit3 size={18} />
+                                            <Edit3 size={16} />
                                         </button>
                                         <button 
-                                            className="btn-ghost"
-                                            onClick={() => deletePost(post.id)} 
-                                            style={{ color: '#ef4444' }}
+                                            onClick={() => deletePost(post.id, post.userId || post.user_id || post.employee_id)} 
+                                            style={{ border: 'none', background: '#fef2f2', color: '#ef4444', padding: '10px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                            title="Delete post"
                                         >
-                                            <Trash2 size={18} />
+                                            <Trash2 size={16} />
                                         </button>
                                     </div>
                                 )}
@@ -348,18 +429,62 @@ export default function EngagementModule() {
                                             value={editContent}
                                             onChange={(e) => setEditContent(e.target.value)}
                                         />
+                                        <input type="file" ref={editFileInputRef} onChange={handleEditFileSelect} hidden accept="image/*,video/*" />
+                                        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                                            <div style={styles.mediaBtn} onClick={() => editFileInputRef.current?.click()}>
+                                                <ImageIcon size={18} color="#10b981" /> Replace Photo/Video
+                                            </div>
+                                            {(editMediaPreview || post.media_url || post.mediaUrl || post.media || post.image) && !editRemoveMedia && (
+                                                <div style={{ ...styles.mediaBtn, color: '#ef4444' }} onClick={() => { setEditRemoveMedia(true); setEditMediaFile(null); setEditMediaPreview(null); }}>
+                                                    <Trash2 size={18} color="#ef4444" /> Remove Media
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {(editMediaPreview && !editRemoveMedia) && (
+                                            <div style={{ marginTop: '10px', position: 'relative', borderRadius: '15px', overflow: 'hidden', maxWidth: '300px' }}>
+                                                <XCircle size={24} color="white" style={{ position: 'absolute', top: '10px', right: '10px', cursor: 'pointer', zIndex: 10 }} onClick={() => { setEditMediaFile(null); setEditMediaPreview(null); }} />
+                                                {editMediaType === 'video' ? (<video src={editMediaPreview} controls style={{ width: '100%', display: 'block' }} />) : (<img src={editMediaPreview} alt="" style={{ width: '100%', display: 'block' }} />)}
+                                            </div>
+                                        )}
+
+                                        {(!editMediaPreview && !editRemoveMedia) && (() => {
+                                            const mediaPath = post.media_url || post.mediaUrl || post.media || post.image;
+                                            if (!mediaPath || typeof mediaPath !== 'string') return null;
+                                            const isVideo = mediaPath.match(/\.(mp4|webm|ogg)$/i) || mediaPath.toLowerCase().includes('video');
+                                            let src = getFullUrl(mediaPath);
+                                            return (
+                                                <div style={{ marginTop: '10px', borderRadius: '15px', overflow: 'hidden', maxWidth: '300px', opacity: 0.5 }}>
+                                                    {isVideo ? (<video src={src} controls style={{ width: '100%', display: 'block' }} />) : (<img src={src} style={{ width: '100%', display: 'block' }} alt="" />)}
+                                                </div>
+                                            );
+                                        })()}
+
                                         <div style={{ display: 'flex', gap: '10px' }}>
                                             <button 
                                                 onClick={async () => {
-                                                    await updatePost(post.id, editContent);
+                                                    await updatePost(post.id, {
+                                                        content: editContent,
+                                                        file: editMediaFile,
+                                                        mediaType: editMediaType,
+                                                        removeMedia: editRemoveMedia
+                                                    }, post.userId || post.user_id || post.employee_id);
                                                     setEditingPostId(null);
+                                                    setEditMediaFile(null);
+                                                    setEditMediaPreview(null);
+                                                    setEditRemoveMedia(false);
                                                 }}
                                                 style={{ backgroundColor: '#315A9E', color: 'white', border: 'none', padding: '8px 20px', borderRadius: '10px', fontWeight: '900', cursor: 'pointer' }}
                                             >
                                                 SAVE
                                             </button>
                                             <button 
-                                                onClick={() => setEditingPostId(null)}
+                                                onClick={() => {
+                                                    setEditingPostId(null);
+                                                    setEditMediaFile(null);
+                                                    setEditMediaPreview(null);
+                                                    setEditRemoveMedia(false);
+                                                }}
                                                 style={{ background: 'none', border: '1.5px solid #e2e8f0', color: '#64748b', padding: '8px 20px', borderRadius: '10px', fontWeight: '900', cursor: 'pointer' }}
                                             >
                                                 CANCEL
@@ -371,7 +496,7 @@ export default function EngagementModule() {
                                 )}
                             </div>
 
-                            {post.media_url && (
+                            {!isEditing && post.media_url && (
                                 <div style={styles.postMedia} onClick={() => {
                                     const isVid = post.media_url.match(/\.(mp4|webm|ogg)$/i) || post.media_url.includes('video');
                                     setFullscreenMedia({ src: getFullUrl(post.media_url), type: isVid ? 'video' : 'image' });
@@ -432,7 +557,7 @@ export default function EngagementModule() {
                                         onClick={() => onToggleLike(post.id)}
                                     >
                                         <Heart size={20} fill={pLiked ? "white" : "none"} stroke={pLiked ? "white" : "currentColor"} /> 
-                                        <span style={{ textTransform: 'uppercase', fontSize: '14px', letterSpacing: '0.5px' }}>{pLiked ? 'LIKED' : 'Like'} ({post.likes || 0})</span>
+                                        <span style={{ textTransform: 'uppercase', fontSize: '14px', letterSpacing: '0.5px' }}>{pLiked ? 'LIKED' : 'Like'}</span>
                                     </div>
 
                                     <AnimatePresence>
@@ -477,13 +602,6 @@ export default function EngagementModule() {
                                         <MessageSquare size={16} /> 
                                         <span>COMMENT ({Math.max(post.commentCount || post.comment_count || 0, (postComments[post.id] || []).length)})</span>
                                     </div>
-
-                                    <Smile 
-                                        size={20} 
-                                        color="#64748b" 
-                                        style={{ cursor: 'pointer' }} 
-                                        onClick={() => setActiveEmojiPicker(activeEmojiPicker === post.id ? null : post.id)}
-                                    />
                                 </div>
                             </div>
 
@@ -496,46 +614,70 @@ export default function EngagementModule() {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                         {loadingComments[post.id] ? (
                                             <div style={{ fontSize: '12px', color: '#94a3b8' }}>Loading comments...</div>
-                                        ) : (postComments[post.id] || []).map(c => {
+                                                                                ) : (postComments[post.id] || []).map(c => {
                                             const cUid = c.userId || c.user_id || c.employee_id || c.EmpID;
                                             const profile = userProfiles[cUid] || Object.values(userProfiles).find(p => p.name === (c.userName || c.user_name || c.name));
                                             const cUser = profile?.name || c.userName || c.user_name || c.name || 'User';
                                             const cText = c.content || c.comment_text || c.text_content || c.text || c.comment || c.message || '...';
+                                            const commentAuthorId = cUid;
+                                            const isMyComment = (user?.id && commentAuthorId && String(user.id) === String(commentAuthorId)) || 
+                                                                (user?.employee_id && commentAuthorId && String(user.employee_id) === String(commentAuthorId)) ||
+                                                                (user?.name && cUser && String(user.name).toLowerCase() === String(cUser).toLowerCase());
                                             
                                             return (
                                                 <div key={c.id} style={{ display: 'flex', gap: '12px' }}>
-                                                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '900', color: '#315A9E', overflow: 'hidden', flexShrink: 0 }}>
+                                                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '900', color: '#315A9E', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
                                                         {(() => {
-                                                            const pic = profile?.profileImage || profile?.profilePicture || profile?.profile_image || profile?.profile_picture || profile?.avatar;
-                                                            if (pic) {
-                                                                return <img src={getFullUrl(pic)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />;
-                                                            }
-                                                            return cUser.charAt(0).toUpperCase();
+                                                            const empIdForPhoto = profile?.employee_id || profile?.id || profile?.empId || cUid;
+                                                            const pic = profile?.profile_pic || profile?.profile_picture || profile?.profileImage || profile?.profilePicture || profile?.profile_image || profile?.avatar || profile?.photo;
+                                                            const finalPicUrl = pic ? getFullUrl(pic) : (empIdForPhoto ? `${BASE_URL}/api/users/${empIdForPhoto}/photo` : null);
+                                                            return (
+                                                                <>
+                                                                    {finalPicUrl && (
+                                                                        <img 
+                                                                            src={finalPicUrl} 
+                                                                            alt="" 
+                                                                            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} 
+                                                                            onLoad={(e) => { if (e.target.nextSibling) e.target.nextSibling.style.display = 'none'; }}
+                                                                            onError={(e) => { e.target.style.display = 'none'; }}
+                                                                        />
+                                                                    )}
+                                                                    <span>
+                                                                        {cUser.charAt(0).toUpperCase()}
+                                                                    </span>
+                                                                </>
+                                                            );
                                                         })()}
                                                     </div>
                                                     <div style={{ flex: 1, padding: '12px', background: 'white', borderRadius: '15px', border: '1px solid #f1f5f9' }}>
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                                                             <div style={{ fontSize: '12px', fontWeight: '900', color: '#315A9E' }}>{cUser}</div>
-                                                            {editingCommentId !== c.id && (
-                                                                <div style={{ display: 'flex', gap: '4px' }}>
+                                                            {editingCommentId !== c.id && (isMyComment || isLead) && (
+                                                                <div style={{ display: 'flex', gap: '8px' }}>
                                                                     <button
-                                                                        onClick={() => { setEditingCommentId(c.id); setEditCommentContent(cText); }}
+                                                                        onClick={() => { setEditingCommentId(c.id || c._id); setEditCommentContent(cText); }}
                                                                         title="Edit comment"
-                                                                        style={{ border: 'none', background: '#f0f7ff', color: '#315A9E', padding: '5px 8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                        style={{ border: '1px solid #e2e8f0', background: '#f8fafc', color: '#315A9E', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
                                                                     >
-                                                                        <Edit3 size={13} />
+                                                                        <Edit3 size={15} />
                                                                     </button>
                                                                     <button
-                                                                        onClick={async () => { await deleteComment(post.id, c.id); const updated = await fetchComments(post.id); setPostComments(prev => ({ ...prev, [post.id]: updated })); }}
+                                                                        onClick={async () => {
+                                                                            const success = await deleteComment(post.id, c.id || c._id, c.userId || c.user_id || c.employee_id || c.EmpID);
+                                                                            if (success) {
+                                                                                const updated = await fetchComments(post.id);
+                                                                                setPostComments(prev => ({ ...prev, [post.id]: updated }));
+                                                                            }
+                                                                        }}
                                                                         title="Delete comment"
-                                                                        style={{ border: 'none', background: '#fef2f2', color: '#ef4444', padding: '5px 8px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                        style={{ border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', padding: '8px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
                                                                     >
-                                                                        <Trash2 size={13} />
+                                                                        <Trash2 size={15} />
                                                                     </button>
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        {editingCommentId === c.id ? (
+                                                        {editingCommentId === (c.id || c._id) ? (
                                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
                                                                 <textarea
                                                                     style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1.5px solid #315A9E', fontSize: '13px', outline: 'none', minHeight: '60px', background: '#f8fafc', boxSizing: 'border-box' }}
@@ -544,7 +686,14 @@ export default function EngagementModule() {
                                                                     autoFocus
                                                                 />
                                                                 <div style={{ display: 'flex', gap: '8px' }}>
-                                                                    <button onClick={() => { updateComment(post.id, c.id, editCommentContent); setEditingCommentId(null); }} style={{ fontSize: '11px', fontWeight: '900', color: 'white', background: '#315A9E', border: 'none', padding: '6px 15px', borderRadius: '8px', cursor: 'pointer' }}>UPDATE</button>
+                                                                    <button onClick={async () => {
+                                                                        const success = await updateComment(post.id, c.id || c._id, editCommentContent, c.userId || c.user_id || c.employee_id || c.EmpID);
+                                                                        if (success) {
+                                                                            const updated = await fetchComments(post.id);
+                                                                            setPostComments(prev => ({ ...prev, [post.id]: updated }));
+                                                                            setEditingCommentId(null);
+                                                                        }
+                                                                    }} style={{ fontSize: '11px', fontWeight: '900', color: 'white', background: '#315A9E', border: 'none', padding: '6px 15px', borderRadius: '8px', cursor: 'pointer' }}>UPDATE</button>
                                                                     <button onClick={() => setEditingCommentId(null)} style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', background: 'none', border: '1.5px solid #e2e8f0', padding: '6px 15px', borderRadius: '8px', cursor: 'pointer' }}>CANCEL</button>
                                                                 </div>
                                                             </div>

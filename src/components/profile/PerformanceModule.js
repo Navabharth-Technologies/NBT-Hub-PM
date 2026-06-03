@@ -10,9 +10,11 @@ import {
   Building2, Mail, User, Phone, Check, X,
   ChevronRight, Calendar, Shield, LogOut,
   History, Users, FileText, Briefcase, Heart, Edit3, Fingerprint, Camera,
-  MessageSquare, Trash2, Clock, MapPin, Info, LifeBuoy
+  MessageSquare, Trash2, Clock, MapPin, Info, LifeBuoy, RefreshCw
 } from 'lucide-react';
 import UpdatePasswordModal from './UpdatePasswordModal';
+import Cropper from 'react-easy-crop';
+import getCroppedImg from '../../utils/cropImage';
 
 export default function PerformanceModule() {
   const { user, logout, updateUserData } = useAuth();
@@ -34,9 +36,20 @@ export default function PerformanceModule() {
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [isEditingDob, setIsEditingDob] = useState(false);
   const [joiningDate, setJoiningDate] = useState(user?.joining_date || '16 January 2026');
+  const [dbJoiningDate, setDbJoiningDate] = useState(null);
   const [tempPhone, setTempPhone] = useState('');
   const [tempDob, setTempDob] = useState('');
   const [toast, setToast] = useState({ show: false, message: '' });
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // Crop States
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [selectedImageSrc, setSelectedImageSrc] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [cropUploading, setCropUploading] = useState(false);
+
   const fileInputRef = useRef(null);
   const dobInputRef = useRef(null);
 
@@ -103,29 +116,110 @@ export default function PerformanceModule() {
 
     loadProfile();
     loadManager();
+
+    const loadUserRole = async () => {
+      if (!user?.token) return;
+      try {
+        const res = await fetch(`${BASE_URL}/api/users`, {
+          headers: { 'Authorization': `Bearer ${user.token}` }
+        });
+        if (res.ok) {
+          const users = await res.json();
+          const currentId = user?.employee_id || user?.id || user?.empId;
+          const target = users.find(u => String(u.employee_id || u.id || u.empId) === String(currentId));
+          if (target) {
+            if (target.joining_date) {
+              setDbJoiningDate(target.joining_date);
+              try {
+                const dateObj = new Date(target.joining_date);
+                if (!isNaN(dateObj)) {
+                  setJoiningDate(dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }));
+                } else {
+                  setJoiningDate(target.joining_date);
+                }
+              } catch (e) {
+                setJoiningDate(target.joining_date);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Fetch Role Error:', err);
+      }
+    };
+
+    loadUserRole();
     return () => window.removeEventListener('resize', handleResize);
   }, [user]);
 
   const handleLogout = () => { logout(); navigate('/'); };
 
+  // Calculate total tenurity from joining date
+  const calcTenure = () => {
+    const raw = dbJoiningDate || user?.date_of_joining || user?.joining_date || user?.doj || joiningDate;
+    let joinDate;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      joinDate = new Date(raw);
+    } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
+      const [d, m, y] = raw.split('/');
+      joinDate = new Date(`${y}-${m}-${d}`);
+    } else if (raw && raw !== '16 January 2026') {
+      joinDate = new Date(raw);
+    } else {
+      joinDate = new Date('2026-01-16');
+    }
+    if (!joinDate || isNaN(joinDate.getTime())) joinDate = new Date('2026-01-16');
+    const now = new Date();
+    let months = (now.getFullYear() - joinDate.getFullYear()) * 12 + (now.getMonth() - joinDate.getMonth());
+    let days = now.getDate() - joinDate.getDate();
+    if (days < 0) { months -= 1; const prev = new Date(now.getFullYear(), now.getMonth(), 0); days += prev.getDate(); }
+    if (months < 0) months = 0;
+    if (months === 0 && days < 0) days = 0;
+    return { months, days };
+  };
+  const tenure = calcTenure();
+
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // 1. Local preview
     const reader = new FileReader();
-    reader.onloadend = () => setProfileImage(reader.result);
+    reader.onloadend = () => {
+      setSelectedImageSrc(reader.result);
+      setShowCropModal(true);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
     reader.readAsDataURL(file);
+  };
+
+  const onCropComplete = (croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  };
+
+  const handleCropConfirm = async () => {
+    if (!selectedImageSrc || !croppedAreaPixels) return;
+    setCropUploading(true);
 
     try {
+      const croppedBlob = await getCroppedImg(selectedImageSrc, croppedAreaPixels);
+      if (!croppedBlob) throw new Error('Failed to crop image');
+
+      // Local preview instantly
+      const previewUrl = URL.createObjectURL(croppedBlob);
+      setProfileImage(previewUrl);
+
+      const reader = new FileReader();
+      reader.readAsDataURL(croppedBlob);
+      reader.onloadend = () => {
+        updateUserData({ profile_pic: reader.result, profile_picture: reader.result });
+      };
+
       const formData = new FormData();
-      // Add file under multiple potential keys
-      formData.append('image', file);
-      formData.append('file', file);
+      formData.append('image', croppedBlob, 'profile_pic.jpg');
+      formData.append('file', croppedBlob, 'profile_pic.jpg');
 
       const empId = parseInt(user.employee_id || user.id || user.userId || user.EmpID || 0);
 
-      // Provide redundant identifiers to ensure backend compatibility
       formData.append('managerId', empId);
       formData.append('employee_id', empId);
       formData.append('employeeId', empId);
@@ -144,13 +238,9 @@ export default function PerformanceModule() {
 
       if (res.ok) {
         const data = await res.json();
-        console.log("Upload Response:", data);
-
-        // Robust URL extraction from various potential backend response formats
         const url = data.url || data.filePath || data.path || data.record?.path || data.profile_pic || data.profile_picture || (data.record && (data.record.profile_pic || data.record.path));
 
         if (url) {
-          // 3. Persist to core user record to prevent fallback on refresh
           await fetch(API_ENDPOINTS.UPDATE_PROFILE, {
             method: 'POST',
             headers: {
@@ -171,7 +261,6 @@ export default function PerformanceModule() {
             })
           });
 
-          // 4. Sync with Employee Metadata table (Metadata Table)
           await fetch(API_ENDPOINTS.EMPLOYEE_PROFILE_UPDATE, {
             method: 'POST',
             headers: {
@@ -186,7 +275,6 @@ export default function PerformanceModule() {
             })
           });
 
-          // 5. Sync with Global State
           const updatedUser = {
             ...user,
             profile_pic: url,
@@ -194,11 +282,10 @@ export default function PerformanceModule() {
           };
           updateUserData(updatedUser);
 
-          // Update local display state
           const fullUrl = url.startsWith('http') || url.startsWith('data:') ? url : `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
           setProfileImage(fullUrl);
 
-          setToast({ show: true, message: 'Profile pic updated successfully ✅', type: 'success' });
+          setToast({ show: true, message: 'profile pic updated successfully ✅', type: 'success' });
           setTimeout(() => setToast({ show: false, message: '' }), 3000);
         } else {
           setToast({ show: true, message: 'Upload succeeded but URL missing', type: 'error' });
@@ -211,6 +298,10 @@ export default function PerformanceModule() {
       console.error('Upload error:', err);
       setToast({ show: true, message: 'Upload failed', type: 'error' });
       setTimeout(() => setToast({ show: false, message: '' }), 3000);
+    } finally {
+      setCropUploading(false);
+      setShowCropModal(false);
+      setSelectedImageSrc(null);
     }
   };
 
@@ -223,7 +314,7 @@ export default function PerformanceModule() {
     const day = parseInt(dStr, 10);
     const month = parseInt(mStr, 10);
     const year = parseInt(yStr, 10);
-    
+
     if (day < 1 || day > 31) {
       return 'Day must be between 01 and 31';
     }
@@ -432,7 +523,7 @@ export default function PerformanceModule() {
   const dashboardStyles = {
     container: {
       minHeight: '100vh',
-      backgroundColor: '#f8fafc',
+      backgroundColor: '#eaeff2',
       paddingTop: winWidth < 768 ? '100px' : '120px',
       paddingBottom: '20px',
       fontFamily: "'Outfit', sans-serif"
@@ -582,61 +673,12 @@ export default function PerformanceModule() {
                         </div>
                       )}
                     </div>
+                    {/* DOB Display */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#475569', fontSize: winWidth < 768 ? '12px' : '13px', fontWeight: '800' }}>
                       <Calendar size={16} />
-                      {isEditingDob ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                            <input
-                              type="text"
-                              value={tempDob}
-                              onChange={handleDobChange}
-                              onKeyDown={e => e.key === 'Enter' && updateProfileField('date_of_birth', tempDob)}
-                              placeholder="DD/MM/YYYY"
-                              autoFocus
-                              style={{ border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '6px 35px 6px 12px', fontSize: '13px', outline: 'none', background: 'white', width: '130px' }}
-                            />
-                            <Calendar
-                              size={14}
-                              color="#64748b"
-                              style={{ position: 'absolute', right: '10px', cursor: 'pointer' }}
-                              onClick={() => dobInputRef.current?.showPicker()}
-                            />
-                            <input
-                              type="date"
-                              ref={dobInputRef}
-                              style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
-                              max="2090-12-31"
-                              onChange={e => {
-                                const val = e.target.value; // YYYY-MM-DD
-                                if (val) {
-                                  const [y, m, d] = val.split('-');
-                                  setTempDob(`${d}/${m}/${y}`);
-                                }
-                              }}
-                            />
-                          </div>
-                          <button
-                            onClick={() => updateProfileField('date_of_birth', tempDob)}
-                            style={{ background: '#22c55e', color: 'white', padding: '8px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)', transition: 'transform 0.1s active' }}
-                            title="Save Changes"
-                          >
-                            <Check size={16} strokeWidth={3} />
-                          </button>
-                          <button
-                            onClick={() => setIsEditingDob(false)}
-                            style={{ background: '#f1f5f9', color: '#64748b', padding: '8px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
-                            title="Cancel"
-                          >
-                            <X size={16} strokeWidth={3} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={() => { setTempDob(formatDateDisplay(dob)); setIsEditingDob(true); }}>
-                          <span>{formatDateDisplay(dob)}</span>
-                          <Edit3 size={14} color="#94a3b8" />
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{formatDateDisplay(dob)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -688,27 +730,52 @@ export default function PerformanceModule() {
 
         {/* Services Section */}
         <div style={{ width: '100%', maxWidth: '100%', margin: '0 auto 40px' }}>
-          <h3 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '950', color: '#0f172a', marginBottom: '24px' }}>Services & Summary</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: winWidth < 768 ? '1fr' : '1fr 1fr', gap: '24px' }}>
-            {[
-              { title: 'Manage Leave', sub: 'Requested Leaves', color: '#fee2e2', text: '#161414ff', icon: <Calendar color="#161515ff" size={20} />, path: '/leaves' },
-              { title: 'Attendance Logs', sub: 'Review check-in history', color: '#dcfce7', text: 'rgba(62, 138, 89, 1)', icon: <Clock color="#22c55e" size={20} />, path: '/attendance' },
-              { title: 'Security Settings', sub: 'Update security passkey', color: '#dbeafe', text: '#1e40af', icon: <Shield color="#3b82f6" size={20} />, onClick: () => setShowSecurityModal(true) },
-              { title: 'Support & Maintenance', sub: 'View technical ticket', color: '#ffedd5', text: '#9a3412', icon: <LifeBuoy color="#f97316" size={20} />, path: '/tickets' }
-            ].map((svc, i) => (
-              <div key={i} onClick={svc.onClick || (() => navigate(svc.path))} style={{ ...dashboardStyles.serviceCard, background: svc.color }}>
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {svc.icon}
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: svc.text, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{svc.title}</p>
-                    <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '900', color: '#0f172a' }}>{svc.sub}</p>
-                  </div>
+          <h3 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '950', color: '#0f172a', marginBottom: '24px' }}>Services &amp; Summary</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : winWidth < 900 ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '24px' }}>
+
+            {/* Card 1 – Security Settings */}
+            <div onClick={() => setShowSecurityModal(true)} style={{ ...dashboardStyles.serviceCard, background: '#dbeafe' }}>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Shield color="#3b82f6" size={20} />
                 </div>
-                <ChevronRight size={winWidth < 768 ? 16 : 20} color={svc.text} />
+                <div>
+                  <p style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Security Settings</p>
+                  <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '900', color: '#0f172a' }}>Update Security Passkey</p>
+                </div>
               </div>
-            ))}
+              <ChevronRight size={winWidth < 768 ? 16 : 20} color="#1e40af" />
+            </div>
+
+            {/* Card 2 – Support & Maintenance */}
+            <div onClick={() => navigate('/tickets')} style={{ ...dashboardStyles.serviceCard, background: '#ffedd5' }}>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <LifeBuoy color="#f97316" size={20} />
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Support &amp; Maintenance</p>
+                  <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '900', color: '#0f172a' }}>View Tickets</p>
+                </div>
+              </div>
+              <ChevronRight size={winWidth < 768 ? 16 : 20} color="#9a3412" />
+            </div>
+
+            {/* Card 3 – Total Tenurity */}
+            <div style={{ ...dashboardStyles.serviceCard, background: '#dcfce7', cursor: 'default' }}>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <RefreshCw color="#16a34a" size={20} />
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Tenurity</p>
+                  <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '900', color: '#0f172a' }}>
+                    {tenure.months}M {tenure.days}D Experience
+                  </p>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -752,7 +819,7 @@ export default function PerformanceModule() {
                 <div style={{ width: '60px', height: '60px', borderRadius: '20px', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LogOut color="#ef4444" size={26} /></div>
                 <div>
                   <p style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Resignation Letter</p>
-                  <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '900', color: '#0f172a' }}>View Resignation Requests</p>
+                  <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '900', color: '#0f172a' }}>Apply for Resignation</p>
                 </div>
               </div>
               <ChevronRight size={winWidth < 768 ? 16 : 24} color="#94a3b8" />
@@ -782,6 +849,10 @@ export default function PerformanceModule() {
                   placeholder="Tell us about yourself..."
                   style={{ width: '100%', minHeight: '120px', padding: '16px', borderRadius: '16px', border: '1.5px solid #3b82f6', outline: 'none', fontSize: '14px', fontFamily: 'inherit', resize: 'vertical' }}
                   autoFocus
+                  onFocus={(e) => {
+                    const len = e.target.value.length;
+                    e.target.setSelectionRange(len, len);
+                  }}
                 />
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                   <button onClick={() => setIsEditingAbout(false)} style={{ padding: '8px 20px', borderRadius: '10px', border: '1.5px solid #e2e8f0', background: 'white', color: '#64748b', fontWeight: '700', cursor: 'pointer' }}>Cancel</button>
@@ -791,10 +862,7 @@ export default function PerformanceModule() {
             ) : (
               <>
                 {aboutMe === 'Write a short introduction about yourself' ? (
-                  <>
-                    <div style={{ width: '50px', height: '50px', background: '#f8fafc', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}><Edit3 size={24} color="#cbd5e1" /></div>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#94a3b8', fontWeight: '700' }}>{aboutMe}</p>
-                  </>
+                  null
                 ) : (
                   <p style={{ margin: 0, fontSize: '15px', color: '#475569', fontWeight: '500', lineHeight: '1.6', textAlign: 'left' }}>{aboutMe}</p>
                 )}
@@ -806,7 +874,7 @@ export default function PerformanceModule() {
         {/* Logout */}
         <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '5px' }}>
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             style={{ background: 'white', color: '#ef4444', border: '2px solid #ef4444', borderRadius: '16px', padding: winWidth < 768 ? '10px 40px' : '12px 60px', fontSize: winWidth < 768 ? '13px' : '15px', fontWeight: '950', cursor: 'pointer', width: winWidth < 480 ? '100%' : 'auto' }}
           >
             Logout Securely
@@ -825,11 +893,117 @@ export default function PerformanceModule() {
 
       {/* Toast Notification */}
       {toast.show && (
-        <div style={{ position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)', background: '#0f172a', color: 'white', padding: '12px 24px', borderRadius: '16px', fontSize: '14px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', zIndex: 9999 }}>
-          <div style={{ background: '#22c55e', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Check size={12} color="white" strokeWidth={4} />
+        <div style={{ position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)', background: '#0f172a', color: 'white', padding: '12px 24px', borderRadius: '16px', fontSize: '14px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', zIndex: 9999, border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ background: toast.type === 'success' ? '#22c55e' : '#ef4444', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {toast.type === 'success' ? <Check size={12} color="white" strokeWidth={4} /> : <X size={12} color="white" strokeWidth={4} />}
           </div>
           {toast.message}
+        </div>
+      )}
+      {showCropModal && selectedImageSrc && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ position: 'relative', width: '90%', maxWidth: '500px', height: '400px', background: '#333', borderRadius: '16px', overflow: 'hidden' }}>
+            <Cropper
+              image={selectedImageSrc}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              cropShape="round"
+              showGrid={false}
+              onCropChange={setCrop}
+              onCropComplete={onCropComplete}
+              onZoomChange={setZoom}
+            />
+          </div>
+          <div style={{ marginTop: '20px', display: 'flex', gap: '16px' }}>
+            <button
+              onClick={() => { setShowCropModal(false); setSelectedImageSrc(null); }}
+              disabled={cropUploading}
+              style={{ padding: '10px 24px', borderRadius: '8px', border: '1px solid white', background: 'transparent', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCropConfirm}
+              disabled={cropUploading}
+              style={{ padding: '10px 24px', borderRadius: '8px', border: 'none', background: '#3863a8', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              {cropUploading ? <RefreshCw size={16} className="spin" /> : <Check size={16} />}
+              {cropUploading ? 'Uploading...' : 'Apply & Upload'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '32px',
+            borderRadius: '24px',
+            width: '100%',
+            maxWidth: '380px',
+            textAlign: 'center',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            transform: 'scale(1)',
+            animation: 'modalIn 0.3s ease-out'
+          }}>
+            <div style={{
+              width: '64px', height: '64px', background: '#fee2e2', borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px', color: '#ef4444'
+            }}>
+              <LogOut size={32} />
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1e293b', marginBottom: '8px' }}>Confirm Logout</h2>
+            <p style={{ color: '#64748b', fontSize: '15px', fontWeight: '600', marginBottom: '32px' }}>
+              Are you sure you want to logout from NBT Hub?
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                style={{
+                  flex: 1, padding: '14px', borderRadius: '16px', border: '1.5px solid #e2e8f0',
+                  background: 'white', color: '#64748b', fontWeight: '800', cursor: 'pointer',
+                  transition: '0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#f8fafc'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                style={{
+                  flex: 1, padding: '14px', borderRadius: '16px', border: 'none',
+                  background: '#ef4444', color: 'white', fontWeight: '800', cursor: 'pointer',
+                  boxShadow: '0 10px 15px -3px rgba(239, 68, 68, 0.3)',
+                  transition: '0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+          <style>{`
+            @keyframes modalIn {
+              from { opacity: 0; transform: scale(0.9) translateY(20px); }
+              to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+          `}</style>
         </div>
       )}
     </div>
