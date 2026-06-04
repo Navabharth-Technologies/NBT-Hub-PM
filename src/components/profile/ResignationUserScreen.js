@@ -117,76 +117,81 @@ export default function ResignationUserScreen() {
                 </div>
 
                 {activeTab === 'submit' ? (
-                    <div className="animate-fade-in" style={{ backgroundColor: 'white', borderRadius: '30px', padding: '40px', boxShadow: '0 4px 20px rgba(0,0,0,0.02)', border: '1px solid #f1f5f9' }}>
-                        <div style={{ display: 'flex', gap: '20px', alignItems: 'center', paddingBottom: '30px', borderBottom: '1px solid #f1f5f9', marginBottom: '30px' }}>
-                            <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LogOut color="#ef4444" size={24} /></div>
+                    <div className="animate-fade-in" style={{ backgroundColor: 'white', borderRadius: '30px', boxShadow: '0 8px 30px rgba(0,0,0,0.06)', border: '1.5px solid #e2e8f0', overflow: 'hidden' }}>
+                        <div style={{ height: '6px', background: 'linear-gradient(90deg, #ef4444 0%, #fca5a5 100%)' }} />
+                        <div style={{ padding: '32px 40px', display: 'flex', gap: '20px', alignItems: 'center', paddingBottom: '28px', borderBottom: '1.5px solid #f1f5f9', marginBottom: '28px' }}>
+                            <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><LogOut color="#ef4444" size={24} /></div>
                             <div>
-                                <h2 style={{ fontSize: '19px', fontWeight: '900', color: '#0f172a', margin: 0 }}>Resignation Letter</h2>
-                                <p style={{ color: '#64748b', fontSize: '13px', margin: '4px 0 0', fontWeight: '500' }}>Formalize your exit notice here.</p>
+                                <div style={{ fontSize: '10px', fontWeight: '900', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Resignation Request</div>
+                                <h2 style={{ fontSize: '20px', fontWeight: '950', color: '#0f172a', margin: 0, letterSpacing: '-0.4px' }}>Resignation Letter</h2>
+                                <p style={{ color: '#64748b', fontSize: '13px', margin: '3px 0 0', fontWeight: '600' }}>Formalize your exit notice here.</p>
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '30px' }}>
+                        <div style={{ padding: '0 40px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
                             <div>
-                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Resignation Date</label>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>Resignation Date</label>
                                 <input 
                                     type="date" 
                                     readOnly 
                                     value={formData.resignation_date} 
-                                    style={{ width: '100%', padding: '16px 20px', borderRadius: '14px', border: '1px solid #f1f5f9', background: '#f8fafc', color: '#64748b', fontWeight: '700', fontSize: '14px', outline: 'none' }} 
+                                    style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #cbd5e1', background: '#f8fafc', color: '#64748b', fontWeight: '700', fontSize: '14px', outline: 'none', boxSizing: 'border-box', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }} 
                                 />
                             </div>
                             <div>
-                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Proposed Last Working Day</label>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>Proposed Last Working Day <span style={{ color: '#ef4444' }}>*</span></label>
                                 <input 
                                     type="date" 
                                     value={formData.last_working_day}
                                     onChange={(e) => setFormData({...formData, last_working_day: e.target.value})}
-                                    style={{ width: '100%', padding: '16px 20px', borderRadius: '14px', border: '1px solid #f1f5f9', background: '#f8fafc', color: '#0f172a', fontWeight: '700', fontSize: '14px', cursor: 'pointer', outline: 'none' }} 
+                                    style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #cbd5e1', background: 'white', color: '#0f172a', fontWeight: '700', fontSize: '14px', cursor: 'pointer', outline: 'none', boxSizing: 'border-box', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }} 
                                 />
                             </div>
                         </div>
 
-                        <div style={{ marginBottom: '30px' }}>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Primary Reason</label>
+                        <div style={{ padding: '0 40px', marginBottom: '24px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>Primary Reason <span style={{ color: '#ef4444' }}>*</span></label>
                             <div style={{ position: 'relative' }}>
                                 <select 
                                     value={formData.primary_reason}
                                     onChange={(e) => setFormData({...formData, primary_reason: e.target.value})}
-                                    style={{ width: '100%', padding: '16px 20px', borderRadius: '14px', border: '1px solid #f1f5f9', background: '#f8fafc', color: '#0f172a', fontWeight: '700', fontSize: '14px', cursor: 'pointer', outline: 'none', appearance: 'none' }}
+                                    style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #cbd5e1', background: 'white', color: formData.primary_reason ? '#0f172a' : '#94a3b8', fontWeight: '700', fontSize: '14px', cursor: 'pointer', outline: 'none', appearance: 'none', boxSizing: 'border-box', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
                                 >
-                                    <option value="">Select a reason</option>
-                                    <option value="Better Opportunity">Better Opportunity</option>
-                                    <option value="Career Growth">Career Growth</option>
-                                    <option value="Personal Reasons">Personal Reasons</option>
-                                    <option value="Health Issues">Health Issues</option>
-                                    <option value="Relocation">Relocation</option>
-                                    <option value="Higher Education">Higher Education</option>
+                                    <option value="" disabled style={{ color: '#94a3b8' }}>Select a reason</option>
+                                    <option value="Better Opportunity" style={{ color: '#0f172a' }}>Better Opportunity</option>
+                                    <option value="Career Growth" style={{ color: '#0f172a' }}>Career Growth</option>
+                                    <option value="Personal Reasons" style={{ color: '#0f172a' }}>Personal Reasons</option>
+                                    <option value="Health Issues" style={{ color: '#0f172a' }}>Health Issues</option>
+                                    <option value="Relocation" style={{ color: '#0f172a' }}>Relocation</option>
+                                    <option value="Higher Education" style={{ color: '#0f172a' }}>Higher Education</option>
                                 </select>
                                 <ChevronDown size={18} color="#94a3b8" style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
                             </div>
                         </div>
 
-                        <div style={{ marginBottom: '40px' }}>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Formal Letter Content</label>
+                        <div style={{ padding: '0 40px', marginBottom: '32px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>Formal Letter Content</label>
                             <textarea 
                                 placeholder="Write your formal letter..."
                                 value={formData.letter_content}
                                 onChange={(e) => setFormData({...formData, letter_content: e.target.value})}
-                                style={{ width: '100%', padding: '20px', borderRadius: '18px', border: '1px solid #f1f5f9', background: '#f8fafc', color: '#0f172a', fontWeight: '600', fontSize: '14px', outline: 'none', minHeight: '150px', resize: 'none', fontFamily: 'inherit' }}
+                                style={{ width: '100%', padding: '18px 20px', borderRadius: '16px', border: '1.5px solid #cbd5e1', background: 'white', color: '#0f172a', fontWeight: '600', fontSize: '14px', outline: 'none', minHeight: '160px', resize: 'none', fontFamily: 'inherit', lineHeight: '1.7', boxSizing: 'border-box', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
                             />
                         </div>
 
-                        <button 
-                            onClick={handleFormSubmit}
-                            disabled={submitting}
-                            style={{ 
-                                width: '100%', padding: '18px', borderRadius: '18px', border: 'none', background: '#ef4444', color: 'white', fontWeight: '900', fontSize: '15px', cursor: 'pointer', 
-                                boxShadow: '0 10px 20px rgba(239, 68, 68, 0.2)', transition: '0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', opacity: submitting ? 0.7 : 1
-                            }}
-                        >
-                            <Send size={18} /> {submitting ? 'Submitting...' : 'Submit Formal Notice'}
-                        </button>
+                        <div style={{ padding: '0 40px 40px' }}>
+                            <button 
+                                onClick={handleFormSubmit}
+                                disabled={submitting}
+                                style={{ 
+                                    width: '100%', padding: '18px', borderRadius: '16px', border: 'none', background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color: 'white', fontWeight: '900', fontSize: '15px', cursor: submitting ? 'not-allowed' : 'pointer',
+                                    boxShadow: '0 10px 25px rgba(239, 68, 68, 0.3)', transition: '0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', opacity: submitting ? 0.7 : 1,
+                                    textTransform: 'uppercase', letterSpacing: '1px'
+                                }}
+                            >
+                                <Send size={18} /> {submitting ? 'Submitting...' : 'Submit Formal Notice'}
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     <div className="animate-fade-in" style={{ backgroundColor: 'white', borderRadius: '30px', padding: '40px', border: '1px solid #f1f5f9' }}>
