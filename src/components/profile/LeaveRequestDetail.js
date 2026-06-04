@@ -64,7 +64,7 @@ export default function LeaveRequestDetail() {
       let finalStage = 'L1';
 
       if (isHRReqLocal) {
-        finalStage = 'L2'; // For HR requests, CEO acts as L2
+        finalStage = 'L3'; // For HR requests, PM acts as L3
       } else if (r.includes('PM') || r.includes('CEO') || r.includes('ADMIN') || r.includes('MANAGER')) {
         finalStage = 'L3';
       } else if (r.includes('HR')) {
@@ -108,7 +108,7 @@ export default function LeaveRequestDetail() {
 
         const requireL1 = !isLeadOrAbove;
         const requireL2 = !isHRReq;
-        const requireL3 = !isHRReq; // For HR, only L2 (CEO) is required
+        const requireL3 = true; // PM Approval is required for everyone including HR
 
         const isFullyApproved = targetStatus === 'APPROVED' &&
           (!requireL1 || willBeL1) &&
@@ -317,13 +317,44 @@ export default function LeaveRequestDetail() {
           let dynamicPMName = found.l3_name || 'Anish V N';
           const isPMRequester = resolvedRole.includes('PROJECT MANAGER') || resolvedRole === 'PM';
 
-          if (isPMRequester || isHRRequester) {
+          if (isPMRequester) {
             const rmDinesh = Array.isArray(empData) ? empData.find(e =>
               String(e.name || '').toLowerCase().includes('dinesh') ||
               String(e.full_name || '').toLowerCase().includes('dinesh') ||
               String(e.role || '').toUpperCase().includes('CEO')
             ) : null;
             if (rmDinesh) dynamicPMName = rmDinesh.name || rmDinesh.full_name;
+          }
+
+          const resolvedRole2 = resolvedRole;
+          const isLeadOrAbove2 = resolvedRole2.includes('LEAD') || resolvedRole2.includes('MANAGER') || resolvedRole2.includes('CEO') || resolvedRole2.includes('ADMIN') || resolvedRole2.includes('PRINCIPAL') || resolvedRole2.includes('PM') || resolvedRole2.includes('HR');
+          const isHRReq2 = resolvedRole2 === 'HR' || resolvedRole2.includes('HUMAN RESOURCE');
+
+          const l1Status = isPMRequester ? 'APPROVED' : resolveStatus(pickStatus(found.rm_status, found.l1_status));
+          const l2Status = isPMRequester ? 'APPROVED' : resolveStatus(pickStatus(found.hr_status, found.l2_status));
+          const l3Status = isPMRequester ? 'APPROVED' : resolveStatus(pickStatus(found.pm_status, found.l3_status, found.manager_status));
+
+          // Overall status: REJECTED if any is rejected; APPROVED only if ALL required are approved; else PENDING
+          const requiresL1 = !isLeadOrAbove2;
+          const requiresL2 = true;
+          const requiresL3 = !isHRReq2;
+
+          let overallStatus = 'PENDING';
+          if (!isPMRequester) {
+            const allRequired = [
+              ...(requiresL1 ? [l1Status] : []),
+              ...(requiresL2 ? [l2Status] : []),
+              ...(requiresL3 ? [l3Status] : [])
+            ];
+            if (allRequired.some(s => s === 'REJECTED')) {
+              overallStatus = 'REJECTED';
+            } else if (allRequired.every(s => s === 'APPROVED')) {
+              overallStatus = 'APPROVED';
+            } else {
+              overallStatus = 'PENDING';
+            }
+          } else {
+            overallStatus = 'APPROVED';
           }
 
           setRequest({
@@ -336,13 +367,13 @@ export default function LeaveRequestDetail() {
             duration: calculateDuration(found.start_date, found.end_date),
             reason: found.reason || found.remarks || 'No reason provided.',
             appliedOn: (found.created_at || found.date) ? formatDate(found.created_at || found.date) : 'N/A',
-            status: resolveStatus(allStatusFields),
+            status: overallStatus,
             requesterRole: resolvedRole,
             profile_pic: finalPic,
             approvals: {
-              l1: { name: dynamicLeadName, status: resolveStatus(pickStatus(found.rm_status, found.l1_status)), stage: 'L1' },
-              l2: { name: isHRRequester ? ceoName : (found.l2_name || dynamicHRName), status: resolveStatus(pickStatus(found.hr_status, found.l2_status)), stage: 'L2' },
-              l3: { name: dynamicPMName, status: resolveStatus(pickStatus(found.pm_status, found.l3_status, found.manager_status)), stage: 'L3' }
+              l1: { name: dynamicLeadName, status: l1Status, stage: 'L1' },
+              l2: { name: isHRRequester ? ceoName : (found.l2_name || dynamicHRName), status: l2Status, stage: 'L2' },
+              l3: { name: dynamicPMName, status: l3Status, stage: 'L3' }
             }
           });
         }
@@ -358,10 +389,11 @@ export default function LeaveRequestDetail() {
   const userRoleStr = (user?.role || 'PM').toUpperCase();
   const rRoleStr = (request?.requesterRole || '').toUpperCase();
   const isHRReq = rRoleStr === 'HR' || rRoleStr.includes('HUMAN RESOURCE');
+  const isPMRequester = rRoleStr.includes('PROJECT MANAGER') || rRoleStr === 'PM';
 
   let currentUserStage = 'l1';
   if (isHRReq) {
-    currentUserStage = 'l2'; // For HR requests, CEO approves at L2 stage
+    currentUserStage = 'l3'; // For HR requests, PM approves at L3 stage
   } else {
     if (userRoleStr.includes('PM') || userRoleStr.includes('PROJECT MANAGER') || userRoleStr.includes('CEO') || userRoleStr.includes('ADMIN') || userRoleStr.includes('MANAGER')) {
       currentUserStage = 'l3';
@@ -462,52 +494,64 @@ export default function LeaveRequestDetail() {
             <div style={{ background: '#f8fafc', padding: winWidth < 768 ? '20px' : '30px', borderRadius: '32px', border: '1px solid #f1f5f9' }}>
               <h3 style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '24px' }}>Official Verification</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {[
-                  { role: 'Team Leader Approval', ...request.approvals.l1, stage: 'L1' },
-                  { role: 'HR Approval', ...request.approvals.l2, stage: 'L2' },
-                  { role: 'PM Approval', ...request.approvals.l3, stage: 'L3' }
-                ].filter(step => {
-                  if (isHRReq) {
-                    return step.stage === 'L2'; // Only CEO Approval (at L2) for HR requests
-                  }
-
-                  const role = (request.requesterRole || '').toUpperCase();
-                  const isLeadOrAbove = role.includes('LEAD') || role.includes('MANAGER') || role.includes('CEO') || role.includes('ADMIN') || role.includes('PRINCIPAL') || role.includes('PM') || role.includes('HR');
-
-                  if (step.stage === 'L1' && isLeadOrAbove) return false;
-                  return true;
-                }).map((app, i) => {
-                  let displayRole = app.role;
-                  if (isHRReq) {
-                    displayRole = 'CEO Approval';
-                  } else if (rRoleStr.includes('PROJECT MANAGER') || rRoleStr === 'PM') {
-                    if (app.stage === 'L2') displayRole = 'HR Verification';
-                    if (app.stage === 'L3') displayRole = 'RM Approval';
-                  } else if (rRoleStr.includes('HR')) {
-                    if (app.stage === 'L2') displayRole = 'HR Verification';
-                    if (app.stage === 'L3') displayRole = 'CEO Verification';
-                  } else if (rRoleStr.includes('LEAD')) {
-                    if (app.stage === 'L3') displayRole = 'PM Approval';
-                  } else if (rRoleStr.includes('MANAGER')) {
-                    if (app.stage === 'L3') displayRole = 'CEO Verification';
-                  }
-
-                  const appStatus = resolveStatus(app.status);
-                  const appColor = appStatus === 'APPROVED' ? '#16a34a' : appStatus === 'REJECTED' ? '#ef4444' : '#f59e0b';
-                  const appBg = appStatus === 'APPROVED' ? '#f0fdf4' : appStatus === 'REJECTED' ? '#fef2f2' : '#fffbeb';
-                  const appBorder = appStatus === 'APPROVED' ? '#bbf7d0' : appStatus === 'REJECTED' ? '#fecaca' : '#fef3c7';
-                  return (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <p style={{ margin: 0, fontSize: '14px', fontWeight: '950', color: '#0f172a' }}>{displayRole}</p>
-                        <p style={{ margin: 0, fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>By: {app.name}</p>
-                      </div>
-                      <div style={{ padding: '6px 16px', borderRadius: '10px', fontSize: '10px', fontWeight: '900', background: appBg, color: appColor, border: `1px solid ${appBorder}` }}>
-                        {appStatus}
-                      </div>
+                {isPMRequester ? (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '14px', fontWeight: '950', color: '#0f172a' }}>Auto Approval</p>
+                      <p style={{ margin: 0, fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>System approved</p>
                     </div>
-                  );
-                })}
+                    <div style={{ padding: '6px 16px', borderRadius: '10px', fontSize: '10px', fontWeight: '900', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                      APPROVED
+                    </div>
+                  </div>
+                ) : (
+                  [
+                    { role: 'Team Leader Approval', ...request.approvals.l1, stage: 'L1' },
+                    { role: 'HR Approval', ...request.approvals.l2, stage: 'L2' },
+                    { role: 'PM Approval', ...request.approvals.l3, stage: 'L3' }
+                  ].filter(step => {
+                    if (isHRReq) {
+                      return step.stage === 'L3'; // Only PM Approval (at L3) for HR requests
+                    }
+
+                    const role = (request.requesterRole || '').toUpperCase();
+                    const isLeadOrAbove = role.includes('LEAD') || role.includes('MANAGER') || role.includes('CEO') || role.includes('ADMIN') || role.includes('PRINCIPAL') || role.includes('PM') || role.includes('HR');
+
+                    if (step.stage === 'L1' && isLeadOrAbove) return false;
+                    return true;
+                  }).map((app, i) => {
+                    let displayRole = app.role;
+                    if (isHRReq) {
+                      displayRole = 'PM Approval';
+                    } else if (rRoleStr.includes('PROJECT MANAGER') || rRoleStr === 'PM') {
+                      if (app.stage === 'L2') displayRole = 'HR Verification';
+                      if (app.stage === 'L3') displayRole = 'RM Approval';
+                    } else if (rRoleStr.includes('HR')) {
+                      if (app.stage === 'L2') displayRole = 'HR Verification';
+                      if (app.stage === 'L3') displayRole = 'CEO Verification';
+                    } else if (rRoleStr.includes('LEAD')) {
+                      if (app.stage === 'L3') displayRole = 'PM Approval';
+                    } else if (rRoleStr.includes('MANAGER')) {
+                      if (app.stage === 'L3') displayRole = 'CEO Verification';
+                    }
+
+                    const appStatus = resolveStatus(app.status);
+                    const appColor = appStatus === 'APPROVED' ? '#16a34a' : appStatus === 'REJECTED' ? '#ef4444' : '#f59e0b';
+                    const appBg = appStatus === 'APPROVED' ? '#f0fdf4' : appStatus === 'REJECTED' ? '#fef2f2' : '#fffbeb';
+                    const appBorder = appStatus === 'APPROVED' ? '#bbf7d0' : appStatus === 'REJECTED' ? '#fecaca' : '#fef3c7';
+                    return (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <p style={{ margin: 0, fontSize: '14px', fontWeight: '950', color: '#0f172a' }}>{displayRole}</p>
+                          <p style={{ margin: 0, fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>By: {app.name}</p>
+                        </div>
+                        <div style={{ padding: '6px 16px', borderRadius: '10px', fontSize: '10px', fontWeight: '900', background: appBg, color: appColor, border: `1px solid ${appBorder}` }}>
+                          {appStatus}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -515,32 +559,31 @@ export default function LeaveRequestDetail() {
           {/* Reason Section */}
           <div style={{ marginBottom: '40px' }}>
             <h3 style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>Reason for Leave</h3>
-            <div style={{ background: '#f8fafc', padding: winWidth < 768 ? '24px' : '40px', borderRadius: '32px', color: '#334155', fontSize: '16px', fontWeight: '800', lineHeight: '1.6', border: '1px solid #f1f5f9' }}>
+            <div style={{ background: '#f8fafc', padding: winWidth < 768 ? '24px' : '40px', borderRadius: '32px', color: '#334155', fontSize: '16px', fontWeight: '800', lineHeight: '1.6', border: '1px solid #f1f5f9', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
               {request.reason}
             </div>
           </div>
 
           {/* Feedback Section */}
-          {!isHRReq && (
-            <div style={{ marginBottom: '40px' }}>
-              <h3 style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Add Feedback / Comment</h3>
-              <textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Enter your feedback here..."
-                style={{ width: '100%', minHeight: '120px', padding: '24px', borderRadius: '24px', border: '1.5px solid #f1f5f9', fontSize: '14px', fontWeight: '700', outline: 'none', fontFamily: 'inherit', color: '#0f172a' }}
-              />
-            </div>
-          )}
+          <div style={{ marginBottom: '40px' }}>
+            <h3 style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>Add Feedback / Comment</h3>
+            <textarea
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              placeholder="Enter your feedback here..."
+              style={{ width: '100%', minHeight: '120px', padding: '24px', borderRadius: '24px', border: '1.5px solid #f1f5f9', fontSize: '14px', fontWeight: '700', outline: 'none', fontFamily: 'inherit', color: '#0f172a' }}
+            />
+          </div>
 
           {/* Action Buttons */}
           {(String(user?.employee_id || user?.id || user?.EmpID || '').trim() !== String(request.empCode || '').trim()) && (() => {
             const reqRole = (request?.requesterRole || '').toUpperCase();
+            const isPMReq = reqRole.includes('PROJECT MANAGER') || reqRole === 'PM';
+            if (isPMReq) return null;
+            
             const isHRReqLocal = reqRole === 'HR' || reqRole.includes('HUMAN RESOURCE');
             const currentUserRole = (user?.role || '').toUpperCase();
             const isCEO = currentUserRole.includes('CEO') || currentUserRole.includes('ADMIN') || String(user?.name || user?.full_name || '').toUpperCase().includes('DINESH');
-
-            if (isHRReqLocal && !isCEO) return null;
 
             return (
               <div style={{ display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : '1.2fr 2.8fr', gap: '20px', marginBottom: winWidth < 768 ? '40px' : '0' }}>

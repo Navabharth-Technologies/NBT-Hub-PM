@@ -1076,14 +1076,7 @@ export default function PMDashboard() {
                 <h3 style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Clock size={16} color="#7e22ce" /> Late Logins ({lateLogins.length})
                 </h3>
-                {lateLogins.length > 0 && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); navigate('/attendance'); }} 
-                    style={{ background: 'transparent', border: 'none', color: '#3863a8', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}
-                  >
-                    View All <ChevronRight size={14} />
-                  </button>
-                )}
+
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

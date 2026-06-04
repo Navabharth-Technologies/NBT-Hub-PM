@@ -25,7 +25,7 @@ const parseLogDate = (log) => {
           const day = String(d.getDate()).padStart(2, '0');
           return `${year}-${month}-${day}`;
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     return dateStr.split('T')[0].split(' ')[0];
   }
@@ -45,7 +45,7 @@ const parseLogDate = (log) => {
       const day = String(d.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     }
-  } catch (e) {}
+  } catch (e) { }
   return '';
 };
 
@@ -55,18 +55,18 @@ const parseTime = (timeStr, baseDate = new Date()) => {
     const cleanStr = String(timeStr).trim();
     const isPM = cleanStr.toUpperCase().includes('PM');
     const isAM = cleanStr.toUpperCase().includes('AM');
-    
+
     const timeOnly = cleanStr.replace(/[^\d:]/g, '');
     const parts = timeOnly.split(':');
     if (parts.length < 2) return null;
-    
+
     let hours = parseInt(parts[0], 10);
     let minutes = parseInt(parts[1], 10);
     let seconds = parts[2] ? parseInt(parts[2], 10) : 0;
-    
+
     if (isPM && hours < 12) hours += 12;
     if (isAM && hours === 12) hours = 0;
-    
+
     const d = new Date(baseDate);
     d.setHours(hours, minutes, seconds, 0);
     return d;
@@ -78,20 +78,20 @@ const parseTime = (timeStr, baseDate = new Date()) => {
 const getWorkHrs = (inTime, outTime, recordDate) => {
   const isMissing = (t) => !t || t === '--:--' || t === '00:00' || t === 'null' || t === '----';
   if (isMissing(inTime)) return '00:00';
-  
+
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const cleanRecordDate = parseLogDate({ punch_date: recordDate });
   const isToday = cleanRecordDate === todayStr;
-  
+
   const inDate = parseTime(inTime);
   if (!inDate) return '00:00';
-  
+
   let outDate = null;
   if (!isMissing(outTime)) {
     outDate = parseTime(outTime);
   }
-  
+
   if (!outDate) {
     if (isToday) {
       const now = new Date();
@@ -105,7 +105,7 @@ const getWorkHrs = (inTime, outTime, recordDate) => {
       return '00:00';
     }
   }
-  
+
   const diffMs = outDate - inDate;
   if (diffMs <= 0) return '00:00';
   const diffMins = Math.floor(diffMs / 60000);
@@ -476,7 +476,7 @@ export default function AttendanceManagement() {
           const lastLog = myTodayLogs[myTodayLogs.length - 1];
 
           const in_time = firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time || firstLog?.PunchTime;
-          
+
           const checkHasPunchOut = (record) => {
             if (!record) return null;
             const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric || record.PunchTime || record.punch_time;
@@ -658,7 +658,7 @@ export default function AttendanceManagement() {
   const getExportRows = (forExcel = false) => {
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    
+
     const getDatesInRange = (startDate, endDate) => {
       const dates = [];
       let currentDate = new Date(startDate);
@@ -701,23 +701,23 @@ export default function AttendanceManagement() {
           const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric;
           return outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00';
         };
-        
+
         const hasDayPunchOut = logsForEmp.some(checkHasPunchOut);
         const dayPunchOutLog = [...logsForEmp].reverse().find(checkHasPunchOut) || lastLog || firstLog;
         const dayPunchOutVal = dayPunchOutLog?.out_time || dayPunchOutLog?.OUTTime || dayPunchOutLog?.PunchOut || dayPunchOutLog?.punch_time_out || dayPunchOutLog?.out_time_biometric || '----';
 
         const inTime = firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time || '----';
         const outTime = firstLog ? ((targetDate === todayStr && !hasDayPunchOut) ? '----' : dayPunchOutVal) : '----';
-        
+
         let displayStatus = 'Absent';
         if (firstLog) {
           const pIn = parseTimeStr(inTime);
           const pOut = parseTimeStr(outTime);
           const isHalfDayTime = (pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60));
-          
+
           let rawStatus = isHalfDayTime ? 'HALF_DAY' : String(firstLog.status || firstLog.Status || 'PRESENT').trim().toUpperCase();
           if (inTime !== '----' && inTime !== '--:--' && rawStatus === 'ABSENT') rawStatus = 'PRESENT';
-          
+
           if (rawStatus === 'PRESENT' || rawStatus === 'P' || rawStatus === 'IN OFFICE' || rawStatus === 'IN-OFFICE') {
             displayStatus = 'In Office';
           } else if (rawStatus === 'ABSENT' || rawStatus === 'A') {
@@ -768,12 +768,12 @@ export default function AttendanceManagement() {
     const todayFormatted = `${dd}-${mm}-${yyyy}`;
 
     const formatToDDMMYYYY = (dStr) => {
-        if (!dStr || dStr === '----') return '----';
-        const parts = dStr.split('-');
-        if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
-        return dStr;
+      if (!dStr || dStr === '----') return '----';
+      const parts = dStr.split('-');
+      if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      return dStr;
     };
-    
+
     const dateRangeDisplay = `${formatToDDMMYYYY(fromDate)} to ${formatToDDMMYYYY(toDate)}`;
 
     doc.setFillColor(15, 23, 42);
@@ -945,16 +945,16 @@ export default function AttendanceManagement() {
       const s = searchTerm.toLowerCase();
       if (!(emp.name || emp.user_name || '').toLowerCase().startsWith(s)) return false;
     }
-    
+
     if (activeFilter === 'ALL') return true;
-    
+
     const empIdStr = String(emp.id || '').trim();
     if (activeFilter === 'PRESENT') return metrics.presentEmpIds.has(empIdStr);
     if (activeFilter === 'ABSENT') return !metrics.presentEmpIds.has(empIdStr);
     if (activeFilter === 'HALF DAYS') return metrics.halfDayEmpIds.has(empIdStr);
     if (activeFilter === 'Late Login') return metrics.lateLoginEmpIds.has(empIdStr);
     if (activeFilter === 'Early logout') return metrics.earlyLogoutEmpIds.has(empIdStr);
-    
+
     return true;
   });
 
@@ -1019,9 +1019,6 @@ export default function AttendanceManagement() {
                       <button onClick={handleExportPDF} style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', color: '#1e293b', fontWeight: '800', fontSize: '13px', cursor: 'pointer', textAlign: 'left', borderRadius: '10px', transition: '0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
                         <FileText size={18} color="#ef4444" /> Export as PDF
                       </button>
-                      <button onClick={handleExportExcel} style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', color: '#1e293b', fontWeight: '800', fontSize: '13px', cursor: 'pointer', textAlign: 'left', borderRadius: '10px', transition: '0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
-                        <Table size={18} color="#10b981" /> Export as Excel
-                      </button>
                     </div>
                   )}
                 </div>
@@ -1070,11 +1067,11 @@ export default function AttendanceManagement() {
                   fontWeight: '950',
                   color: (() => {
                     if (!personalAttendance?.in_time || personalAttendance.in_time === '----') return '#ef4444';
-                    const hasOut = personalAttendance.out_time && 
-                                   personalAttendance.out_time !== '----' && 
-                                   personalAttendance.out_time !== '--:--' && 
-                                   personalAttendance.out_time !== '00:00' && 
-                                   personalAttendance.out_time !== '00:00:00';
+                    const hasOut = personalAttendance.out_time &&
+                      personalAttendance.out_time !== '----' &&
+                      personalAttendance.out_time !== '--:--' &&
+                      personalAttendance.out_time !== '00:00' &&
+                      personalAttendance.out_time !== '00:00:00';
                     if (hasOut) {
                       const pIn = parseTimeStr(personalAttendance.in_time);
                       const pOut = parseTimeStr(personalAttendance.out_time);
@@ -1091,11 +1088,11 @@ export default function AttendanceManagement() {
                 }}>
                   {(() => {
                     if (!personalAttendance?.in_time || personalAttendance.in_time === '----') return 'Offline';
-                    const hasOut = personalAttendance.out_time && 
-                                   personalAttendance.out_time !== '----' && 
-                                   personalAttendance.out_time !== '--:--' && 
-                                   personalAttendance.out_time !== '00:00' && 
-                                   personalAttendance.out_time !== '00:00:00';
+                    const hasOut = personalAttendance.out_time &&
+                      personalAttendance.out_time !== '----' &&
+                      personalAttendance.out_time !== '--:--' &&
+                      personalAttendance.out_time !== '00:00' &&
+                      personalAttendance.out_time !== '00:00:00';
                     if (hasOut) {
                       const pIn = parseTimeStr(personalAttendance.in_time);
                       const pOut = parseTimeStr(personalAttendance.out_time);
@@ -2026,7 +2023,7 @@ export default function AttendanceManagement() {
               <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                 <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#fdf2f8', color: '#db2777', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}><AlertTriangle size={24} /></div>
                 <h2 style={{ fontSize: '20px', fontWeight: '950', color: '#0f172a', margin: '0 0 8px 0' }}>Edit Punch-In Time</h2>
-                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}>Modify the arrival log for selected date.</p>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}></p>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -2066,7 +2063,7 @@ export default function AttendanceManagement() {
               <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                 <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#f0f9ff', color: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}><AlertTriangle size={24} /></div>
                 <h2 style={{ fontSize: '20px', fontWeight: '950', color: '#0f172a', margin: '0 0 8px 0' }}>Edit Punch-Out Time</h2>
-                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}>Modify the departure log for selected date.</p>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', fontWeight: '600' }}></p>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

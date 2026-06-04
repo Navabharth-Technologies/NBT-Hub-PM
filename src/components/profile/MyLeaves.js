@@ -37,6 +37,131 @@ export default function MyLeaves() {
     is_half_day: false
   });
 
+  const [holidaysSet, setHolidaysSet] = useState(new Set());
+  const [alertState, setAlertState] = useState({ show: false, message: '', type: 'INFO' });
+  const [isPMUser, setIsPMUser] = useState(false);
+
+  useEffect(() => {
+    const determinePM = async () => {
+      if (!user) return;
+      const roleStr = (user.role || user.designation || '').toUpperCase();
+      if (roleStr.includes('PROJECT MANAGER') || roleStr === 'PM') {
+        setIsPMUser(true);
+        return;
+      }
+      try {
+        const res = await fetch(API_ENDPOINTS.USERS, {
+          headers: { 'Authorization': `Bearer ${user.token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const users = Array.isArray(data) ? data : (data.value || []);
+          const currentId = String(user.employee_id || user.id || '').trim();
+          const target = users.find(u => String(u.employee_id || u.id || u.empId || '').trim() === currentId);
+          if (target) {
+            const roleName = String(target.Role || target.role || '').toUpperCase();
+            if (roleName.includes('PROJECT MANAGER') || roleName === 'PM') {
+              setIsPMUser(true);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Error determining PM role:", e);
+      }
+    };
+    determinePM();
+  }, [user]);
+
+  const showAlert = (message, type = 'ERROR') => {
+    setAlertState({ show: true, message, type });
+  };
+
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      if (!user?.token) return;
+      try {
+        const response = await fetch(API_ENDPOINTS.HOLIDAYS, {
+          headers: { 'Authorization': `Bearer ${user.token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const list = Array.isArray(data) ? data : (data.data || []);
+          const hSet = new Set();
+          
+          const parseDateLocal = (dateStr) => {
+            if (!dateStr) return null;
+            const s = String(dateStr).trim();
+            let d;
+            if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+              d = new Date(s.substring(0, 10));
+            } else if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(s)) {
+              const [dayVal, monthVal, yearVal] = s.split(/[-/]/);
+              d = new Date(yearVal, monthVal - 1, dayVal);
+            } else if (/^\d{1,2}[-/]\d{1,2}$/.test(s)) {
+              const [dayVal, monthVal] = s.split(/[-/]/);
+              d = new Date(new Date().getFullYear(), monthVal - 1, dayVal);
+            } else {
+              d = new Date(s);
+            }
+            return isNaN(d.getTime()) ? null : d;
+          };
+
+          list.forEach(h => {
+            const dateObj = parseDateLocal(h.date || h.holiday_date);
+            if (dateObj) {
+              const yyyy = dateObj.getFullYear();
+              const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+              const dd = String(dateObj.getDate()).padStart(2, '0');
+              hSet.add(`${yyyy}-${mm}-${dd}`);
+            }
+          });
+          setHolidaysSet(hSet);
+        }
+      } catch (err) {
+        console.error('Error fetching holidays in MyLeaves:', err);
+      }
+    };
+    fetchHolidays();
+  }, [user]);
+
+  const calculateLeaveDays = (startDateStr, endDateStr, holidaysSetLocal, isHalfDay) => {
+    if (!startDateStr) return 0;
+    const start = new Date(startDateStr);
+    const finalEndStr = endDateStr || startDateStr;
+    const end = new Date(finalEndStr);
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+    if (start > end) return 0;
+    
+    let daysCount = 0;
+    let currentDate = new Date(start);
+    
+    while (currentDate <= end) {
+      const dayOfWeek = currentDate.getDay();
+      if (dayOfWeek !== 0) { // Exclude Sundays
+        const yyyy = currentDate.getFullYear();
+        const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(currentDate.getDate()).padStart(2, '0');
+        const formattedDate = `${yyyy}-${mm}-${dd}`;
+        
+        if (!holidaysSetLocal || !holidaysSetLocal.has(formattedDate)) {
+          daysCount++;
+        }
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return isHalfDay ? (daysCount > 0 ? 0.5 : 0) : daysCount;
+  };
+
+  const getTodayDateString = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
@@ -60,6 +185,31 @@ export default function MyLeaves() {
         const currentEmail = (user.email || '').toLowerCase();
         const currentName = (user.name || '').toLowerCase();
 
+        // Check PM role dynamically
+        const localRole = (user.role || user.designation || '').toUpperCase();
+        let isPM = localRole.includes('PROJECT MANAGER') || localRole === 'PM' || isPMUser;
+        
+        if (!isPM) {
+          try {
+            const usersRes = await fetch(API_ENDPOINTS.USERS, {
+              headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            if (usersRes.ok) {
+              const usersData = await usersRes.json();
+              const users = Array.isArray(usersData) ? usersData : (usersData.value || []);
+              const target = users.find(u => String(u.employee_id || u.id || u.empId || '').trim() === currentUserId);
+              if (target) {
+                const roleName = String(target.Role || target.role || '').toUpperCase();
+                if (roleName.includes('PROJECT MANAGER') || roleName === 'PM') {
+                  isPM = true;
+                }
+              }
+            }
+          } catch (e) {
+            console.error("Async role check inside fetchMyLeaves failed:", e);
+          }
+        }
+
         // Comprehensive filter to ensure we catch the correct user data across different API field names
         const myData = list.filter(l => {
           const lUserId = String(l.user_id || '').trim();
@@ -74,7 +224,33 @@ export default function MyLeaves() {
             (lName && currentName && lName.includes(currentName))
           );
         });
-        setLeaves(myData.sort((a, b) => new Date(b.created_at || b.start_date) - new Date(a.created_at || a.start_date)));
+
+        const mappedData = myData.map(l => {
+          if (isPM) {
+            return {
+              ...l,
+              status: 'Approved',
+              rm_status: 'Approved',
+              l1_status: 'Approved',
+              l2_status: 'Approved',
+              l3_status: 'Approved',
+              hr_status: 'Approved',
+              pm_status: 'Approved',
+              manager_status: 'Approved'
+            };
+          }
+          return l;
+        });
+
+        setLeaves(mappedData.sort((a, b) => {
+          const sA = String(a.status || 'Pending').toUpperCase().split(',')[0].trim();
+          const sB = String(b.status || 'Pending').toUpperCase().split(',')[0].trim();
+          const pendA = sA.includes('PENDING');
+          const pendB = sB.includes('PENDING');
+          if (pendA && !pendB) return -1;
+          if (!pendA && pendB) return 1;
+          return new Date(b.created_at || b.start_date) - new Date(a.created_at || a.start_date);
+        }));
       }
     } catch (err) {
       console.error('Fetch leaves error:', err);
@@ -161,18 +337,24 @@ export default function MyLeaves() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.start_date || !formData.reason) {
-      alert('Please fill all required fields');
+      showAlert('Please fill all required fields', 'WARNING');
       return;
     }
 
     const finalEndDate = formData.end_date || formData.start_date;
-    const start = new Date(formData.start_date);
-    const end = new Date(finalEndDate);
-    const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    const totalDays = calculateLeaveDays(formData.start_date, finalEndDate, holidaysSet, formData.is_half_day);
+
+    if (totalDays <= 0) {
+      showAlert('Selected leave period has 0 active days (all selected days are Sundays or public holidays).', 'WARNING');
+      return;
+    }
 
     // Create DD-MM-YYYY versions for legacy compatibility
     const startDMY = formData.start_date.split('-').reverse().join('-');
     const endDMY = finalEndDate.split('-').reverse().join('-');
+
+    const userRoleStr = (user?.role || user?.designation || '').toUpperCase();
+    const isPM = userRoleStr.includes('PROJECT MANAGER') || userRoleStr === 'PM' || isPMUser;
 
     try {
       setSubmitting(true);
@@ -208,7 +390,15 @@ export default function MyLeaves() {
           description: formData.reason,
 
           // Status & Ledger Counts
-          status: 'Pending',
+          status: isPM ? 'Approved' : 'Pending',
+          rm_status: isPM ? 'Approved' : 'Pending',
+          l1_status: isPM ? 'Approved' : 'Pending',
+          hr_status: isPM ? 'Approved' : 'Pending',
+          l2_status: isPM ? 'Approved' : 'Pending',
+          pm_status: isPM ? 'Approved' : 'Pending',
+          l3_status: isPM ? 'Approved' : 'Pending',
+          manager_status: isPM ? 'Approved' : 'Pending',
+          remarks: isPM ? 'Auto-approved for PM' : '',
           total_days: totalDays,
           cl: formData.leave_type.includes('Casual') ? totalDays : 0,
           lop: formData.leave_type.includes('LOP') ? totalDays : 0,
@@ -221,6 +411,57 @@ export default function MyLeaves() {
 
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
+        if (isPM) {
+          try {
+            const leaveDate = new Date(formData.start_date);
+            const month = isNaN(leaveDate.getTime()) ? (new Date().getMonth() + 1) : leaveDate.getMonth() + 1;
+            const year = isNaN(leaveDate.getTime()) ? new Date().getFullYear() : leaveDate.getFullYear();
+
+            const statsRes = await fetch(`${API_ENDPOINTS.ADMIN_LEAVE_STATS}?month=${month}&year=${year}`, {
+              headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+
+            if (statsRes.ok) {
+              const statsData = await statsRes.json();
+              const allStats = Array.isArray(statsData) ? statsData : (statsData.stats || statsData.data || []);
+              const empId = user.employee_id || user.id;
+              const empStat = allStats.find(s => String(s.employee_id || s.user_id) === String(empId));
+
+              let cl = parseFloat(empStat?.leaves_taken || 0);
+              let lop = parseFloat(empStat?.LOP || 0);
+              let available = parseFloat(empStat?.leaves_available || 0);
+              const duration = parseFloat(totalDays || 0);
+
+              const leaveTypeUpper = String(formData.leave_type || '').toUpperCase();
+              if (leaveTypeUpper.includes('CASUAL')) {
+                cl += duration;
+                available -= duration;
+              } else if (leaveTypeUpper.includes('LOP') || leaveTypeUpper.includes('LOSS')) {
+                lop += duration;
+              }
+
+              await fetch(API_ENDPOINTS.ADMIN_LEAVE_STATS_UPDATE, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${user.token}`
+                },
+                body: JSON.stringify({
+                  employeeId: empId,
+                  leaves_taken: cl,
+                  LOP: lop,
+                  leaves_available: available,
+                  month,
+                  year,
+                  remarks: 'Auto-updated from PM auto-approved leave request'
+                })
+              });
+            }
+          } catch (e) {
+            console.error("Auto-update ledger failed for PM leave request", e);
+          }
+        }
+
         setShowModal(false);
         setFormData({
           leave_type: 'Casual Leave',
@@ -232,11 +473,11 @@ export default function MyLeaves() {
         fetchMyLeaves();
         fetchLeaveStats();
       } else {
-        alert(data.message || data.error || 'Failed to submit leave request');
+        showAlert(data.message || data.error || 'Failed to submit leave request', 'ERROR');
       }
     } catch (err) {
       console.error('Submit leave error:', err);
-      alert('Network error. Please try again.');
+      showAlert('Network error. Please try again.', 'ERROR');
     } finally {
       setSubmitting(false);
     }
@@ -270,6 +511,7 @@ export default function MyLeaves() {
     { label: 'LOP Leaves', value: leaveStats.lop_taken, icon: <Clock size={20} color="#f59e0b" />, bg: '#fffbeb' },
   ];
 
+  const calculatedDays = calculateLeaveDays(formData.start_date, formData.end_date, holidaysSet, formData.is_half_day);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
@@ -497,7 +739,15 @@ export default function MyLeaves() {
                   <input
                     type="date"
                     value={formData.start_date}
-                    onChange={e => setFormData({ ...formData, start_date: e.target.value })}
+                    min={getTodayDateString()}
+                    onChange={e => {
+                      const newStart = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        start_date: newStart,
+                        end_date: prev.end_date && prev.end_date < newStart ? '' : prev.end_date
+                      }));
+                    }}
                     style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontWeight: '700', fontSize: '14px', outline: 'none' }}
                   />
                 </div>
@@ -506,11 +756,38 @@ export default function MyLeaves() {
                   <input
                     type="date"
                     value={formData.end_date}
+                    min={formData.start_date || getTodayDateString()}
                     onChange={e => setFormData({ ...formData, end_date: e.target.value })}
                     style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontWeight: '700', fontSize: '14px', outline: 'none' }}
                   />
                 </div>
               </div>
+
+              {formData.start_date && (
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1.5px dashed #cbd5e1',
+                  borderRadius: '16px',
+                  padding: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginTop: '4px',
+                  marginBottom: '4px'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase', marginBottom: '2px' }}>Calculated Duration</div>
+                    <div style={{ fontSize: '15px', fontWeight: '855', color: '#0f172a' }}>
+                      {calculatedDays} {calculatedDays === 1 || calculatedDays === 0.5 ? 'Day' : 'Days'}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', background: '#e2e8f0', padding: '4px 8px', borderRadius: '8px' }}>
+                      Sundays & Holidays Excluded
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <input
@@ -615,7 +892,7 @@ export default function MyLeaves() {
                 <div style={{ fontSize: '11px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <FileText size={14} /> Reason for Leave
                 </div>
-                <div style={{ background: 'white', padding: '16px', borderRadius: '16px', border: '1.5px solid #f1f5f9', color: '#475569', fontSize: '14px', fontWeight: '600', lineHeight: '1.5', fontStyle: 'italic' }}>
+                <div style={{ background: 'white', padding: '16px', borderRadius: '16px', border: '1.5px solid #f1f5f9', color: '#475569', fontSize: '14px', fontWeight: '600', lineHeight: '1.5', fontStyle: 'italic', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
                   "{selectedLeave.reason || 'No specific reason provided.'}"
                 </div>
               </div>
@@ -636,6 +913,94 @@ export default function MyLeaves() {
                 onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
               >
                 Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Alert Dialog Modal */}
+      {alertState.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(15, 23, 42, 0.45)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 99999
+        }}>
+          <div style={{
+            background: 'white',
+            width: '90%',
+            maxWidth: '380px',
+            borderRadius: '32px',
+            padding: '32px',
+            boxShadow: '0 20px 50px rgba(15, 23, 42, 0.15)',
+            border: '1.5px solid #f1f5f9',
+            textAlign: 'center',
+            fontFamily: "'Outfit', sans-serif"
+          }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '22px',
+              background: alertState.type === 'SUCCESS' ? '#f0fdf4' : alertState.type === 'WARNING' ? '#fffbeb' : '#fef2f2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              border: `1.5px solid ${alertState.type === 'SUCCESS' ? '#bbf7d0' : alertState.type === 'WARNING' ? '#fef3c7' : '#fecaca'}`
+            }}>
+              {alertState.type === 'SUCCESS' ? (
+                <CheckCircle size={32} color="#16a34a" />
+              ) : alertState.type === 'WARNING' ? (
+                <AlertCircle size={32} color="#d97706" />
+              ) : (
+                <XCircle size={32} color="#ef4444" />
+              )}
+            </div>
+            <h2 style={{
+              fontSize: '20px',
+              fontWeight: '950',
+              color: '#0f172a',
+              margin: '0 0 12px 0',
+              lineHeight: '1.4'
+            }}>
+              {alertState.type === 'SUCCESS' ? 'Success' : alertState.type === 'WARNING' ? 'Note' : 'Error'}
+            </h2>
+            <p style={{
+              fontSize: '14px',
+              color: '#64748b',
+              margin: '0 0 24px 0',
+              lineHeight: '1.5',
+              fontWeight: '700',
+              whiteSpace: 'pre-line'
+            }}>
+              {alertState.message}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                onClick={() => setAlertState({ show: false, message: '', type: 'INFO' })}
+                style={{
+                  width: '100%',
+                  padding: '14px 24px',
+                  borderRadius: '16px',
+                  border: 'none',
+                  background: alertState.type === 'SUCCESS' ? '#16a34a' : alertState.type === 'WARNING' ? '#d97706' : '#ef4444',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: '900',
+                  cursor: 'pointer',
+                  boxShadow: `0 8px 20px ${alertState.type === 'SUCCESS' ? 'rgba(22, 163, 74, 0.25)' : alertState.type === 'WARNING' ? 'rgba(217, 119, 6, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
+                  transition: 'all 0.2s'
+                }}
+              >
+                OK
               </button>
             </div>
           </div>

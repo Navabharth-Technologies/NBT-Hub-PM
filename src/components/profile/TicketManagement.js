@@ -71,16 +71,16 @@ export default function TicketManagement() {
   }, [user]);
 
   const filteredTickets = tickets.filter(ticket => {
-    const requesterName = ticket.requester || ticket.requester_name || ticket.user_name || ticket.member_name || 
-                        usersList.find(u => String(u.id) === String(ticket.user_id || ticket.userId || ticket.employee_id))?.name || 
-                        'Anonymous';
-    
+    const requesterName = ticket.requester || ticket.requester_name || ticket.user_name || ticket.member_name ||
+      usersList.find(u => String(u.id) === String(ticket.user_id || ticket.userId || ticket.employee_id))?.name ||
+      'Anonymous';
+
     const searchStr = `${ticket.id} ${ticket.subject} ${requesterName} ${ticket.description}`.toLowerCase();
     const matchesSearch = searchStr.includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === 'All Status' || (ticket.status || '').toLowerCase() === statusFilter.toLowerCase();
     const matchesPriority = priorityFilter === 'All Priority' || (ticket.priority || '').toLowerCase() === priorityFilter.toLowerCase();
-    
+
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
@@ -120,7 +120,7 @@ export default function TicketManagement() {
     doc.setFontSize(22);
     doc.setTextColor(30, 41, 59);
     doc.text('TICKET MANAGEMENT', 14, 20);
-    
+
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
     doc.text('OFFICIAL TICKET PERFORMANCE REPORT', 14, 28);
@@ -140,10 +140,10 @@ export default function TicketManagement() {
       } else if (dateVal) {
         formattedDate = String(dateVal).split('T')[0];
       }
-      
-      const rName = t.requester || t.requester_name || t.user_name || t.member_name || 
-                   usersList.find(u => String(u.id) === String(t.user_id || t.userId || t.employee_id))?.name || 
-                   'Anonymous';
+
+      const rName = t.requester || t.requester_name || t.user_name || t.member_name ||
+        usersList.find(u => String(u.id) === String(t.user_id || t.userId || t.employee_id))?.name ||
+        'Anonymous';
 
       const statusStr = String(t.status || '').toUpperCase() === 'OPEN' ? 'Pending' : (t.status || 'Pending');
       const priorityStr = (t.priority || 'NORMAL').toUpperCase();
@@ -182,22 +182,22 @@ export default function TicketManagement() {
   return (
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
-      
+
       <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px' : '40px 26px', maxWidth: '100%', width: '100%', boxSizing: 'border-box', marginTop: '70px' }}>
-        <header style={{ 
-          marginBottom: '32px', 
-          display: 'flex', 
+        <header style={{
+          marginBottom: '32px',
+          display: 'flex',
           flexDirection: winWidth < 768 ? 'column' : 'row',
-          justifyContent: 'space-between', 
-          alignItems: winWidth < 768 ? 'flex-start' : 'flex-end', 
-          gap: '24px' 
+          justifyContent: 'space-between',
+          alignItems: winWidth < 768 ? 'flex-start' : 'flex-end',
+          gap: '24px'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <button 
+            <button
               onClick={() => navigate(-1)}
-              style={{ 
-                width: '40px', height: '40px', borderRadius: '12px', background: 'white', border: '1.5px solid #e2e8f0', 
-                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s' 
+              style={{
+                width: '40px', height: '40px', borderRadius: '12px', background: 'white', border: '1.5px solid #e2e8f0',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s'
               }}
               onMouseOver={(e) => e.currentTarget.style.borderColor = '#3863a8'}
               onMouseOut={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
@@ -206,74 +206,74 @@ export default function TicketManagement() {
             </button>
             <div>
               <h1 style={{ fontSize: winWidth < 768 ? '26px' : '32px', fontWeight: '950', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-1px' }}>Support Hub</h1>
-              <p style={{ color: '#64748b', margin: 0, fontSize: winWidth < 768 ? '14px' : '15px', fontWeight: '600', lineHeight: '1.5' }}>Manage organization-wide support requests and resolutions</p>
+              <p style={{ color: '#64748b', margin: 0, fontSize: winWidth < 768 ? '14px' : '15px', fontWeight: '600', lineHeight: '1.5' }}>Manage Organization-Wide Support Requests and Resolutions</p>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
-             <button 
-               className="btn-primary" 
-               onClick={handleExportPDF}
-               style={{ flex: 1, background: 'white', color: '#3863a8', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
-             >
-               <Download size={16} /> Export
-             </button>
+            <button
+              className="btn-primary"
+              onClick={handleExportPDF}
+              style={{ flex: 1, background: 'white', color: '#3863a8', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
+            >
+              <Download size={16} /> Export
+            </button>
           </div>
         </header>
 
         {/* Filters */}
         <div className="flex-responsive-stack" style={{ marginBottom: '32px', gap: '16px' }}>
           <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
-            <select 
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ flex: 1, padding: '14px 16px', borderRadius: '15px', border: '2px solid #eef2f6', background: 'white', fontWeight: '700', color: '#1e293b', outline: 'none', cursor: 'pointer', fontSize: '13px' }}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{ flex: 1, padding: '14px 16px', borderRadius: '15px', border: '2px solid #eef2f6', background: 'white', fontWeight: '700', color: '#1e293b', outline: 'none', cursor: 'pointer', fontSize: '13px' }}
             >
-                <option>All Status</option>
-                <option value="Open">Pending</option>
-                <option>In Progress</option>
-                <option>Resolved</option>
-                <option>Closed</option>
+              <option>All Status</option>
+              <option value="Open">Pending</option>
+              <option>In Progress</option>
+              <option>Resolved</option>
+              <option>Closed</option>
             </select>
-            <select 
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-                style={{ flex: 1, padding: '14px 16px', borderRadius: '15px', border: '2px solid #eef2f6', background: 'white', fontWeight: '700', color: '#1e293b', outline: 'none', cursor: 'pointer', fontSize: '13px' }}
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              style={{ flex: 1, padding: '14px 16px', borderRadius: '15px', border: '2px solid #eef2f6', background: 'white', fontWeight: '700', color: '#1e293b', outline: 'none', cursor: 'pointer', fontSize: '13px' }}
             >
-                <option>All Priority</option>
-                <option>High</option>
-                <option>Medium</option>
-                <option>Low</option>
+              <option>All Priority</option>
+              <option>High</option>
+              <option>Medium</option>
+              <option>Low</option>
             </select>
           </div>
         </div>
 
         <section style={{ background: winWidth < 768 ? 'transparent' : 'white', borderRadius: '24px', border: winWidth < 768 ? 'none' : '3px solid #cbd5e1', boxShadow: winWidth < 768 ? 'none' : '0 10px 25px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
           {winWidth < 768 ? (
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {loading ? (
                 <div style={{ textAlign: 'center', padding: '40px', background: 'white', borderRadius: '20px' }}>Fetching support tickets...</div>
               ) : filteredTickets.length > 0 ? (
                 filteredTickets.map((ticket, index) => {
                   const status = getStatusStyle(ticket.status);
                   const priority = getPriorityStyle(ticket.priority);
-                  const requesterName = ticket.requester || ticket.requester_name || ticket.user_name || ticket.member_name || 
-                                       usersList.find(u => String(u.id) === String(ticket.user_id || ticket.userId || ticket.employee_id))?.name || 
-                                       'Anonymous';
-                  
+                  const requesterName = ticket.requester || ticket.requester_name || ticket.user_name || ticket.member_name ||
+                    usersList.find(u => String(u.id) === String(ticket.user_id || ticket.userId || ticket.employee_id))?.name ||
+                    'Anonymous';
+
                   let dateVal = ticket.created_at || ticket.created_date || ticket.timestamp || ticket.time_stamp;
                   if (typeof dateVal === 'string' && dateVal.includes('Z20')) dateVal = dateVal.split('Z')[0] + 'Z';
                   const parsedDate = new Date(dateVal);
-                  const formattedDate = (parsedDate && !isNaN(parsedDate.getTime())) 
-                    ? parsedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') 
+                  const formattedDate = (parsedDate && !isNaN(parsedDate.getTime()))
+                    ? parsedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')
                     : (dateVal ? String(dateVal).split('T')[0] : 'N/A');
 
                   return (
-                    <div 
+                    <div
                       key={ticket.id || index}
-                      style={{ 
-                        background: 'white', 
-                        padding: '24px', 
-                        borderRadius: '24px', 
+                      style={{
+                        background: 'white',
+                        padding: '24px',
+                        borderRadius: '24px',
                         border: '1.5px solid #f1f5f9',
                         boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
                         display: 'flex',
@@ -293,7 +293,7 @@ export default function TicketManagement() {
                         <span style={{ fontSize: '12px', fontWeight: '800', color: '#3863a8', backgroundColor: '#f0f4ff', padding: '4px 12px', borderRadius: '8px' }}>
                           #{String(ticket.id || index + 1)}
                         </span>
-                        <span style={{ 
+                        <span style={{
                           fontSize: '10px', fontWeight: '950', padding: '6px 12px', borderRadius: '100px', textTransform: 'uppercase', letterSpacing: '0.5px',
                           backgroundColor: status.bg, color: status.text, border: `1px solid ${status.border}`, display: 'inline-flex', alignItems: 'center', gap: '6px'
                         }}>
@@ -301,7 +301,7 @@ export default function TicketManagement() {
                         </span>
                       </div>
 
-                      <div 
+                      <div
                         style={{ cursor: 'pointer' }}
                         onClick={() => {
                           setViewTicket(ticket);
@@ -324,15 +324,15 @@ export default function TicketManagement() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px dashed #e2e8f0' }}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
                           <div style={{ fontSize: '11px', fontWeight: '900', color: priority.color, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: priority.color }}></span>
-                             {priority.label}
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: priority.color }}></span>
+                            {priority.label}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontWeight: '700', fontSize: '12px' }}>
                             <Clock size={12} />
                             {formattedDate}
                           </div>
                         </div>
-                        <button 
+                        <button
                           onClick={() => {
                             setManageTicket(ticket);
                             setManageResponse(ticket.response || '');
@@ -347,12 +347,12 @@ export default function TicketManagement() {
                 })
               ) : (
                 <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '24px', border: '3px dashed #cbd5e1' }}>
-                    <div style={{ fontSize: '40px', marginBottom: '20px' }}>🎫</div>
-                    <h3 style={{ color: '#1e293b', marginBottom: '8px' }}>No Tickets Found</h3>
-                    <p style={{ color: '#64748b' }}>Awaiting new support requests...</p>
+                  <div style={{ fontSize: '40px', marginBottom: '20px' }}>🎫</div>
+                  <h3 style={{ color: '#1e293b', marginBottom: '8px' }}>No Tickets Found</h3>
+                  <p style={{ color: '#64748b' }}>Awaiting new support requests...</p>
                 </div>
               )}
-             </div>
+            </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -381,7 +381,7 @@ export default function TicketManagement() {
                               {String(ticket.id || ticket.ticket_id || index + 1)}
                             </span>
                           </td>
-                          <td 
+                          <td
                             style={{ padding: '20px 25px', cursor: 'pointer' }}
                             onClick={() => {
                               setViewTicket(ticket);
@@ -393,9 +393,9 @@ export default function TicketManagement() {
                           <td style={{ padding: '20px 25px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               {(() => {
-                                const rName = ticket.requester || ticket.requester_name || ticket.user_name || ticket.member_name || 
-                                             usersList.find(u => String(u.id) === String(ticket.user_id || ticket.userId || ticket.employee_id))?.name || 
-                                             'Anonymous';
+                                const rName = ticket.requester || ticket.requester_name || ticket.user_name || ticket.member_name ||
+                                  usersList.find(u => String(u.id) === String(ticket.user_id || ticket.userId || ticket.employee_id))?.name ||
+                                  'Anonymous';
                                 return (
                                   <>
                                     <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: '#e0e7ff', color: '#312e81', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '900' }}>
@@ -411,28 +411,28 @@ export default function TicketManagement() {
                           </td>
                           <td style={{ padding: '20px 25px' }}>
                             <div style={{ fontSize: '11px', fontWeight: '900', color: priority.color, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: priority.color }}></span>
-                               {priority.label}
+                              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: priority.color }}></span>
+                              {priority.label}
                             </div>
                           </td>
                           <td style={{ padding: '20px 25px', color: '#64748b', fontWeight: '600', fontSize: '12px' }}>
                             {(() => {
                               let dateVal = ticket.created_at || ticket.created_date || ticket.timestamp || ticket.time_stamp;
                               if (!dateVal) return 'Unknown';
-                              
+
                               // Handle cases where the date might be doubled/concatenated in the DB
                               if (typeof dateVal === 'string' && dateVal.includes('Z20')) {
                                 dateVal = dateVal.split('Z')[0] + 'Z';
                               }
-  
+
                               const parsedDate = new Date(dateVal);
                               if (isNaN(parsedDate.getTime())) return String(dateVal).split('T')[0]; // Fallback to YYYY-MM-DD
-                              
+
                               return parsedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
                             })()}
                           </td>
                           <td style={{ padding: '20px 25px' }}>
-                            <span style={{ 
+                            <span style={{
                               fontSize: '10px', fontWeight: '900', padding: '6px 12px', borderRadius: '8px', textTransform: 'uppercase', letterSpacing: '0.5px',
                               backgroundColor: status.bg, color: status.text, border: `1px solid ${status.border}`, display: 'inline-flex', alignItems: 'center', gap: '6px'
                             }}>
@@ -440,15 +440,15 @@ export default function TicketManagement() {
                             </span>
                           </td>
                           <td style={{ padding: '20px 25px' }}>
-                            <button 
-                              className="btn-ghost" 
+                            <button
+                              className="btn-ghost"
                               style={{ color: '#3863a8', fontWeight: '800', fontSize: '12px', padding: '6px 12px', border: '1.5px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
                               onClick={() => {
                                 setManageTicket(ticket);
                                 setManageResponse(ticket.response || '');
                               }}
                             >
-                               Manage
+                              Manage
                             </button>
                           </td>
                         </tr>
@@ -457,9 +457,9 @@ export default function TicketManagement() {
                   ) : (
                     <tr>
                       <td colSpan="7" style={{ textAlign: 'center', padding: '100px', backgroundColor: '#fcfcfd' }}>
-                          <div style={{ fontSize: '40px', marginBottom: '20px' }}>🎫</div>
-                          <h3 style={{ color: '#1e293b', marginBottom: '8px' }}>No Tickets Found</h3>
-                          <p style={{ color: '#64748b' }}>Awaiting new support requests...</p>
+                        <div style={{ fontSize: '40px', marginBottom: '20px' }}>🎫</div>
+                        <h3 style={{ color: '#1e293b', marginBottom: '8px' }}>No Tickets Found</h3>
+                        <p style={{ color: '#64748b' }}>Awaiting new support requests...</p>
                       </td>
                     </tr>
                   )}
@@ -471,13 +471,13 @@ export default function TicketManagement() {
       </main>
 
       <AppFooter />
-      
+
       {/* MANAGE TICKET MODAL */}
       {manageTicket && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="animate-zoom-in" style={{ background: 'white', padding: '35px', borderRadius: '30px', width: '100%', maxWidth: '550px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '3px solid #cbd5e1', position: 'relative' }}>
-            
-            <button 
+          <div className="animate-zoom-in" style={{ background: 'white', padding: '35px', borderRadius: '30px', width: '100%', maxWidth: '550px', maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '3px solid #cbd5e1', position: 'relative' }}>
+
+            <button
               onClick={() => setManageTicket(null)}
               style={{ position: 'absolute', right: '25px', top: '25px', width: '36px', height: '36px', borderRadius: '50%', background: '#f8fafc', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
               onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
@@ -504,7 +504,7 @@ export default function TicketManagement() {
 
             <div style={{ marginBottom: '30px' }}>
               <span style={{ fontSize: '11px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginBottom: '15px' }}>Action Taken / Response</span>
-              <textarea 
+              <textarea
                 value={manageResponse}
                 onChange={(e) => setManageResponse(e.target.value)}
                 placeholder="Type your resolution or update here..."
@@ -518,7 +518,7 @@ export default function TicketManagement() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '15px' }}>
-              <button 
+              <button
                 onClick={() => setManageTicket(null)}
                 style={{ padding: '16px', borderRadius: '15px', background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', fontWeight: '800', cursor: 'pointer', fontSize: '14px', transition: '0.2s' }}
                 onMouseOver={(e) => e.currentTarget.style.borderColor = '#94a3b8'}
@@ -526,7 +526,7 @@ export default function TicketManagement() {
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={async () => {
                   if (!manageResponse.trim()) return;
                   const ticketId = manageTicket.id || manageTicket.ticket_id || manageTicket.ticket_number;
@@ -534,7 +534,7 @@ export default function TicketManagement() {
                     const res = await fetch(`${API_ENDPOINTS.SUPPORT_TICKETS}/${encodeURIComponent(ticketId)}`, {
                       method: 'PUT',
                       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
-                      body: JSON.stringify({ 
+                      body: JSON.stringify({
                         id: ticketId,
                         ticket_id: ticketId,
                         response: manageResponse,
@@ -550,11 +550,11 @@ export default function TicketManagement() {
                       await fetch(`${API_ENDPOINTS.SUPPORT_TICKETS}/${encodeURIComponent(ticketId)}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
-                        body: JSON.stringify({ 
+                        body: JSON.stringify({
                           id: ticketId,
                           ticket_id: ticketId,
-                          response: manageResponse, 
-                          status: 'Resolved' 
+                          response: manageResponse,
+                          status: 'Resolved'
                         })
                       });
                       setTickets(prev => prev.map(t => (t.id === ticketId || t.ticket_id === ticketId) ? { ...t, response: manageResponse, status: 'Resolved' } : t));
@@ -566,8 +566,8 @@ export default function TicketManagement() {
                   }
                 }}
                 disabled={!manageResponse.trim()}
-                style={{ 
-                  padding: '16px', borderRadius: '15px', background: '#3b82f6', color: 'white', border: 'none', fontWeight: '800', 
+                style={{
+                  padding: '16px', borderRadius: '15px', background: '#3b82f6', color: 'white', border: 'none', fontWeight: '800',
                   cursor: manageResponse.trim() ? 'pointer' : 'not-allowed', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                   boxShadow: manageResponse.trim() ? '0 10px 15px -3px rgba(59, 130, 246, 0.3)' : 'none', opacity: manageResponse.trim() ? 1 : 0.6,
                   transition: 'all 0.2s'
@@ -583,9 +583,9 @@ export default function TicketManagement() {
       {/* VIEW TICKET MODAL */}
       {viewTicket && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="animate-zoom-in" style={{ background: 'white', padding: '35px', borderRadius: '30px', width: '100%', maxWidth: '550px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '3px solid #cbd5e1', position: 'relative' }}>
-            
-            <button 
+          <div className="animate-zoom-in" style={{ background: 'white', padding: '35px', borderRadius: '30px', width: '100%', maxWidth: '550px', maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '3px solid #cbd5e1', position: 'relative' }}>
+
+            <button
               onClick={() => setViewTicket(null)}
               style={{ position: 'absolute', right: '25px', top: '25px', width: '36px', height: '36px', borderRadius: '50%', background: '#f8fafc', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
               onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}

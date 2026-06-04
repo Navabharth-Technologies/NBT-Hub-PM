@@ -111,7 +111,7 @@ export default function PayslipScreen() {
                     {/* Logo & Header */}
                     <div style={{ textAlign: 'center', marginBottom: winWidth < 768 ? '20px' : '40px' }}>
                         <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'center' }}>
-                            <img src="/assets/logo.png" alt="Company Logo" style={{ height: winWidth < 768 ? '50px' : '70px', objectFit: 'contain' }} />
+                            <img src="/assets/logo.png" alt="Company Logo" style={{ height: winWidth < 768 ? '80px' : '120px', objectFit: 'contain' }} />
                         </div>
                         <h2 style={{ fontSize: winWidth < 768 ? '22px' : '36px', fontWeight: '900', color: '#062c64', margin: '20px 0 5px', letterSpacing: '-0.5px' }}>NAVABHARATH TECHNOLOGIES</h2>
                         <p style={{ margin: 0, fontSize: winWidth < 768 ? '11px' : '14px', color: '#1e40af', fontWeight: '700' }}>Smarter Solutions for Better Future</p>

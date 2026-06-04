@@ -325,7 +325,7 @@ export default function SalaryStatements() {
 
                         {/* Company Branding */}
                         <div style={{ textAlign: 'center', marginBottom: '30px', position: 'relative', zIndex: 2 }}>
-                            <img src={logo} alt="Company Logo" style={{ width: '50px', marginBottom: '15px' }} />
+                            <img src={logo} alt="Company Logo" style={{ width: '120px', marginBottom: '15px' }} />
                             <h1 style={{ fontSize: '28px', fontWeight: '950', color: '#0f172a', margin: '0 0 5px 0', letterSpacing: '-1px' }}>NAVABHARATH TECHNOLOGIES</h1>
                             <p style={{ margin: 0, fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Smarter Solutions for Better Future</p>
                             <div style={{ width: '100%', height: '1.5px', background: '#f1f5f9', margin: '20px 0' }}></div>

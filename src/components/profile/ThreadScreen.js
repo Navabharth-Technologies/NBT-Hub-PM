@@ -45,6 +45,7 @@ export default function ThreadScreen() {
     const editFileInputRef = useRef(null);
     const [reactorModal, setReactorModal] = useState(null); // { postId, emoji, users, count }
     const [loadingReactors, setLoadingReactors] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState({ show: false, postId: null, userId: null });
 
     useEffect(() => {
         if (clearNotifications) clearNotifications();
@@ -287,6 +288,13 @@ export default function ThreadScreen() {
     const isMobile = winWidth < 768;
     const isTablet = winWidth < 1024;
 
+    const confirmDelete = async (confirmed) => {
+      if (confirmed && deleteConfirm.postId) {
+        await deletePost(deleteConfirm.postId, deleteConfirm.userId);
+      }
+      setDeleteConfirm({ show: false, postId: null, userId: null });
+    };
+
     const styles = {
         container: { minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '20px', padding: isMobile ? '100px 15px 40px' : (isTablet ? '125px 26px 50px' : '125px 40px 50px'), marginTop: 0, width: '100%', maxWidth: '100%', margin: '0', boxSizing: 'border-box' },
         card: { backgroundColor: 'white', borderRadius: isMobile ? '25px' : '40px', padding: isMobile ? '20px' : '30px', boxShadow: '0 10px 40px rgba(0,0,0,0.04)', border: '3px solid #cbd5e1' },
@@ -406,6 +414,19 @@ export default function ThreadScreen() {
 
     return (
         <div style={styles.container}>
+            <AppHeader />
+            {deleteConfirm.show && (
+                <div style={styles.modalOverlay}>
+                    <div style={styles.modalContent}>
+                        <h2 style={{ marginBottom: '1rem' }}>Confirm Deletion</h2>
+                        <p>Are you sure you want to delete this post?</p>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
+                            <button onClick={() => confirmDelete(true)} style={{ flex: 1, padding: '8px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '8px' }}>Delete</button>
+                            <button onClick={() => confirmDelete(false)} style={{ flex: 1, padding: '8px', backgroundColor: '#cbd5e1', color: '#0B1E3F', border: 'none', borderRadius: '8px' }}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* CREATE THREAD */}
             <div style={{ ...styles.card, borderTop: '5px solid #FDB913' }}>
                 <textarea style={styles.mainInput} placeholder="Share an update with the team..." value={newPost} onChange={e => setNewPost(e.target.value)} />
@@ -544,7 +565,7 @@ export default function ThreadScreen() {
                                         <Edit3 size={16} />
                                     </button>
                                     <button 
-                                        onClick={() => deletePost(post.id, post.userId || post.user_id || post.employee_id)} 
+                                        onClick={() => setDeleteConfirm({ show: true, postId: post.id, userId: post.userId || post.user_id || post.employee_id })}
                                         style={{ border: 'none', background: '#fef2f2', color: '#ef4444', padding: '10px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                         title="Delete post"
                                     >

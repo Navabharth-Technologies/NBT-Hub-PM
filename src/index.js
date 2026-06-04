@@ -4,7 +4,7 @@ import App from './App';
 import { HashRouter } from 'react-router-dom';
 
 // Helper: show a beautiful centered modal (pure DOM, works outside React tree)
-function showSessionExpiredModal(message, onConfirm) {
+function showSessionExpiredModal(message, onConfirm, title = "Session Expired", icon = "⚠") {
   const existing = document.getElementById('__session_modal__');
   if (existing) existing.remove();
 
@@ -74,8 +74,8 @@ function showSessionExpiredModal(message, onConfirm) {
       }
     </style>
     <div class="__sm_card__">
-      <div class="__sm_icon__">⚠</div>
-      <p class="__sm_title__">Session Expired</p>
+      <div class="__sm_icon__">${icon}</div>
+      <p class="__sm_title__">${title}</p>
       <p class="__sm_msg__">${message}</p>
       <button class="__sm_btn__" id="__session_ok_btn__">OK, Got it</button>
     </div>
@@ -87,7 +87,7 @@ function showSessionExpiredModal(message, onConfirm) {
     overlay.style.animation = 'none';
     overlay.style.opacity = '0';
     overlay.style.transition = 'opacity 0.2s';
-    setTimeout(() => { overlay.remove(); onConfirm(); }, 200);
+    setTimeout(() => { overlay.remove(); if (onConfirm) onConfirm(); }, 200);
   });
 }
 
@@ -122,8 +122,14 @@ window.fetch = async (...args) => {
     }
     return response;
   } catch (error) {
-    if (error.name === 'TypeError' || error.message?.includes('Failed to fetch')) {
+    if (error.name === 'TypeError' || error.message?.includes('Failed to fetch') || error.message?.includes('network')) {
       window.dispatchEvent(new Event('offline'));
+      showSessionExpiredModal(
+        "Please check your internet connection and try again.",
+        null,
+        "Network Error",
+        "🔌"
+      );
     }
     return Promise.reject(error);
   }

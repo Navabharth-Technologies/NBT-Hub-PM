@@ -89,7 +89,7 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: userEmail, otp: passwords.otp })
       });
-      
+
       const data = await response.json();
       if (response.ok) {
         setOtpVerified(true);
@@ -140,7 +140,7 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
     setLoading(true);
     try {
       const endpoint = resetMode ? API_ENDPOINTS.PASSWORD_RESET : API_ENDPOINTS.PASSWORD_CHANGE;
-      const body = resetMode 
+      const body = resetMode
         ? { email: userEmail, otp, newPassword, logoutAllDevices }
         : { email: userEmail, oldPassword: currentPassword, newPassword, logoutAllDevices };
 
@@ -249,7 +249,7 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
                 <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#0B1E3F', margin: 0 }}>Update Security</h2>
               </div>
               <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '600', margin: 0 }}>
-                {resetMode ? `An OTP has been sent to ${userEmail}.` : 'Refresh your credentials regularly for better security.'}
+                {resetMode ? `An OTP has been sent to ${userEmail}.` : 'Change Your Password'}
               </p>
             </div>
 
@@ -270,7 +270,7 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
                       <div style={{ cursor: 'pointer', color: '#94a3b8' }} onClick={() => setShowPass({ ...showPass, current: !showPass.current })}>
                         {showPass.current ? <Eye size={16} color="#315A9E" /> : <EyeOff size={16} />}
                       </div>
-                      <div style={{ color: '#315A9E', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }} onClick={handleForgotPassword}>FORGOT?</div>
+                      <div style={{ color: '#315A9E', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }} onClick={handleForgotPassword}>forgot?</div>
                     </div>
                   </div>
                 </div>
@@ -291,7 +291,7 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
                       style={{ width: '100%', padding: '16px 20px', borderRadius: '18px', border: '1.5px solid #fbbf24', background: otpVerified ? '#f8fafc' : '#fffbeb', fontSize: '15px', fontWeight: '900', color: otpVerified ? '#64748b' : '#92400e', outline: 'none', boxSizing: 'border-box', textAlign: 'center', letterSpacing: '2px' }}
                     />
                   </div>
-                  
+
                   {!otpVerified && (
                     <div style={{ marginTop: '12px', textAlign: 'center', fontSize: '13px' }}>
                       {countdown > 0 ? (
@@ -299,7 +299,7 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
                           Resend OTP in <strong style={{ color: '#475569' }}>{countdown}s</strong>
                         </span>
                       ) : (
-                        <span 
+                        <span
                           onClick={handleForgotPassword}
                           style={{ color: '#315A9E', fontWeight: '800', cursor: 'pointer', textDecoration: 'underline' }}
                         >
@@ -349,7 +349,7 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
                         onChange={handleChange}
                         style={{ width: '100%', padding: '16px 20px', borderRadius: '18px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontSize: '15px', fontWeight: '600', color: '#0B1E3F', outline: 'none', boxSizing: 'border-box' }}
                       />
-                      <div 
+                      <div
                         style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#94a3b8' }}
                         onClick={() => setShowPass({ ...showPass, new: !showPass.new })}
                       >
@@ -369,7 +369,7 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
                         onChange={handleChange}
                         style={{ width: '100%', padding: '16px 20px', borderRadius: '18px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontSize: '15px', fontWeight: '600', color: '#0B1E3F', outline: 'none', boxSizing: 'border-box' }}
                       />
-                      <div 
+                      <div
                         style={{ position: 'absolute', right: '15px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#94a3b8' }}
                         onClick={() => setShowPass({ ...showPass, confirm: !showPass.confirm })}
                       >
@@ -379,9 +379,9 @@ export default function UpdatePasswordModal({ isOpen, onClose, userEmail }) {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
-                    <input 
-                      type="checkbox" 
-                      id="logoutAllDevices" 
+                    <input
+                      type="checkbox"
+                      id="logoutAllDevices"
                       checked={logoutAllDevices}
                       onChange={(e) => setLogoutAllDevices(e.target.checked)}
                       style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#315A9E' }}

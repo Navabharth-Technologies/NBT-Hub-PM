@@ -659,7 +659,7 @@ export default function TeamManagement() {
                   padding: winWidth < 480 ? '12px' : '16px', 
                   borderRadius: '16px', 
                   boxShadow: 'var(--shadow-md)', 
-                  border: 'none',
+                  border: '1.5px solid #cbd5e1',
                   display: 'flex',
                   flexDirection: 'column',
                   height: '100%',

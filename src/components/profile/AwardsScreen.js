@@ -194,149 +194,103 @@ export default function AwardsScreen() {
             const unique = Array.from(new Map(allStaff.map(s => [s.id || s.employee_id || s.userId, s])).values());
             setEmployees(unique);
 
-            // Fetch Quiz Scores to aggregate
+            // Fetch ALL quiz completion records from the rewards leaderboard API (returns cumulative all-time quiz scores for all users)
             let qList = [];
             let fetchSuccess = false;
             try {
-                const qRes = await fetch(API_ENDPOINTS.QUIZ_LEADERBOARD, { headers: { 'Authorization': `Bearer ${user.token}` } });
-                if (qRes.ok) {
-                    const qData = await qRes.json();
-                    qList = Array.isArray(qData) ? qData : (qData.data || []);
+                const [allRes, rewHistoryRes] = await Promise.all([
+                    fetch(API_ENDPOINTS.LEADERBOARD_ALL || `${BASE_URL}/api/employees/leaderboard/all`, { headers: { 'Authorization': `Bearer ${user.token}` } }),
+                    fetch(API_ENDPOINTS.REWARDS_HISTORY || `${BASE_URL}/api/admin/rewards/history`, { headers: { 'Authorization': `Bearer ${user.token}` } })
+                ]);
+                if (allRes.ok && rewHistoryRes.ok) {
+                    const allJson = await allRes.json();
+                    const employeesList = allJson.data || [];
+                    const rewHistoryData = await rewHistoryRes.json();
+                    
+                    const rewardSums = {};
+                    rewHistoryData.forEach(r => {
+                        const empId = String(r.employee_id || '');
+                        if (empId) {
+                            rewardSums[empId] = (rewardSums[empId] || 0) + parsePoints(r.points);
+                        }
+                    });
+
+                    qList = employeesList.map(emp => {
+                        const empId = String(emp.id || emp.employee_id || '');
+                        const totalPoints = emp.totalPointsNum || emp.totalRepNum || parsePoints(emp.total_points || emp.total_rep || 0);
+                        const rewardPoints = rewardSums[empId] || 0;
+                        const quizPoints = Math.max(0, totalPoints - rewardPoints);
+                        return {
+                            employee_id: empId,
+                            points: quizPoints,
+                            created_at: null
+                        };
+                    }).filter(item => item.employee_id && item.points > 0);
                     fetchSuccess = true;
                 }
-            } catch (e) { }
+            } catch (e) { console.error('Quiz leaderboard fetch failed:', e); }
 
-            // Fetch exact cumulative quiz points for all employees from backend database
-            let backendCumulativeQuizScores = [];
-            try {
-                const rewardsPromises = unique.map(async (emp) => {
-                    const empId = emp.id || emp.employee_id || emp.userId;
-                    if (!empId) return null;
-                    try {
-                        const res = await fetch(`${BASE_URL}/api/rewards/user/${empId}`, { headers: { 'Authorization': `Bearer ${user.token}` } });
-                        if (res.ok) {
-                            const data = await res.json();
-                            const quizPoints = parsePoints(data.quizPointsNum || data.quizPoints);
-                            if (quizPoints > 0) {
-                                return {
-                                    employee_id: String(empId),
-                                    points: quizPoints,
-                                    created_at: null // Cumulative
-                                };
-                            }
-                        }
-                    } catch (e) {
-                        console.error(`Failed to fetch rewards for user ${empId}:`, e);
-                    }
-                    return null;
-                });
-                backendCumulativeQuizScores = (await Promise.all(rewardsPromises)).filter(Boolean);
-            } catch (e) {
-                console.error("Failed to fetch backend cumulative rewards:", e);
-            }
+            // ── Cache & Merge: preserve ALL historical dated records, never overwrite ──
+            const getLocalDateString = (dateVal) => {
+                const d = dateVal ? new Date(dateVal) : null;
+                if (!d || isNaN(d.getTime())) return null;
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            };
 
-            // Local Cache & Merge Strategy to prevent historical score loss when quiz is deleted
-            if (fetchSuccess || backendCumulativeQuizScores.length > 0) {
+            if (fetchSuccess) {
                 try {
                     let cachedQuizScores = [];
                     const localData = localStorage.getItem('nbt_historical_quiz_scores');
                     if (localData) {
                         const parsed = JSON.parse(localData);
-                        if (Array.isArray(parsed)) {
-                            cachedQuizScores = parsed;
-                        }
+                        if (Array.isArray(parsed)) cachedQuizScores = parsed;
                     }
 
-                    // A robust helper to get local date string YYYY-MM-DD
-                    const getLocalDateString = (dateVal) => {
-                        const d = dateVal ? new Date(dateVal) : new Date();
-                        if (isNaN(d.getTime())) {
-                            const now = new Date();
-                            const y = now.getFullYear();
-                            const m = String(now.getMonth() + 1).padStart(2, '0');
-                            const day = String(now.getDate()).padStart(2, '0');
-                            return `${y}-${m}-${day}`;
-                        }
-                        const year = d.getFullYear();
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        return `${year}-${month}-${day}`;
-                    };
-
                     const mergedMap = new Map();
-                    // 1. Load historical cache first (all of it, no activeEmpIds filtering!)
                     cachedQuizScores.forEach(item => {
-                        if (item) {
-                            const empId = String(item.employee_id || item.user_id || item.userId || item.id || '');
-                            if (empId) {
-                                const score = parsePoints(item.total_score || item.points || item.quiz_score || item.score || 0);
-                                const originalDateStr = item.created_at || item.completion_date || item.date || null;
-                                // Use 'cumulative' key for undated entries so they don't double-count with dated entries
-                                const uniqueKey = originalDateStr
-                                    ? `${empId}-${getLocalDateString(originalDateStr)}`
-                                    : `${empId}-cumulative`;
-                                
-                                if (mergedMap.has(uniqueKey)) {
-                                    const existing = mergedMap.get(uniqueKey);
-                                    if (score > existing.points) {
-                                        mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: originalDateStr });
-                                    }
-                                } else {
-                                    mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: originalDateStr });
-                                }
-                            }
+                        if (!item) return;
+                        const empId = String(item.employee_id || item.user_id || item.userId || item.id || '');
+                        if (!empId) return;
+                        const score = parsePoints(item.total_score || item.points || item.quiz_score || item.score || 0);
+                        const dateStr = item.created_at || item.completion_date || item.date || null;
+                        const dateKey = dateStr ? getLocalDateString(dateStr) : null;
+                        const uniqueKey = dateKey ? `${empId}-${dateKey}` : `${empId}-cumulative`;
+                        if (!mergedMap.has(uniqueKey) || score > parsePoints((mergedMap.get(uniqueKey) || {}).points || 0)) {
+                            mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: dateStr });
                         }
                     });
 
-                    // 2. Overlay new active quiz scores from server
                     qList.forEach(item => {
-                        if (item) {
-                            const empId = String(item.employee_id || item.user_id || item.userId || item.id || '');
-                            if (empId) {
-                                const score = parsePoints(item.total_score || item.points || item.quiz_score || item.score || 0);
-                                const originalDateStr = item.created_at || item.completion_date || item.date || null;
-                                // Undated server entries (cumulative totals) get a 'cumulative' key to avoid double-counting
-                                const uniqueKey = originalDateStr
-                                    ? `${empId}-${getLocalDateString(originalDateStr)}`
-                                    : `${empId}-cumulative`;
-                                
-                                if (mergedMap.has(uniqueKey)) {
-                                    const existing = mergedMap.get(uniqueKey);
-                                    if (score > existing.points) {
-                                        mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: originalDateStr });
-                                    }
-                                } else {
-                                    mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: originalDateStr });
-                                }
-                            }
+                        if (!item) return;
+                        const empId = String(item.employee_id || item.user_id || item.userId || item.id || '');
+                        if (!empId) return;
+                        const score = parsePoints(item.total_score || item.points || item.quiz_score || item.score || 0);
+                        const dateStr = item.created_at || item.completion_date || item.date || null;
+                        const dateKey = dateStr ? getLocalDateString(dateStr) : null;
+                        const uniqueKey = dateKey ? `${empId}-${dateKey}` : `${empId}-cumulative`;
+                        if (!mergedMap.has(uniqueKey) || score > parsePoints((mergedMap.get(uniqueKey) || {}).points || 0)) {
+                            mergedMap.set(uniqueKey, { ...item, employee_id: empId, points: score, created_at: dateStr });
                         }
-                    });
-
-                    // 3. Overlay the exact all-time cumulative scores from the backend
-                    backendCumulativeQuizScores.forEach(item => {
-                        const empId = item.employee_id;
-                        const uniqueKey = `${empId}-cumulative`;
-                        mergedMap.set(uniqueKey, item);
                     });
 
                     const mergedList = Array.from(mergedMap.values());
-                    localStorage.setItem('nbt_historical_quiz_scores', JSON.stringify(mergedList));
+                    localStorage.setItem('nbt_historical_quiz_scores', JSON.stringify(mergedList.slice(-2000)));
                     qList = mergedList;
                 } catch (cacheErr) {
-                    console.error("Local quiz score caching error:", cacheErr);
+                    console.error('Quiz score cache error:', cacheErr);
                 }
             } else {
-                // Fallback to cache if network fails
                 try {
                     const localData = localStorage.getItem('nbt_historical_quiz_scores');
                     if (localData) {
                         const parsed = JSON.parse(localData);
-                        if (Array.isArray(parsed)) {
-                            qList = parsed;
-                        }
+                        if (Array.isArray(parsed)) qList = parsed;
                     }
                 } catch (cacheErr) {
-                    console.error("Local quiz score cache fallback error:", cacheErr);
+                    console.error('Quiz score cache fallback error:', cacheErr);
                 }
             }
 
@@ -421,21 +375,78 @@ export default function AwardsScreen() {
     /* fetchLeaderboard replaced by local effect */
 
     const combinedRewards = React.useMemo(() => {
-        const quizRewards = quizScores.map((q, index) => {
-            const hasDate = !!(q.created_at || q.completion_date || q.date);
-            return {
-                id: `quiz-${q.employee_id || q.user_id || q.userId || q.id}-${q.id || index}`,
-                employee_id: q.employee_id || q.user_id || q.userId || q.id,
-                reward_name: 'Quiz Excellence',
-                points: parsePoints(q.total_score || q.points || q.quiz_score || q.score || 0),
-                created_at: q.created_at || q.completion_date || q.date || null,
-                note: 'Earned from Quiz Hub',
-                isCumulative: !hasDate
-            };
-        }).filter(q => q.points > 0);
+        // Group quizScores by employee ID to prevent double counting of cumulative and dated scores
+        const employeeQuizGroups = {}; // empId -> { dated: Map, cumulative: 0, items: [] }
+
+        quizScores.forEach(q => {
+            const rawId = String(q.employee_id || q.user_id || q.userId || q.id || '');
+            if (!rawId) return;
+            const emp = employees.find(e =>
+                String(e.id) === rawId ||
+                String(e.employee_id) === rawId ||
+                String(e.userId) === rawId ||
+                String(e.emp_id) === rawId
+            );
+            const id = emp ? String(emp.id || emp.employee_id || emp.userId || rawId) : rawId;
+            const score = parsePoints(q.total_score || q.points || q.quiz_score || q.score || 0);
+            if (score <= 0) return;
+
+            const dateStr = q.created_at || q.completion_date || q.date || null;
+            const hasDate = !!dateStr;
+
+            if (!employeeQuizGroups[id]) {
+                employeeQuizGroups[id] = { dated: new Map(), cumulative: 0, items: [] };
+            }
+
+            const group = employeeQuizGroups[id];
+            if (hasDate) {
+                const dateKey = dateStr.split('T')[0];
+                group.dated.set(dateKey, Math.max(group.dated.get(dateKey) || 0, score));
+                group.items.push({
+                    id: `quiz-${id}-${dateKey}`,
+                    employee_id: id,
+                    reward_name: 'Quiz Excellence',
+                    points: score,
+                    created_at: dateStr,
+                    note: 'Earned from Quiz Hub',
+                    isCumulative: false
+                });
+            } else {
+                group.cumulative = Math.max(group.cumulative, score);
+            }
+        });
+
+        const quizRewards = [];
+        Object.keys(employeeQuizGroups).forEach(id => {
+            const group = employeeQuizGroups[id];
+            const uniqueDatedItems = [];
+            const seenDates = new Set();
+            group.items.sort((a, b) => b.points - a.points);
+            group.items.forEach(item => {
+                const dKey = item.created_at.split('T')[0];
+                if (!seenDates.has(dKey)) {
+                    seenDates.add(dKey);
+                    uniqueDatedItems.push(item);
+                    quizRewards.push(item);
+                }
+            });
+
+            const datedSum = Array.from(group.dated.values()).reduce((sum, val) => sum + val, 0);
+            if (group.cumulative > datedSum) {
+                quizRewards.push({
+                    id: `quiz-${id}-cumulative`,
+                    employee_id: id,
+                    reward_name: 'Quiz Excellence',
+                    points: group.cumulative - datedSum,
+                    created_at: null,
+                    note: 'Earned from Quiz Hub',
+                    isCumulative: true
+                });
+            }
+        });
 
         return [...rewards, ...quizRewards];
-    }, [rewards, quizScores]);
+    }, [rewards, quizScores, employees]);
 
     const filteredRewards = combinedRewards.filter(r => {
         const rDate = parseToDate(r.created_at || r.date);
@@ -448,7 +459,6 @@ export default function AwardsScreen() {
                 if (rDate < startOfDay) return false;
             }
         }
-
         if (endDate) {
             const end = parseToDate(endDate);
             if (end) {
@@ -456,13 +466,11 @@ export default function AwardsScreen() {
                 if (rDate > endOfDay) return false;
             }
         }
-
         return true;
     });
 
     React.useEffect(() => {
         const mergedMap = new Map();
-        const userQuizRewards = {}; // id -> list of quiz rewards
 
         filteredRewards.forEach(r => {
             const rawId = String(r.employee_id || r.user_id || r.userId || r.id);
@@ -486,33 +494,9 @@ export default function AwardsScreen() {
 
             const existing = mergedMap.get(id);
             if (isQuiz) {
-                if (!userQuizRewards[id]) userQuizRewards[id] = [];
-                userQuizRewards[id].push(r);
+                existing.total_quiz_points += parsePoints(r.points);
             } else {
                 existing.total_reward_points += parsePoints(r.points);
-            }
-        });
-
-        // Resolve quiz points for each user to prevent duplicate/double counting of cumulative and dated scores
-        const isDateFilterActive = !!(startDate || endDate);
-        mergedMap.forEach((existing, id) => {
-            const qRewards = userQuizRewards[id] || [];
-            if (qRewards.length > 0) {
-                const cumulativeEntry = qRewards.find(q => q.isCumulative);
-                const datedEntries = qRewards.filter(q => !q.isCumulative);
-
-                if (isDateFilterActive) {
-                    // Sum up all dated quiz points in the range
-                    existing.total_quiz_points = datedEntries.reduce((sum, q) => sum + parsePoints(q.points), 0);
-                } else {
-                    if (cumulativeEntry) {
-                        // All-time: use cumulative entry if present
-                        existing.total_quiz_points = parsePoints(cumulativeEntry.points);
-                    } else {
-                        // Otherwise, sum dated entries
-                        existing.total_quiz_points = datedEntries.reduce((sum, q) => sum + parsePoints(q.points), 0);
-                    }
-                }
             }
         });
 
@@ -544,7 +528,7 @@ export default function AwardsScreen() {
         }));
 
         setLeaderboard(rankedLeaderboard.filter(item => item.total_points > 0));
-    }, [filteredRewards, employees, startDate, endDate]);
+    }, [filteredRewards, employees]);
 
 
     const topContributor = React.useMemo(() => {

@@ -752,12 +752,9 @@ export default function AssetsManagement() {
             >
               <ArrowLeft size={18} color="#64748b" />
             </button>
-            <div style={{ background: 'white', padding: '12px', borderRadius: '15px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-              <Package size={24} color="#3163aa" />
-            </div>
             <div>
               <h1 style={{ fontSize: winWidth < 768 ? '20px' : '24px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Asset Management Hub</h1>
-              <p style={{ fontSize: '13px', color: '#64748b', margin: '2px 0 0 0' }}>Deploy and track workforce hardware inventory</p>
+              <p style={{ fontSize: '13px', color: '#64748b', margin: '2px 0 0 0' }}></p>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto', flexDirection: winWidth < 480 ? 'column' : 'row', alignItems: 'center' }}>

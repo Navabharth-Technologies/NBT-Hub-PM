@@ -91,7 +91,7 @@ export default function AppHeader() {
   };
 
   return (
-    <div style={styles.header}>
+    <div className="app-header-container" style={styles.header}>
       <div style={{ ...styles.left, paddingRight: '20px' }}>
         <div
           onClick={handleLogoClick}
