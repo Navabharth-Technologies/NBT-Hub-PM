@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Download, Calendar, Search, User, Info, FileText, Table, ChevronDown, CheckCircle, Clock, XCircle, AlertTriangle, UserCheck, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { jsPDF } from 'jspdf';
@@ -22,6 +22,74 @@ export default function LeaveManagement() {
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [allLeaveStats, setAllLeaveStats] = useState([]);
   const [leavesLoading, setLeavesLoading] = useState(true);
+
+  const getOverallStatus = (req, employeesList) => {
+    const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
+    const empId = cleanId(req.user_id || req.emp_id || req.employee_id || req.id);
+    const emp = employeesList?.find(e => {
+      const eid = cleanId(e.id || e.EmpID || e.employee_id || e.userId || e.emp_id);
+      if (eid && empId && eid === empId) return true;
+      const eName = String(e.name || e.user_name || '').toLowerCase().trim();
+      const rName = String(req.employee_name || req.name || req.full_name || '').toLowerCase().trim();
+      return eName && rName && eName === rName;
+    });
+    const reqRole = String(emp?.designation || emp?.role || req.user_role || req.role || '').toUpperCase();
+    const isPMReq = reqRole.includes('PROJECT MANAGER') || reqRole === 'PM';
+
+    if (isPMReq) return 'APPROVED';
+
+    const resolvedRole = reqRole;
+    const isLeadOrAbove = resolvedRole && (resolvedRole.includes('LEAD') || resolvedRole.includes('MANAGER') || resolvedRole.includes('CEO') || resolvedRole.includes('ADMIN') || resolvedRole.includes('PRINCIPAL') || resolvedRole.includes('PM') || resolvedRole.includes('HR'));
+    const isHRRequest = resolvedRole && (resolvedRole === 'HR' || resolvedRole.includes('HUMAN RESOURCE'));
+
+    const resolveStatus = (rawStatus) => {
+      if (!rawStatus) return 'PENDING';
+      const parts = String(rawStatus).toUpperCase().split(',').map(s => s.trim());
+      if (parts.some(s => s.includes('REJECT'))) return 'REJECTED';
+      if (parts.some(s => s.includes('APPROV'))) return 'APPROVED';
+      return 'PENDING';
+    };
+
+    const pickStatus = (...fields) => {
+      const valid = fields.filter(f => f && String(f).toUpperCase() !== 'PENDING');
+      return valid.length > 0 ? valid[0] : (fields[0] || 'PENDING');
+    };
+
+    const l1Status = resolveStatus(pickStatus(req.rm_status, req.l1_status));
+    const l2Status = resolveStatus(pickStatus(req.hr_status, req.l2_status));
+    const l3Status = resolveStatus(pickStatus(req.pm_status, req.l3_status, req.manager_status));
+
+    const requiresL1 = !isLeadOrAbove;
+    const requiresL2 = true;
+    const requiresL3 = !isHRRequest;
+
+    const requiredStatuses = [
+      ...(requiresL1 ? [l1Status] : []),
+      ...(requiresL2 ? [l2Status] : []),
+      ...(requiresL3 ? [l3Status] : [])
+    ];
+
+    if (requiredStatuses.some(s => s === 'REJECTED')) {
+      return 'REJECTED';
+    } else if (requiredStatuses.every(s => s === 'APPROVED')) {
+      return 'APPROVED';
+    }
+    return 'PENDING';
+  };
+
+  const sortedLeaveRequests = useMemo(() => {
+    return [...leaveRequests].sort((a, b) => {
+      const overallA = getOverallStatus(a, allEmployees);
+      const overallB = getOverallStatus(b, allEmployees);
+      const isPendingA = overallA === 'PENDING';
+      const isPendingB = overallB === 'PENDING';
+      if (isPendingA && !isPendingB) return -1;
+      if (!isPendingA && isPendingB) return 1;
+      const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+      const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [leaveRequests, allEmployees]);
 
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const dropdownRef = useRef(null);
@@ -100,19 +168,7 @@ export default function LeaveManagement() {
       const data = await res.json();
       const list = Array.isArray(data) ? data : (data?.all || data?.data || data?.requests || []);
 
-      const sortedList = [...list].sort((a, b) => {
-        const statusA = String(a.status || 'PENDING').toUpperCase().split(',')[0].trim();
-        const statusB = String(b.status || 'PENDING').toUpperCase().split(',')[0].trim();
-        const isPendingA = statusA.includes('PENDING');
-        const isPendingB = statusB.includes('PENDING');
-        if (isPendingA && !isPendingB) return -1;
-        if (!isPendingA && isPendingB) return 1;
-        const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
-        const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
-        return dateB - dateA;
-      });
-
-      setLeaveRequests(sortedList);
+      setLeaveRequests(list);
     } finally { setLeavesLoading(false); }
   };
 
@@ -196,7 +252,7 @@ export default function LeaveManagement() {
 
           <div style={{ display: 'flex', gap: winWidth < 600 ? '12px' : '24px', borderBottom: '1.5px solid #e2e8f0', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px' }}>
             <button onClick={() => setActiveTab('leave')} style={{ padding: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', borderBottom: activeTab === 'leave' ? '3px solid #1d4ed8' : '3px solid transparent', color: activeTab === 'leave' ? '#1d4ed8' : '#64748b', fontWeight: '800', fontSize: winWidth < 600 ? '12px' : '14px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
-              Leave Requests <span style={{ background: '#1d4ed8', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '11px' }}>{leaveRequests.length}</span>
+              Leave Requests <span style={{ background: '#1d4ed8', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '11px' }}>{sortedLeaveRequests.length}</span>
             </button>
             <button onClick={() => setActiveTab('summary')} style={{ padding: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', borderBottom: activeTab === 'summary' ? '3px solid #1d4ed8' : '3px solid transparent', color: activeTab === 'summary' ? '#1d4ed8' : '#64748b', fontWeight: '800', fontSize: winWidth < 600 ? '12px' : '14px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
               <Table size={14} /> Leaves Summary (XL)
@@ -393,32 +449,19 @@ export default function LeaveManagement() {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: winWidth < 768 ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))', gap: '24px' }}>
-              {leaveRequests.length > 0 ? (
-                leaveRequests.map(req => {
-                  const cleanId = (val) => String(val || '').replace(/[^0-9]/g, '').trim();
-                  const empId = cleanId(req.user_id || req.emp_id || req.employee_id || req.id);
-                  const emp = allEmployees.find(e => {
-                    const eid = cleanId(e.id || e.EmpID || e.employee_id || e.userId || e.emp_id);
-                    if (eid && empId && eid === empId) return true;
-                    const eName = String(e.name || e.user_name || '').toLowerCase().trim();
-                    const rName = String(req.employee_name || req.name || req.full_name || '').toLowerCase().trim();
-                    return eName && rName && eName === rName;
-                  });
-                  const reqRole = String(emp?.designation || emp?.role || req.user_role || req.role || '').toUpperCase();
-                  const isPMReq = reqRole.includes('PROJECT MANAGER') || reqRole === 'PM';
-
-                  const rawStatus = isPMReq ? 'APPROVED' : String(req.status || 'PENDING').toUpperCase();
-                  const statusMatch = rawStatus.split(',')[0].trim();
+              {sortedLeaveRequests.length > 0 ? (
+                sortedLeaveRequests.map(req => {
+                  const overall = getOverallStatus(req, allEmployees);
 
                   let sColor = '#f59e0b'; // Orange for Pending
                   let sBg = '#fffbeb';
                   let displayStatus = 'PENDING';
 
-                  if (statusMatch.includes('APPROVED')) {
+                  if (overall === 'APPROVED') {
                     sColor = '#10b981'; // Green for Approved
                     sBg = '#ecfdf5';
                     displayStatus = 'APPROVED';
-                  } else if (statusMatch.includes('REJECTED')) {
+                  } else if (overall === 'REJECTED') {
                     sColor = '#ef4444'; // Red for Rejected
                     sBg = '#fef2f2';
                     displayStatus = 'REJECTED';
