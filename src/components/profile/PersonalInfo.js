@@ -93,7 +93,7 @@ const SECTIONS = [
     icon: <History size={20} />,
     color: '#ef4444',
     fields: [
-      { key: 'separation', label: 'Separation Date', type: 'text', placeholder: 'DD-MM-YYYY' },
+      { key: 'separation', label: 'Separation Date', type: 'text', placeholder: 'DD/MM/YYYY' },
       { key: 'lwd', label: 'Last Working Day (LWD)', type: 'text', placeholder: 'DD/MM/YYYY' },
       { key: 'attrition_bucket', label: 'Attrition Bucket', type: 'select', options: ['N/A', 'Resignation', 'Performance', 'Behavioral', 'Medical'] },
       { key: 'reason', label: 'Reason of Separation', type: 'text' },
@@ -318,7 +318,7 @@ export default function PersonalInfo({ onBack }) {
                 const dd = String(parseInt(day, 10)).padStart(2, '0');
                 const mm = String(parseInt(month, 10)).padStart(2, '0');
                 const yyyy = String(parseInt(year, 10));
-                normalizedVal = (targetKey === 'dob' || targetKey === 'date_of_birth' || targetKey === 'lwd') ? `${dd}/${mm}/${yyyy}` : `${dd}-${mm}-${yyyy}`;
+                normalizedVal = (targetKey === 'dob' || targetKey === 'date_of_birth' || targetKey === 'lwd' || targetKey === 'separation') ? `${dd}/${mm}/${yyyy}` : `${dd}-${mm}-${yyyy}`;
               }
             }
 
@@ -522,8 +522,8 @@ export default function PersonalInfo({ onBack }) {
           clean = clean.slice(0, 4) + yyyy;
         }
 
-        // Use '-' for doj/separation (DD-MM-YYYY) and '/' for dob/lwd (DD/MM/YYYY)
-        const useDash = (key === 'doj' || key === 'separation');
+        // Use '-' for doj (DD-MM-YYYY) and '/' for dob/lwd/separation (DD/MM/YYYY)
+        const useDash = (key === 'doj');
         const sep = useDash ? '-' : '/';
         let formatted = '';
         if (clean.length > 4) {
@@ -727,6 +727,13 @@ export default function PersonalInfo({ onBack }) {
       }
     }
 
+    if (activeSectionFields.includes('separation') && form.separation) {
+      if (!/^\d{2}\/\d{2}\/\d{4}$/.test(form.separation) && !/^\d{2}-\d{2}-\d{4}$/.test(form.separation)) {
+        setToast({ type: 'error', msg: `Please enter a complete Separation Date (DD/MM/YYYY)${getSection('separation')}` });
+        return;
+      }
+    }
+
     if (activeSectionFields.includes('lwd') && form.lwd) {
       if (!/^\d{2}\/\d{2}\/\d{4}$/.test(form.lwd)) {
         setToast({ type: 'error', msg: `Please enter a complete Last Working Day (DD/MM/YYYY)${getSection('lwd')}` });
@@ -793,12 +800,12 @@ export default function PersonalInfo({ onBack }) {
       const uid = selectedEmpId;
       const token = localStorage.getItem('token');
 
-      // Format dates: date_of_birth/dob stays DD/MM/YYYY; doj/separation/lwd convert to YYYY-MM-DD
+      // Format dates: date_of_birth/dob and separation stay DD/MM/YYYY; doj/lwd convert to YYYY-MM-DD
       const payload = { employee_id: uid, id: uid };
       activeSectionFields.forEach(k => {
         let val = form[k];
-        if ((k === 'dob' || k === 'date_of_birth') && val && typeof val === 'string') {
-          // Keep DOB as DD/MM/YYYY — normalise dashes to slashes if needed
+        if ((k === 'dob' || k === 'date_of_birth' || k === 'separation') && val && typeof val === 'string') {
+          // Keep DOB/separation as DD/MM/YYYY — normalise dashes to slashes if needed
           if (val.includes('-')) {
             const parts = val.split('-');
             if (parts.length === 3 && parts[0].length === 2) {
@@ -808,7 +815,7 @@ export default function PersonalInfo({ onBack }) {
             }
           }
           // Already DD/MM/YYYY — leave as-is
-        } else if (['doj', 'separation', 'lwd'].includes(k) && val && typeof val === 'string') {
+        } else if (['doj', 'lwd'].includes(k) && val && typeof val === 'string') {
           // Convert other dates to YYYY-MM-DD for backend
           if (val.includes('-')) {
             const parts = val.split('-');
