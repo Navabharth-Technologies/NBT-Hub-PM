@@ -1,4 +1,4 @@
-import React, { useState, useEffect, cloneElement, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, cloneElement, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -136,6 +136,23 @@ const SECTIONS = [
 export default function PersonalInfo({ onBack }) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const caretRef = useRef({ target: null, selectionStart: 0, oldValLen: 0 });
+
+  useLayoutEffect(() => {
+    const { target, selectionStart, oldValLen } = caretRef.current;
+    if (target) {
+      try {
+        let newPos = selectionStart;
+        if (target.value.length !== oldValLen) {
+          const diff = target.value.length - oldValLen;
+          newPos = Math.max(0, selectionStart + diff);
+        }
+        target.setSelectionRange(newPos, newPos);
+      } catch (err) { }
+      caretRef.current = { target: null, selectionStart: 0, oldValLen: 0 };
+    }
+  });
+
   const [form, setForm] = useState({
     emp_name: '', gender: '', dob: '', date_of_birth: '', age: '', religion: '', blood_group: '', marital_status: '', nationality: '', father_husband_name: '', pan_number: '', aadhar_number: '', category: '',
     pancard_photo: '', adharcard_photo: '', voter_id: '', voter_id_photo: '', passport_no: '', passport_photo: '',
@@ -463,79 +480,284 @@ export default function PersonalInfo({ onBack }) {
     }
   };
 
-  const handleChange = (key, value) => {
+  const handleChange = (key, value, target) => {
     let sanitizedValue = value;
 
-    if (['dob', 'date_of_birth', 'lwd', 'separation', 'doj'].includes(key)) {
+    if (['dob', 'date_of_birth', 'separation', 'lwd'].includes(key)) {
       const prevValue = form[key] || '';
       const isDeleting = prevValue.length > value.length;
-      
-      if (isDeleting) {
-        sanitizedValue = value.replace(/[^0-9\/\-]/g, '');
-      } else {
-        let clean = value.replace(/\D/g, '');
 
-        if (clean.length > 8) {
-          clean = clean.slice(0, 8);
-        }
-
-        if (clean.length >= 1) {
-          const d1 = parseInt(clean.charAt(0), 10);
-          if (d1 > 3) {
-            clean = '0' + clean;
-          }
-        }
-        if (clean.length >= 2) {
-          let dd = clean.slice(0, 2);
-          const ddVal = parseInt(dd, 10);
-          if (ddVal > 31) {
-            dd = '31';
-          } else if (ddVal === 0) {
-            dd = '01';
-          }
-          clean = dd + clean.slice(2);
-        }
-
-        if (clean.length >= 3) {
-          const m1 = parseInt(clean.charAt(2), 10);
-          if (m1 > 1) {
-            clean = clean.slice(0, 2) + '0' + clean.slice(2);
-          }
-        }
-        if (clean.length >= 4) {
-          let mm = clean.slice(2, 4);
-          const mmVal = parseInt(mm, 10);
-          if (mmVal > 12) {
-            mm = '12';
-          } else if (mmVal === 0) {
-            mm = '01';
-          }
-          clean = clean.slice(0, 2) + mm + clean.slice(4);
-        }
-
-        if (clean.length >= 8) {
-          let yyyy = clean.slice(4, 8);
-          const yyyyVal = parseInt(yyyy, 10);
-          if (yyyyVal > 2099) {
-            yyyy = '2099';
-          }
-          clean = clean.slice(0, 4) + yyyy;
-        }
-
-        // Use '-' for doj (DD-MM-YYYY) and '/' for dob/lwd/separation (DD/MM/YYYY)
-        const useDash = (key === 'doj');
-        const sep = useDash ? '-' : '/';
-        let formatted = '';
-        if (clean.length > 4) {
-          formatted = clean.slice(0, 2) + sep + clean.slice(2, 4) + sep + clean.slice(4);
-        } else if (clean.length > 2) {
-          formatted = clean.slice(0, 2) + sep + clean.slice(2);
-        } else {
-          formatted = clean;
-        }
-
-        sanitizedValue = formatted;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        caretRef.current = {
+          target,
+          selectionStart: target.selectionStart,
+          oldValLen: target.value.length
+        };
       }
+
+      // Collapse multiple trailing slashes (e.g. "10//" -> "10/")
+      let cleanedValue = value;
+      if (value.endsWith('//')) {
+        cleanedValue = value.replace(/\/+$/, '/');
+      }
+
+      // Split the input value by slashes
+      const parts = cleanedValue.split('/');
+      // Keep only digits in each part
+      let cleanParts = parts.map(p => p.replace(/\D/g, ''));
+
+      // If there are more than 3 parts, truncate
+      if (cleanParts.length > 3) {
+        cleanParts = cleanParts.slice(0, 3);
+      }
+
+      let dayStr = '';
+      let monthStr = '';
+      let yearStr = '';
+
+      if (cleanParts.length === 1) {
+        const p0 = cleanParts[0] || '';
+        if (p0.length > 2) {
+          yearStr = p0;
+        } else {
+          dayStr = p0;
+        }
+      } else if (cleanParts.length === 2) {
+        const p0 = cleanParts[0] || '';
+        const p1 = cleanParts[1] || '';
+        if (p0.length > 2) {
+          yearStr = p0;
+          monthStr = p1;
+        } else if (p1.length > 2) {
+          dayStr = p0;
+          yearStr = p1;
+        } else {
+          dayStr = p0;
+          monthStr = p1;
+        }
+      } else if (cleanParts.length === 3) {
+        dayStr = cleanParts[0] || '';
+        monthStr = cleanParts[1] || '';
+        yearStr = cleanParts[2] || '';
+      }
+
+      // Restrict day (dd)
+      if (dayStr) {
+        if (dayStr.length > 2) dayStr = dayStr.slice(0, 2);
+        if (dayStr.length === 1 && parseInt(dayStr, 10) > 3) {
+          dayStr = '0' + dayStr;
+        }
+        const ddVal = parseInt(dayStr, 10);
+        if (!isNaN(ddVal)) {
+          if (ddVal > 31) dayStr = '31';
+          else if (ddVal === 0 && dayStr.length === 2) dayStr = '01';
+        }
+      }
+
+      // Restrict month (mm)
+      if (monthStr) {
+        if (monthStr.length > 2) monthStr = monthStr.slice(0, 2);
+        if (monthStr.length === 1 && parseInt(monthStr, 10) > 1) {
+          monthStr = '0' + monthStr;
+        }
+        const mmVal = parseInt(monthStr, 10);
+        if (!isNaN(mmVal)) {
+          if (mmVal > 12) monthStr = '12';
+          else if (mmVal === 0 && monthStr.length === 2) monthStr = '01';
+        }
+      }
+
+      // Restrict year (yyyy)
+      if (yearStr) {
+        if (yearStr.length > 4) yearStr = yearStr.slice(0, 4);
+        const yyyyVal = parseInt(yearStr, 10);
+        if (!isNaN(yyyyVal) && yearStr.length === 4) {
+          if (yyyyVal > 2099) yearStr = '2099';
+        }
+      }
+
+      // Reconstruct formatted string
+      let formatted = '';
+      if (!dayStr && !monthStr && !yearStr) {
+        formatted = '';
+      } else if (parts.length === 1) {
+        if (cleanParts[0] && cleanParts[0].length > 2) {
+          formatted = `//${yearStr}`;
+        } else {
+          formatted = dayStr;
+          if (dayStr.length === 2 && !isDeleting) {
+            formatted += '/';
+          }
+        }
+      } else if (parts.length === 2) {
+        const p1 = cleanParts[1] || '';
+        const p0 = cleanParts[0] || '';
+        if (p0.length > 2) {
+          formatted = `${yearStr}/${monthStr}`;
+        } else if (p1.length > 2) {
+          formatted = `${dayStr}//${yearStr}`;
+        } else {
+          formatted = `${dayStr}/${monthStr}`;
+          if (monthStr.length === 2 && !isDeleting) {
+            formatted += '/';
+          }
+        }
+      } else {
+        formatted = `${dayStr}/${monthStr}/${yearStr}`;
+      }
+
+      sanitizedValue = formatted;
+
+      // Auto-calculate age from DOB if applicable
+      if (key === 'dob' || key === 'date_of_birth') {
+        const dobClean = sanitizedValue.replace(/\D/g, '');
+        if (dobClean.length === 8) {
+          const dd = parseInt(dobClean.slice(0, 2), 10);
+          const mm = parseInt(dobClean.slice(2, 4), 10);
+          const yyyy = parseInt(dobClean.slice(4, 8), 10);
+          const birthDate = new Date(yyyy, mm - 1, dd);
+          const today = new Date();
+          let age = today.getFullYear() - birthDate.getFullYear();
+          const m = today.getMonth() - birthDate.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+          if (age >= 0 && age < 120) {
+            setForm(prev => ({ ...prev, dob: sanitizedValue, date_of_birth: sanitizedValue, age: String(age) }));
+            return;
+          }
+        } else if (sanitizedValue === '' || dobClean.length === 0) {
+          setForm(prev => ({ ...prev, dob: sanitizedValue, date_of_birth: sanitizedValue, age: '' }));
+          return;
+        } else {
+          setForm(prev => ({ ...prev, dob: sanitizedValue, date_of_birth: sanitizedValue, age: '' }));
+          return;
+        }
+      }
+    }
+
+    if (key === 'doj') {
+      const prevValue = form.doj || '';
+      const isDeleting = prevValue.length > value.length;
+
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        caretRef.current = {
+          target,
+          selectionStart: target.selectionStart,
+          oldValLen: target.value.length
+        };
+      }
+
+      // Collapse multiple trailing dashes (e.g. "10--" -> "10-")
+      let cleanedValue = value;
+      if (value.endsWith('--')) {
+        cleanedValue = value.replace(/-+$/, '-');
+      }
+
+      // Split the input value by dashes
+      const parts = cleanedValue.split('-');
+      // Keep only digits in each part
+      let cleanParts = parts.map(p => p.replace(/\D/g, ''));
+
+      // If there are more than 3 parts, truncate
+      if (cleanParts.length > 3) {
+        cleanParts = cleanParts.slice(0, 3);
+      }
+
+      let dayStr = '';
+      let monthStr = '';
+      let yearStr = '';
+
+      if (cleanParts.length === 1) {
+        const p0 = cleanParts[0] || '';
+        if (p0.length > 2) {
+          yearStr = p0;
+        } else {
+          dayStr = p0;
+        }
+      } else if (cleanParts.length === 2) {
+        const p0 = cleanParts[0] || '';
+        const p1 = cleanParts[1] || '';
+        if (p0.length > 2) {
+          yearStr = p0;
+          monthStr = p1;
+        } else if (p1.length > 2) {
+          dayStr = p0;
+          yearStr = p1;
+        } else {
+          dayStr = p0;
+          monthStr = p1;
+        }
+      } else if (cleanParts.length === 3) {
+        dayStr = cleanParts[0] || '';
+        monthStr = cleanParts[1] || '';
+        yearStr = cleanParts[2] || '';
+      }
+
+      // Restrict day (dd)
+      if (dayStr) {
+        if (dayStr.length > 2) dayStr = dayStr.slice(0, 2);
+        if (dayStr.length === 1 && parseInt(dayStr, 10) > 3) {
+          dayStr = '0' + dayStr;
+        }
+        const ddVal = parseInt(dayStr, 10);
+        if (!isNaN(ddVal)) {
+          if (ddVal > 31) dayStr = '31';
+          else if (ddVal === 0 && dayStr.length === 2) dayStr = '01';
+        }
+      }
+
+      // Restrict month (mm)
+      if (monthStr) {
+        if (monthStr.length > 2) monthStr = monthStr.slice(0, 2);
+        if (monthStr.length === 1 && parseInt(monthStr, 10) > 1) {
+          monthStr = '0' + monthStr;
+        }
+        const mmVal = parseInt(monthStr, 10);
+        if (!isNaN(mmVal)) {
+          if (mmVal > 12) monthStr = '12';
+          else if (mmVal === 0 && monthStr.length === 2) monthStr = '01';
+        }
+      }
+
+      // Restrict year (yyyy)
+      if (yearStr) {
+        if (yearStr.length > 4) yearStr = yearStr.slice(0, 4);
+        const yyyyVal = parseInt(yearStr, 10);
+        if (!isNaN(yyyyVal) && yearStr.length === 4) {
+          if (yyyyVal > 2099) yearStr = '2099';
+        }
+      }
+
+      // Reconstruct formatted string
+      let formatted = '';
+      if (!dayStr && !monthStr && !yearStr) {
+        formatted = '';
+      } else if (parts.length === 1) {
+        if (cleanParts[0] && cleanParts[0].length > 2) {
+          formatted = `--${yearStr}`;
+        } else {
+          formatted = dayStr;
+          if (dayStr.length === 2 && !isDeleting) {
+            formatted += '-';
+          }
+        }
+      } else if (parts.length === 2) {
+        const p1 = cleanParts[1] || '';
+        const p0 = cleanParts[0] || '';
+        if (p0.length > 2) {
+          formatted = `${yearStr}-${monthStr}`;
+        } else if (p1.length > 2) {
+          formatted = `${dayStr}--${yearStr}`;
+        } else {
+          formatted = `${dayStr}-${monthStr}`;
+          if (monthStr.length === 2 && !isDeleting) {
+            formatted += '-';
+          }
+        }
+      } else {
+        formatted = `${dayStr}-${monthStr}-${yearStr}`;
+      }
+
+      sanitizedValue = formatted;
     }
 
     if (key === 'personal_email' || key === 'official_email') {
@@ -1336,7 +1558,7 @@ export default function PersonalInfo({ onBack }) {
                           value={form[field.key]}
                           placeholder={field.placeholder || ''}
                           readOnly={isDisabled}
-                          onChange={e => handleChange(field.key, e.target.value)}
+                          onChange={e => handleChange(field.key, e.target.value, e.target)}
                           style={{
                             width: '100%',
                             padding: '16px 20px',
