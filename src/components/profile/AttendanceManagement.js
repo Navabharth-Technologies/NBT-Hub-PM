@@ -764,9 +764,9 @@ export default function AttendanceManagement() {
         };
 
         rows.push([
-          formatToDDMMYYYY(targetDate),
+          forExcel ? "'" + formatToDDMMYYYY(targetDate) : formatToDDMMYYYY(targetDate),
           emp?.name || emp?.user_name || 'Employee',
-          forExcel ? String(emp?.id || 'N/A') : `#${emp?.id || 'N/A'}`,
+          forExcel ? "'" + String(emp?.id || 'N/A') : `#${emp?.id || 'N/A'}`,
           inTime,
           outTime,
           workHrs,
@@ -834,7 +834,7 @@ export default function AttendanceManagement() {
     const headers = ['Date', 'Employee', 'ID', 'In Time', 'Out Time', 'Work Hours', 'Status', 'In Location', 'Out Location'];
     const rows = getExportRows(true);
     const csvContent = [headers, ...rows].map(r => r.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

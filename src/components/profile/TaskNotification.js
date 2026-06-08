@@ -374,7 +374,9 @@ const TaskNotification = ({ onOpenTask }) => {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h4 style={{ margin: 0, fontSize: '13px', fontWeight: notif.isNew ? '900' : '500', color: notif.isNew ? '#0B1E3F' : '#64748b', marginBottom: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{notif.title}</h4>
-                      <p style={{ margin: 0, fontSize: '11.5px', color: notif.isNew ? '#3B5998' : '#94a3b8', fontWeight: notif.isNew ? '700' : '400', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{notif.description}</p>
+                      {!(notif.type === 'quiz' || String(notif.title || '').toLowerCase().includes('quiz')) && (
+                        <p style={{ margin: 0, fontSize: '11.5px', color: notif.isNew ? '#3B5998' : '#94a3b8', fontWeight: notif.isNew ? '700' : '400', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{notif.description}</p>
+                      )}
                     </div>
                     {notif.isNew && (
                       <motion.div

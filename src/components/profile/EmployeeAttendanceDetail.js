@@ -327,8 +327,8 @@ export default function EmployeeAttendanceDetail() {
     const headers = ['Employee Name', 'Employee ID', 'Date', 'Punch In', 'Punch Out', 'Work Hours', 'Status', 'In Location', 'Out Location'];
     const rows = filteredLogs.map(log => [
       empName,
-      id,
-      log.punch_date ? new Date(log.punch_date).toLocaleDateString() : 'N/A',
+      "'" + id,
+      log.punch_date ? "'" + new Date(log.punch_date).toLocaleDateString() : 'N/A',
       log.in_time || '----',
       log.out_time || '----',
       resolveWorkHrs(log),
