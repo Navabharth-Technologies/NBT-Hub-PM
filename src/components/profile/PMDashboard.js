@@ -280,151 +280,151 @@ export default function PMDashboard() {
         }
         setNewJoineesCount(totalActiveJoinees);
 
-      // Fetch Real-time Attendance Logs for Dashboard Metrics
-      const outerToday = new Date();
-      const outerTodayStr = `${outerToday.getFullYear()}-${String(outerToday.getMonth() + 1).padStart(2, '0')}-${String(outerToday.getDate()).padStart(2, '0')}`;
+        // Fetch Real-time Attendance Logs for Dashboard Metrics
+        const outerToday = new Date();
+        const outerTodayStr = `${outerToday.getFullYear()}-${String(outerToday.getMonth() + 1).padStart(2, '0')}-${String(outerToday.getDate()).padStart(2, '0')}`;
 
-      const attLogsRes = await fetch(`${API_ENDPOINTS.ATTENDANCE_LOGS_GET}?startDate=${outerTodayStr}&endDate=${outerTodayStr}`, {
-        headers: { 'Authorization': `Bearer ${user.token}` }
-      });
-      let masterLogs = [];
-      if (attLogsRes.ok) {
-        const logData = await attLogsRes.json();
-        const rawLogs = logData.data || logData.attendance || logData.logs || (Array.isArray(logData) ? logData : []);
-        masterLogs = Array.isArray(rawLogs) ? rawLogs.filter(l => String(l?.user_id || l?.Empcode || l?.EmpID || '').trim() !== '20250') : [];
+        const attLogsRes = await fetch(`${API_ENDPOINTS.ATTENDANCE_LOGS_GET}?startDate=${outerTodayStr}&endDate=${outerTodayStr}`, {
+          headers: { 'Authorization': `Bearer ${user.token}` }
+        });
+        let masterLogs = [];
+        if (attLogsRes.ok) {
+          const logData = await attLogsRes.json();
+          const rawLogs = logData.data || logData.attendance || logData.logs || (Array.isArray(logData) ? logData : []);
+          masterLogs = Array.isArray(rawLogs) ? rawLogs.filter(l => String(l?.user_id || l?.Empcode || l?.EmpID || '').trim() !== '20250') : [];
 
+          if (Array.isArray(masterLogs)) {
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const todayLogs = masterLogs.filter(l => {
+              const lDate = parseLogDate(l);
+              return lDate === todayStr;
+            });
+            const presentIds = new Set();
+            todayLogs.forEach(l => {
+              const punchIn = l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time;
+              const hasValidPunchIn = punchIn && punchIn !== '----' && punchIn !== '--:--' && punchIn !== '00:00';
+              const status = String(l?.status || l?.Status || '').toUpperCase();
+              const isPresent = hasValidPunchIn || status.includes('PRESENT') || status.includes('IN OFFICE') || status.includes('HALF') || status.includes('LATE') || status === 'P';
+
+              if (isPresent && !status.includes('ABSENT')) {
+                const pid = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+                if (pid) presentIds.add(pid);
+              }
+            });
+            const uniquePresentToday = presentIds.size;
+            const lateTodayLogs = todayLogs.filter(l => {
+              const st = String(l?.status || '').toUpperCase();
+              if (st.includes('LATE') || st === 'L') return true;
+              const pIn = parseTimeStr(l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time);
+              return (pIn !== -1 && pIn > (9 * 60 + 30));
+            });
+            const lateToday = lateTodayLogs.length;
+            const halfDayToday = todayLogs.filter(l => {
+              const st = String(l?.status || '').toUpperCase().trim();
+              console.log(`[HalfDay Check] User: ${l?.employee_name || l?.name || l?.user_id}, Status: '${st}'`);
+              if (st === 'HALF_DAY' || st === 'HD' || st === 'HALF DAY' || st === 'HALF-DAY') return true;
+              const pIn = parseTimeStr(l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time);
+              const pOut = parseTimeStr(l?.out_time || l?.OUTTime || l?.PunchOut || l?.punch_time_out || l?.out_time_biometric);
+              if (pIn !== -1 && pIn > (13 * 60 + 30)) return true;
+              if (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60)) return true;
+              return false;
+            }).length;
+            setAttendanceStats(prev => ({ ...prev, present: uniquePresentToday, late: lateToday, halfDay: halfDayToday }));
+
+            const processedLate = lateTodayLogs.map(l => {
+              const uid = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+              const name = l?.employee_name || l?.name || l?.EmpName || (uid && userLookup[uid]) || 'Employee';
+              const time = l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time || 'N/A';
+              return {
+                id: uid,
+                name: name,
+                time: time,
+                status: l?.status || 'LATE'
+              };
+            });
+            setLateLogins(processedLate);
+          }
+        }
+
+        // Fetch Leave Requests & All Metrics
+        setLeavesLoading(true);
+        const leavesRes = await fetch(API_ENDPOINTS.LEAVES_GET, {
+          headers: { 'Authorization': `Bearer ${user.token}` }
+        });
+        let resolvedLeaves = [];
+        if (leavesRes.ok) {
+          const lData = await leavesRes.json();
+          const lList = Array.isArray(lData) ? lData : (lData?.leaves || lData?.all || lData?.data || lData?.requests || []);
+
+          // Name Resolution for Leave Requests
+          resolvedLeaves = (Array.isArray(lList) ? lList : []).map(r => {
+            if (!r.employee_name && !r.name) {
+              const uid = String(r.userId || r.user_id || r.employee_id || r.empId || '').trim();
+              if (uid && userLookup[uid]) {
+                r.employee_name = userLookup[uid];
+              }
+            }
+            return r;
+          });
+          setLeaveRequests(resolvedLeaves);
+
+          // Count all active leaves (Pending + Approved)
+          const totalActiveLeaves = resolvedLeaves.filter(r =>
+            ['PENDING', 'APPROVED'].includes(String(r.status || '').toUpperCase())
+          ).length;
+          setAttendanceStats(prev => ({ ...prev, onLeave: totalActiveLeaves }));
+        }
+
+        // Calculate daily absentees
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const presentIds = new Set();
         if (Array.isArray(masterLogs)) {
-          const today = new Date();
-          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
           const todayLogs = masterLogs.filter(l => {
             const lDate = parseLogDate(l);
             return lDate === todayStr;
           });
-          const presentIds = new Set();
           todayLogs.forEach(l => {
             const punchIn = l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time;
             const hasValidPunchIn = punchIn && punchIn !== '----' && punchIn !== '--:--' && punchIn !== '00:00';
             const status = String(l?.status || l?.Status || '').toUpperCase();
-            const isPresent = hasValidPunchIn || status.includes('PRESENT') || status.includes('IN OFFICE') || status.includes('HALF') || status.includes('LATE') || status === 'P';
-            
+            const isPresent = hasValidPunchIn || status.includes('PRESENT') || status.includes('HALF') || status.includes('LATE') || status === 'P';
+
             if (isPresent && !status.includes('ABSENT')) {
-               const pid = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
-               if (pid) presentIds.add(pid);
+              const pid = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
+              if (pid) presentIds.add(pid);
             }
           });
-          const uniquePresentToday = presentIds.size;
-          const lateTodayLogs = todayLogs.filter(l => {
-            const st = String(l?.status || '').toUpperCase();
-            if (st.includes('LATE') || st === 'L') return true;
-            const pIn = parseTimeStr(l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time);
-            return (pIn !== -1 && pIn > (9 * 60 + 30));
-          });
-          const lateToday = lateTodayLogs.length;
-          const halfDayToday = todayLogs.filter(l => {
-            const st = String(l?.status || '').toUpperCase().trim();
-            console.log(`[HalfDay Check] User: ${l?.employee_name || l?.name || l?.user_id}, Status: '${st}'`);
-            if (st === 'HALF_DAY' || st === 'HD' || st === 'HALF DAY' || st === 'HALF-DAY') return true;
-            const pIn = parseTimeStr(l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time);
-            const pOut = parseTimeStr(l?.out_time || l?.OUTTime || l?.PunchOut || l?.punch_time_out || l?.out_time_biometric);
-            if (pIn !== -1 && pIn > (13 * 60 + 30)) return true;
-            if (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60)) return true;
-            return false;
-          }).length;
-          setAttendanceStats(prev => ({ ...prev, present: uniquePresentToday, late: lateToday, halfDay: halfDayToday }));
+        }
 
-          const processedLate = lateTodayLogs.map(l => {
-            const uid = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
-            const name = l?.employee_name || l?.name || l?.EmpName || (uid && userLookup[uid]) || 'Employee';
-            const time = l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time || 'N/A';
+        const activeLeavesToday = (resolvedLeaves || []).filter(r => {
+          const rStatus = String(r?.status || '').toUpperCase();
+          if (!['PENDING', 'APPROVED'].includes(rStatus)) return false;
+          let rDate = r?.date || r?.start_date || '';
+          if (rDate) {
+            rDate = parseLogDate({ punch_date: rDate });
+          }
+          return rDate === todayStr;
+        });
+        const leaveUserIds = new Set(activeLeavesToday.map(r => String(r.user_id || r.userId || r.empId || '').trim()));
+
+        if (Array.isArray(currentUsers)) {
+          const todayAbsentees = currentUsers.filter(u => {
+            const uid = String(u.id || u.empId || u.employee_id || '').trim();
+            return uid && !presentIds.has(uid);
+          }).map(u => {
+            const uid = String(u.id || u.empId || u.employee_id || '').trim();
+            const isOnLeave = leaveUserIds.has(uid);
             return {
-              id: uid,
-              name: name,
-              time: time,
-              status: l?.status || 'LATE'
+              ...u,
+              status: isOnLeave ? 'ON LEAVE' : 'ABSENT'
             };
           });
-          setLateLogins(processedLate);
+          setAbsentees(todayAbsentees);
         }
-      }
 
-      // Fetch Leave Requests & All Metrics
-      setLeavesLoading(true);
-      const leavesRes = await fetch(API_ENDPOINTS.LEAVES_GET, {
-        headers: { 'Authorization': `Bearer ${user.token}` }
-      });
-      let resolvedLeaves = [];
-      if (leavesRes.ok) {
-        const lData = await leavesRes.json();
-        const lList = Array.isArray(lData) ? lData : (lData?.leaves || lData?.all || lData?.data || lData?.requests || []);
-
-        // Name Resolution for Leave Requests
-        resolvedLeaves = (Array.isArray(lList) ? lList : []).map(r => {
-          if (!r.employee_name && !r.name) {
-            const uid = String(r.userId || r.user_id || r.employee_id || r.empId || '').trim();
-            if (uid && userLookup[uid]) {
-              r.employee_name = userLookup[uid];
-            }
-          }
-          return r;
-        });
-        setLeaveRequests(resolvedLeaves);
-
-        // Count all active leaves (Pending + Approved)
-        const totalActiveLeaves = resolvedLeaves.filter(r =>
-          ['PENDING', 'APPROVED'].includes(String(r.status || '').toUpperCase())
-        ).length;
-        setAttendanceStats(prev => ({ ...prev, onLeave: totalActiveLeaves }));
-      }
-
-      // Calculate daily absentees
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      const presentIds = new Set();
-      if (Array.isArray(masterLogs)) {
-        const todayLogs = masterLogs.filter(l => {
-          const lDate = parseLogDate(l);
-          return lDate === todayStr;
-        });
-        todayLogs.forEach(l => {
-          const punchIn = l?.in_time || l?.INTime || l?.PunchIn || l?.punch_time;
-          const hasValidPunchIn = punchIn && punchIn !== '----' && punchIn !== '--:--' && punchIn !== '00:00';
-          const status = String(l?.status || l?.Status || '').toUpperCase();
-          const isPresent = hasValidPunchIn || status.includes('PRESENT') || status.includes('HALF') || status.includes('LATE') || status === 'P';
-          
-          if (isPresent && !status.includes('ABSENT')) {
-             const pid = String(l?.user_id || l?.Empcode || l?.EmpID || '').trim();
-             if (pid) presentIds.add(pid);
-          }
-        });
-      }
-
-      const activeLeavesToday = (resolvedLeaves || []).filter(r => {
-        const rStatus = String(r?.status || '').toUpperCase();
-        if (!['PENDING', 'APPROVED'].includes(rStatus)) return false;
-        let rDate = r?.date || r?.start_date || '';
-        if (rDate) {
-          rDate = parseLogDate({ punch_date: rDate });
-        }
-        return rDate === todayStr;
-      });
-      const leaveUserIds = new Set(activeLeavesToday.map(r => String(r.user_id || r.userId || r.empId || '').trim()));
-
-      if (Array.isArray(currentUsers)) {
-        const todayAbsentees = currentUsers.filter(u => {
-          const uid = String(u.id || u.empId || u.employee_id || '').trim();
-          return uid && !presentIds.has(uid);
-        }).map(u => {
-          const uid = String(u.id || u.empId || u.employee_id || '').trim();
-          const isOnLeave = leaveUserIds.has(uid);
-          return {
-            ...u,
-            status: isOnLeave ? 'ON LEAVE' : 'ABSENT'
-          };
-        });
-        setAbsentees(todayAbsentees);
-      }
-
-      // Fetch Upcoming Birthdays for Dashboard Preview
+        // Fetch Upcoming Birthdays for Dashboard Preview
         try {
           const bRes = await fetch(API_ENDPOINTS.BIRTHDAYS, {
             headers: { 'Authorization': `Bearer ${user.token}` }
@@ -489,10 +489,10 @@ export default function PMDashboard() {
   const dynamicMetrics = [
     { label: 'Total Teams', value: teams?.length || 'View', icon: <Icons.Teams />, color: '#6366f1', trend: 'Live', trendUp: true, path: '/teams' },
     { label: 'Total Employess', value: employeesCount || 'View', icon: <Icons.Employees />, color: '#8b5cf6', trend: 'Live', trendUp: true, path: '/employees' },
+    { label: 'New Joinee', value: newJoineesCount || 'View', icon: <span>✨</span>, color: '#0ea5e9', trend: 'This Month', trendUp: true, path: '/new-joinees' },
     { label: 'Suggestions', value: 'Manage', icon: <span>💡</span>, color: '#315A9E', trend: 'Active', trendUp: true, path: '/suggestions' },
 
     { label: 'Assets Management', value: 'Manage', icon: <span>📦</span>, color: '#f59e0b', trend: 'New', trendUp: true, path: '/assets' },
-    { label: 'New Joinee', value: newJoineesCount || 'View', icon: <span>✨</span>, color: '#0ea5e9', trend: 'This Month', trendUp: true, path: '/new-joinees' },
     { label: 'Fun and Quiz', value: 'Play', icon: <Icons.Quiz />, color: '#ec4899', trend: 'Active', trendUp: true, path: '/quiz' },
   ];
 
@@ -688,7 +688,7 @@ export default function PMDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
             <div>
               <h1 style={{ fontSize: winWidth < 768 ? '24px' : '32px', fontWeight: '950', color: '#0f172a', margin: '0', letterSpacing: '-1px' }}>Anish's Dashboard</h1>
-              <p style={{ color: '#64748b', fontSize: winWidth < 768 ? '12px' : '14px', fontWeight: '700', margin: '4px 0 0 0' }}>Strength and scale • {teams.length} Active Teams</p>
+              <p style={{ color: '#64748b', fontSize: winWidth < 768 ? '12px' : '14px', fontWeight: '700', margin: '4px 0 0 0' }}>Strength and Scale</p>
             </div>
           </div>
 
@@ -977,9 +977,9 @@ export default function PMDashboard() {
           </section>
 
           {/* Column 3: Attendance Analytics */}
-          <section 
-            className="dashboard-section animate-fade-in" 
-            style={{ 
+          <section
+            className="dashboard-section animate-fade-in"
+            style={{
               animationDelay: '0.7s',
               borderRadius: winWidth < 768 ? '35px' : '32px',
               padding: winWidth < 768 ? '12px' : '32px',
@@ -999,7 +999,7 @@ export default function PMDashboard() {
               gap: '12px'
             }}>
               <h2 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><Calendar size={20} color="#3863a8" />Attendance Management</h2>
-              <button 
+              <button
                 className="btn-view-all btn-blue"
                 onClick={(e) => { e.stopPropagation(); navigate('/attendance'); }}
               >
@@ -1113,7 +1113,7 @@ export default function PMDashboard() {
           <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.8s', cursor: 'pointer', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }} onClick={() => navigate('/birthdays')}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 className="section-title">🎂 Upcoming Birthdays</h2>
-              <button 
+              <button
                 className="btn-view-all btn-pink"
                 onClick={(e) => { e.stopPropagation(); navigate('/birthdays'); }}
               >
@@ -1156,7 +1156,7 @@ export default function PMDashboard() {
           <section className="dashboard-section animate-fade-in" style={{ animationDelay: '1.0s', cursor: 'pointer', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }} onClick={() => navigate('/holidays')}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 className="section-title">🏖️ List of Holidays</h2>
-              <button 
+              <button
                 className="btn-view-all btn-teal"
                 onClick={(e) => { e.stopPropagation(); navigate('/holidays'); }}
               >

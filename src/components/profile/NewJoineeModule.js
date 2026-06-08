@@ -49,6 +49,7 @@ export default function NewJoineeModule() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [joinees, setJoinees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,6 +83,32 @@ export default function NewJoineeModule() {
   const [dismissedCompletions, setDismissedCompletions] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('dismissedCompletions_pm') || '[]'); } catch { return []; }
   });
+
+  useEffect(() => {
+    const visibleCompleted = completedJoinees.filter(j => {
+      const jId = j.id || j._id || j.employee_id || j.intern_id;
+      return !dismissedCompletions.includes(jId);
+    });
+    const hasActiveModal = showAddModal || !!deleteConfirmJoinee || visibleCompleted.length > 0;
+
+    if (hasActiveModal) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100%';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.height = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    };
+  }, [showAddModal, deleteConfirmJoinee, completedJoinees, dismissedCompletions]);
 
   useEffect(() => {
     if (window.location.hash === '#blocked') {
@@ -134,6 +161,7 @@ export default function NewJoineeModule() {
           ...i,
           role: i.role || 'Intern',
           is_intern: true,
+          duration: i.duration_months !== undefined && i.duration_months !== null ? String(i.duration_months) : (i.duration !== undefined && i.duration !== null ? String(i.duration) : ''),
           employee_id: storedId || i.employee_id || i.intern_id || i.employeeId || i.internId || i.emp_id || i.EmpID || ''
         };
       });
@@ -143,6 +171,7 @@ export default function NewJoineeModule() {
         const storedId = email ? localStorage.getItem('joinee_empid_' + email.toLowerCase().trim()) : '';
         return {
           ...j,
+          duration: j.duration !== undefined && j.duration !== null ? String(j.duration) : '',
           employee_id: storedId || j.employee_id || j.employeeId || j.intern_id || j.internId || j.emp_id || j.EmpID || ''
         };
       });
@@ -231,11 +260,11 @@ export default function NewJoineeModule() {
       // DD/MM/YYYY formatting with validation rules
       let clean = value.replace(/[^0-9]/g, '');
       clean = clean.slice(0, 8);
-      
+
       let dd = clean.slice(0, 2);
       let mm = clean.slice(2, 4);
       let yyyy = clean.slice(4, 8);
-      
+
       if (dd.length === 2) {
         const ddVal = parseInt(dd, 10);
         if (ddVal > 31 || ddVal === 0) {
@@ -247,7 +276,7 @@ export default function NewJoineeModule() {
           dd = '0' + dd;
         }
       }
-      
+
       if (mm.length === 2) {
         const mmVal = parseInt(mm, 10);
         if (mmVal > 12 || mmVal === 0) {
@@ -259,7 +288,7 @@ export default function NewJoineeModule() {
           mm = '0' + mm;
         }
       }
-      
+
       const validatedDigits = dd + mm + yyyy;
       let formatted = '';
       if (validatedDigits.length > 0) {
@@ -271,7 +300,7 @@ export default function NewJoineeModule() {
       if (validatedDigits.length > 4) {
         formatted += '/' + validatedDigits.slice(4, 8);
       }
-      
+
       filteredValue = formatted;
     } else if (name === 'email_id') {
       const atIndex = value.indexOf('@');
@@ -315,7 +344,7 @@ export default function NewJoineeModule() {
       employee_id: empId,
       reporting_manager: existingManager ? (existingManager.employee_id || existingManager.name) : (joinee.Reporting_manager_id || joinee.reporting_manager_id || joinee.Reporting_manager || joinee.reporting_manager || joinee.manager || ''),
       phone_number: joinee.phone_number || joinee.phone || joinee.contact_no || '',
-      duration: joinee.duration || joinee.duration || '',
+      duration: joinee.duration !== undefined && joinee.duration !== null ? String(joinee.duration) : '',
       is_intern: !!joinee.is_intern
     });
     setShowAddModal(true);
@@ -402,9 +431,11 @@ export default function NewJoineeModule() {
       reporting_manager_id: selectedLead?.id || selectedLead?.employee_id || originalJoinee?.Reporting_manager_id || originalJoinee?.reporting_manager_id,
       reporting_manager: selectedLead?.name || formData.reporting_manager,
       stipend: 0,
-      duration: formData.duration || 6,
+      duration_months: formData.duration ? parseInt(formData.duration, 10) : 6,
+      duration: formData.duration ? parseInt(formData.duration, 10) : 6,
       status: 'Active',
       phone_number: formData.phone_number,
+      hired_by: originalJoinee?.hired_by || 'Project Manager',
       personal_email: formData.email_id
     } : {
       name: formData.name,
@@ -422,7 +453,8 @@ export default function NewJoineeModule() {
       internId: generatedEmpId,
       status: 'Active',
       phone_number: formData.phone_number,
-      duration: formData.duration,
+      duration: formData.duration !== undefined && formData.duration !== null ? String(formData.duration) : '',
+      hired_by: originalJoinee?.hired_by || 'Project Manager',
       color: ['#312e81', '#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b'][Math.floor(Math.random() * 5)]
     };
 
@@ -601,8 +633,7 @@ export default function NewJoineeModule() {
   };
 
   const filteredJoinees = joinees.filter(j => {
-    const matchesSearch = j.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      j.role.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (j.name || '').toLowerCase().startsWith(searchTerm.toLowerCase());
     const isBlocked = Number(j.is_blocked) === 1;
     if (viewBlocked) return matchesSearch && isBlocked;
     return matchesSearch && !isBlocked;
@@ -610,6 +641,12 @@ export default function NewJoineeModule() {
 
   return (
     <div className="pm-dashboard-container">
+      <style>{`
+        .pm-dashboard-container form input::placeholder {
+          color: #64748b !important;
+          opacity: 1 !important;
+        }
+      `}</style>
       <AppHeader />
 
       <main className="dashboard-content" style={{ flex: 1, paddingTop: isMobile ? '100px' : '120px', paddingLeft: isMobile ? '16px' : '26px', paddingRight: isMobile ? '16px' : '26px', paddingBottom: '120px', width: '100%', boxSizing: 'border-box', margin: '0' }}>
@@ -865,7 +902,7 @@ export default function NewJoineeModule() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '900', color: '#1e293b', letterSpacing: '0.3px' }}>{formData.is_intern ? 'Duration (Months)' : 'Duration (Days)'}</label>
+                  <label style={{ fontSize: '12px', fontWeight: '900', color: '#1e293b', letterSpacing: '0.3px' }}>{formData.is_intern ? 'duration (Months)' : 'duration (Days)'}</label>
                   <input
                     type="text" name="duration" value={formData.duration} onChange={handleInputChange}
                     placeholder={formData.is_intern ? 'e.g. 6' : 'e.g. 10'} required
@@ -999,7 +1036,7 @@ export default function NewJoineeModule() {
                   onClick={() => {
                     const updated = [...dismissedCompletions, jId];
                     setDismissedCompletions(updated);
-                    try { sessionStorage.setItem('dismissedCompletions_pm', JSON.stringify(updated)); } catch {}
+                    try { sessionStorage.setItem('dismissedCompletions_pm', JSON.stringify(updated)); } catch { }
                   }}
                   style={{
                     flex: 1, padding: '12px 20px', background: '#fee2e2', color: '#dc2626',
@@ -1043,7 +1080,7 @@ export default function NewJoineeModule() {
                     // Dismiss this notification
                     const updated = [...dismissedCompletions, jId];
                     setDismissedCompletions(updated);
-                    try { sessionStorage.setItem('dismissedCompletions_pm', JSON.stringify(updated)); } catch {}
+                    try { sessionStorage.setItem('dismissedCompletions_pm', JSON.stringify(updated)); } catch { }
                     setShowSuccessToast(true);
                     setTimeout(() => setShowSuccessToast(false), 3000);
                     // Refresh data

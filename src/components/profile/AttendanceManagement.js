@@ -199,6 +199,27 @@ export default function AttendanceManagement() {
   const [punchOutEditData, setPunchOutEditData] = useState({ empId: '', empName: '', actualTime: '', newTime: '', date: new Date().toISOString().split('T')[0] });
 
   const [alertState, setAlertState] = useState({ show: false, message: '' });
+
+  useEffect(() => {
+    const hasActiveModal = showLateLoginsModal || showEarlyLogoutsModal || showHalfDaysModal || showPunchEditModal || showPunchOutEditModal || alertState.show;
+    if (hasActiveModal) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100%';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.height = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    };
+  }, [showLateLoginsModal, showEarlyLogoutsModal, showHalfDaysModal, showPunchEditModal, showPunchOutEditModal, alertState.show]);
   const showAlert = (msg) => setAlertState({ show: true, message: String(msg) });
 
   const [isPunchFetching, setIsPunchFetching] = useState(false);
@@ -1827,7 +1848,7 @@ export default function AttendanceManagement() {
                               </div>
                               <div>
                                 <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{emp?.name || log?.user_name || 'Unknown'}</div>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>ID: #{empId} {logDate ? `· ${logDate}` : ''}</div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>ID: #{empId} {logDate ? `\u00B7 ${logDate}` : ''}</div>
                               </div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
@@ -1916,7 +1937,7 @@ export default function AttendanceManagement() {
                               </div>
                               <div>
                                 <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{emp?.name || log?.user_name || 'Unknown'}</div>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>ID: #{empId} {logDate ? `· ${logDate}` : ''}</div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>ID: #{empId} {logDate ? `\u00B7 ${logDate}` : ''}</div>
                               </div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
@@ -1992,7 +2013,7 @@ export default function AttendanceManagement() {
                               </div>
                               <div>
                                 <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{emp?.name || log?.user_name || 'Unknown'}</div>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>ID: #{empId} {logDate ? `· ${logDate}` : ''}</div>
+                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>ID: #{empId} {logDate ? `\u00B7 ${logDate}` : ''}</div>
                               </div>
                             </div>
                             <div style={{ textAlign: 'right' }}>

@@ -28,7 +28,7 @@ export default function SuggestionModule() {
     doc.setFontSize(11);
     doc.setTextColor(100, 116, 139);
     doc.text(`Total Submissions: ${submissions.length}`, 14, 30);
-    doc.text(`Report Type: Collaboration & Workflow Overview`, 14, 36);
+
     doc.text(`Generated on: ${new Date().toLocaleString('en-GB')}`, 14, 42);
 
     const cleanText = (str) => {
@@ -53,8 +53,8 @@ export default function SuggestionModule() {
       head: [tableColumn],
       body: tableRows,
       startY: 50,
-      styles: { 
-        fontSize: 8.5, 
+      styles: {
+        fontSize: 8.5,
         cellPadding: { top: 5, bottom: 5, left: 3, right: 3 },
         valign: 'middle',
         overflow: 'linebreak'
@@ -98,14 +98,38 @@ export default function SuggestionModule() {
           const list = Array.isArray(data) ? data : (data.data || data.suggestions || []);
           console.log('SuggestionModule: Processed List Length:', list.length);
 
-          const mapped = list.map(s => ({
-            user: s.employee_name || s.user_name || s.user || 'Anonymous',
-            team: s.employee_id || s.department || s.team || 'N/A',
-            date: s.created_at ? new Date(s.created_at).toLocaleDateString() : (s.date || 'Today'),
-            content: s.suggestion || s.suggestion_text || s.message || s.content || 'No content provided.',
-            participation: s.requirement || s.status || s.participation || 'Active',
-            profile_pic: s.profile_pic || s.profile_picture || s.user_profile_pic || s.user_pic
-          }));
+          const mapped = list.map(s => {
+            const rawDate = s.created_at || s.date;
+            let formattedDate = 'Today';
+            if (rawDate && rawDate !== 'Today') {
+              if (typeof rawDate === 'string' && rawDate.includes('-') && rawDate.length === 10) {
+                const parts = rawDate.split('-');
+                if (parts[0].length === 4) {
+                  formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                } else {
+                  formattedDate = rawDate;
+                }
+              } else {
+                const d = new Date(rawDate);
+                if (!isNaN(d.getTime())) {
+                  const day = String(d.getDate()).padStart(2, '0');
+                  const month = String(d.getMonth() + 1).padStart(2, '0');
+                  const year = d.getFullYear();
+                  formattedDate = `${day}-${month}-${year}`;
+                } else {
+                  formattedDate = rawDate;
+                }
+              }
+            }
+            return {
+              user: s.employee_name || s.user_name || s.user || 'Anonymous',
+              team: s.employee_id || s.department || s.team || 'N/A',
+              date: formattedDate,
+              content: s.suggestion || s.suggestion_text || s.message || s.content || 'No content provided.',
+              participation: s.requirement || s.status || s.participation || 'Active',
+              profile_pic: s.profile_pic || s.profile_picture || s.user_profile_pic || s.user_pic
+            };
+          });
           setSubmissions(mapped);
         } else {
           console.error('SuggestionModule: Fetch Failed', res.status, res.statusText);
@@ -120,7 +144,13 @@ export default function SuggestionModule() {
   }, [user]);
 
   return (
-    <div className="pm-dashboard-container">
+    <div className="pm-dashboard-container suggestion-screen-container">
+      <style>{`
+        .suggestion-screen-container,
+        .suggestion-screen-container * {
+          font-family: 'Outfit', sans-serif !important;
+        }
+      `}</style>
       <AppHeader />
 
       <main className="dashboard-content" style={{ paddingBottom: '100px' }}>
@@ -144,21 +174,21 @@ export default function SuggestionModule() {
             </button>
             <div>
               <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--primary-color)' }}>Suggestion Hub</h1>
-              <p style={{ color: 'var(--text-muted)' }}>Collaborative space for internal suggestions & workflow improvements.</p>
+              <p style={{ color: 'var(--text-muted)' }}></p>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-            <button 
+            <button
               onClick={handleExportPDF}
-              className="btn-outline" 
-              style={{ 
-                background: 'white', 
-                color: 'var(--primary-color)', 
-                border: '2px solid #cbd5e1', 
-                borderRadius: '12px', 
-                padding: '10px 18px', 
-                fontSize: '13px', 
-                fontWeight: '800', 
+              className="btn-outline"
+              style={{
+                background: 'white',
+                color: 'var(--primary-color)',
+                border: '2px solid #cbd5e1',
+                borderRadius: '12px',
+                padding: '10px 18px',
+                fontSize: '13px',
+                fontWeight: '800',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -218,8 +248,8 @@ export default function SuggestionModule() {
                     </div>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{s.date}</span>
                   </div>
-                  <p style={{ fontSize: '14px', color: 'var(--text-main)', lineHeight: '1.6', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', fontStyle: 'italic' }}>
-                    "{s.content}"
+                  <p style={{ fontSize: '14px', color: 'var(--text-main)', lineHeight: '1.6', background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', fontWeight: '600' }}>
+                    {s.content}
                   </p>
                   <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

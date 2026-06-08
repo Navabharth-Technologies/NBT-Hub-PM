@@ -4,7 +4,7 @@ import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config';
-import { ChevronLeft, Download, Printer } from 'lucide-react';
+import { ArrowLeft, Download, Printer } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -82,9 +82,9 @@ export default function PayslipScreen() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <button 
                             onClick={() => navigate(-1)}
-                            style={{ background: 'white', border: 'none', width: '36px', height: '36px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}
+                            style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
-                            <ChevronLeft size={20} color="#0f172a" />
+                            <ArrowLeft size={18} color="#64748b" />
                         </button>
                         <h1 style={{ fontSize: winWidth < 768 ? '18px' : '22px', fontWeight: '900', color: '#0f172a', margin: 0 }}>Monthly Pay Slip</h1>
                     </div>

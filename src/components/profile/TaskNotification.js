@@ -5,19 +5,39 @@ import { Bell, X, Zap, Award } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config';
 
+const formatDateToDDMMYYYY = (date) => {
+  if (!(date instanceof Date) || isNaN(date.getTime())) return '';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
 const formatReadableDatesInString = (str) => {
   if (!str) return '';
+  
+  let res = str;
+
+  // 1. Convert YYYY-MM-DD to DD-MM-YYYY (e.g., 2026-06-08 to 08-06-2026)
+  res = res.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, (match, yyyy, mm, dd) => {
+    return `${dd}-${mm}-${yyyy}`;
+  });
+
+  // 2. Convert standard JS Date strings
   const jsDateRegex = /[A-Z][a-z]{2} [A-Z][a-z]{2} \d{1,2} \d{4} \d{2}:\d{2}:\d{2}(?: GMT[+-]\d{1,4}(?::\d{2})?(?: \([^)]+\))?)?/g;
-  let res = str.replace(jsDateRegex, (match) => {
+  res = res.replace(jsDateRegex, (match) => {
     const cleanMatch = match.replace(/GMT[+-]\d{1,4}(?::\d{2})?(?: \([^)]+\))?/g, '').trim();
     const d = new Date(cleanMatch);
-    return isNaN(d.getTime()) ? match : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return isNaN(d.getTime()) ? match : formatDateToDDMMYYYY(d);
   });
-  const isoDateRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g;
+
+  // 3. Convert ISO timestamps
+  const isoDateRegex = /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\b/g;
   res = res.replace(isoDateRegex, (match) => {
     const d = new Date(match);
-    return isNaN(d.getTime()) ? match : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return isNaN(d.getTime()) ? match : formatDateToDDMMYYYY(d);
   });
+
   res = res.replace(/GMT[+-]\d{1,4}(?::\d{2})?(?: \([^)]+\))?/g, '').trim();
   return res;
 };
@@ -215,7 +235,7 @@ const TaskNotification = ({ onOpenTask }) => {
         const notif = {
           id: n.id || `notif-${Math.random()}`,
           title: displayTitle,
-          description: descText,
+          description: formatReadableDatesInString(descText),
           rawDate: parseDate(n.created_at || n.timestamp),
           isNew: (n.is_read === 0 || n.is_read === false || !n.is_read) && !readSet.has(n.id),
           type: n.type || 'system',
@@ -231,7 +251,7 @@ const TaskNotification = ({ onOpenTask }) => {
         .map(n => ({
           ...n,
           time: n.rawDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-          date: n.rawDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          date: formatDateToDDMMYYYY(n.rawDate)
         }));
       setNotifications(finalMapped);
       if (finalMapped.some(n => n.isNew) && !isOpen) setHasUnread(true);

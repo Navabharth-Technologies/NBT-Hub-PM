@@ -35,6 +35,27 @@ const QuizModule = ({ onBack }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    const hasActiveModal = submissionFeedback.show || customAlert.show;
+    if (hasActiveModal) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100%';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.height = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    };
+  }, [submissionFeedback.show, customAlert.show]);
+
   const isMobile = winWidth < 768;
   const isTablet = winWidth < 1024;
 
@@ -167,7 +188,7 @@ const QuizModule = ({ onBack }) => {
                 const uniqueKey = originalDateStr
                   ? `${empId}-${getLocalDateString(originalDateStr)}`
                   : `${empId}-cumulative`;
-                
+
                 if (mergedMap.has(uniqueKey)) {
                   const existing = mergedMap.get(uniqueKey);
                   if (score > existing.points) {
@@ -191,7 +212,7 @@ const QuizModule = ({ onBack }) => {
                 const uniqueKey = originalDateStr
                   ? `${empId}-${getLocalDateString(originalDateStr)}`
                   : `${empId}-cumulative`;
-                
+
                 if (mergedMap.has(uniqueKey)) {
                   const existing = mergedMap.get(uniqueKey);
                   if (score > existing.points) {
@@ -405,7 +426,9 @@ const QuizModule = ({ onBack }) => {
     heroBtn: { backgroundColor: '#0d676c', color: 'white', border: 'none', padding: '14px 30px', borderRadius: '12px', fontWeight: '800', fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 10px rgba(13,103,108,0.2)', width: isMobile ? '100%' : 'auto' },
     leaderboard: {
       flex: 1, backgroundColor: 'white', borderRadius: '24px', padding: '25px', border: '1px solid #eef2f3',
-      display: 'flex', flexDirection: 'column'
+      display: 'flex', flexDirection: 'column',
+      height: isTablet ? 'auto' : '680px',
+      maxHeight: isTablet ? 'none' : '680px'
     },
     bottomSection: { backgroundColor: 'white', borderRadius: '24px', padding: isMobile ? '20px' : '30px', border: '1px solid #eef2f3' },
     option: (optObj, isAnswered) => {
@@ -461,7 +484,7 @@ const QuizModule = ({ onBack }) => {
   return (
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
-      <main className="dashboard-content" style={{ flex: 1, padding: isMobile ? '100px 16px 100px' : '120px 26px 100px', width: '100%', boxSizing: 'border-box', margin: '0', fontFamily: '"Nunito", "Segoe UI", sans-serif' }}>
+      <main className="dashboard-content" style={{ flex: 1, padding: isMobile ? '100px 16px 30px' : '120px 26px 30px', width: '100%', boxSizing: 'border-box', margin: '0', fontFamily: '"Nunito", "Segoe UI", sans-serif' }}>
         <AnimatePresence>
           {submissionFeedback.show && (
             <motion.div
@@ -538,346 +561,299 @@ const QuizModule = ({ onBack }) => {
           )}
         </AnimatePresence>
 
-        {!quizActive && (
-          <div style={s.layout}>
-            {/* LEFT COLUMN: HERO + PAST QUIZZES */}
-            <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '25px' }}>
-              
-              {/* Back Navigation Bar */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '5px' }}>
-                <button 
-                  onClick={() => window.history.back()} 
-                  style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <ArrowLeft size={18} color="#64748b" />
-                </button>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '900', color: '#0B1E3F' }}>Quiz Center</h3>
-                </div>
-              </div>
-
-              {/* HERO SECTION */}
-              <div style={{ ...s.hero, flex: 'none', minHeight: '380px' }}>
-                <div style={{ position: 'relative', zIndex: 10, flex: 1 }}>
-                  <h2 style={{ ...s.heroTitle, fontSize: isMobile ? '32px' : '48px', marginBottom: '20px' }}>Get Ready for<br />a Fun Quiz!</h2>
-                  <p style={{ ...s.heroDesc, fontSize: '15px', maxWidth: '450px', marginBottom: '40px' }}>Train your brain with smart, scientifically backed games that enhance various cognitive functions.</p>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 210px)', gap: '15px', marginBottom: '40px' }}>
-                    <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '15px', border: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-                      <div style={{ fontSize: '10px', fontWeight: '1000', color: '#1e40af', textTransform: 'uppercase' }}>Daily Questions</div>
-                      <div style={{ fontSize: '16px', fontWeight: '1000', color: '#0B1E3F' }}>{questions.length}</div>
-                    </div>
-                    <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '15px', border: '1px solid #fef3c7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-                      <div style={{ fontSize: '10px', fontWeight: '1000', color: '#92400e', textTransform: 'uppercase' }}>Points Remaining</div>
-                      <div style={{ fontSize: '16px', fontWeight: '1000', color: '#0B1E3F' }}>
-                        {questions.filter(q => !q.has_answered).reduce((sum, q) => sum + Number(q.points_reward || 0), 0)}
-                      </div>
-                    </div>
-                    <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '15px', border: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-                      <div style={{ fontSize: '10px', fontWeight: '1000', color: '#1e40af', textTransform: 'uppercase' }}>Overall Score</div>
-                      <div style={{ fontSize: '16px', fontWeight: '1000', color: '#0B1E3F' }}>
-                        {questions.reduce((sum, q) => sum + Number(q.points_reward || 0), 0)}
-                      </div>
-                    </div>
-                    <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '15px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-                      <div style={{ fontSize: '10px', fontWeight: '1000', color: '#15803d', textTransform: 'uppercase' }}>Session Score</div>
-                      <div style={{ fontSize: '16px', fontWeight: '1000', color: '#0B1E3F' }}>
-                        {questions.reduce((sum, q) => {
-                          if (q.previous_result === 'correct') return sum + Number(q.points_reward || 0);
-                          return sum;
-                        }, 0)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button onClick={() => setQuizActive(true)} style={{ ...s.heroBtn, padding: '16px 45px', borderRadius: '12px', fontSize: '16px', letterSpacing: '0.5px' }}>Start Quiz</button>
-                </div>
-
-                {/* Monster Graphic for Landing */}
-                <div style={{ flexShrink: 0, marginLeft: isMobile ? '0' : '40px', marginTop: isMobile ? '30px' : '0' }}>
-                  <img 
-                    src="https://gifdb.com/images/high/quiz-question-eric-cartman-south-park-hrlfxd5qudqyw7n0.gif" 
-                    alt="South Park Guide" 
-                    style={{ 
-                      width: isMobile ? '200px' : '280px', 
-                      height: 'auto', 
-                      borderRadius: '30px',
-                      boxShadow: '0 15px 35px rgba(0,0,0,0.1)'
-                    }} 
-                  />
-                  <div style={{ 
-                    marginTop: '15px', 
-                    textAlign: 'center', 
-                    fontSize: '18px', 
-                    fontWeight: '1000', 
-                    color: '#0B1E3F',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px'
-                  }}>
-                    ARE THERE ANY<br />QUESTIONS?
-                  </div>
-                </div>
-              </div>
-
-              {/* START QUIZ CTA */}
-              <div style={{ backgroundColor: 'white', padding: isMobile ? '20px' : '30px', borderRadius: '24px', border: '1px solid #eef2f3', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', minHeight: '200px' }}>
-                <div style={{ width: '60px', height: '60px', borderRadius: '16px', backgroundColor: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' }}>
-                  <Zap size={30} color="#0369a1" />
-                </div>
-                <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0B1E3F', margin: '0 0 10px 0' }}>Daily Quiz Challenge</h3>
-                <p style={{ fontSize: '13px', fontWeight: '700', color: '#64748b', maxWidth: '300px', marginBottom: '20px' }}>Test your knowledge and earn score points! Answer the daily questions correctly to climb the leaderboard.</p>
-                <button
-                  onClick={() => setQuizActive(true)}
-                  style={{
-                    backgroundColor: '#0d676c', color: 'white', border: 'none', padding: '14px 40px',
-                    borderRadius: '12px', fontWeight: '900', fontSize: '15px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(13,103,108,0.3)',
-                    transition: 'transform 0.2s'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  Start Quiz <ChevronRight size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* LEADERBOARD */}
-            <div style={s.leaderboard}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Trophy size={18} color="#0d676c" />
-                  <h3 style={{ fontSize: '15px', fontWeight: '900', color: '#0B1E3F', margin: 0 }}>All-Time Scores</h3>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b' }}>Attended Users: {leaderboard.length}</div>
-                  <div style={{ fontSize: '9px', fontWeight: '800', background: '#dcfce7', color: '#15803d', padding: '4px 8px', borderRadius: '20px', textTransform: 'uppercase' }}>LIVE</div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-                {leaderboard.map((p, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingBottom: '10px', borderBottom: i === leaderboard.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px', fontWeight: '900' }}>
-                      {p.initial}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '12px', fontWeight: '900', color: '#0B1E3F' }}>{p.name}</div>
-                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8' }}>Rank #{p.rank}</div>
-                    </div>
-                    <div style={{ fontSize: '13px', fontWeight: '900', color: '#0d676c' }}>{p.score}</div>
-                  </div>
-                ))}
-              </div>
-
-              <button style={{ marginTop: '15px', width: '100%', border: '1.5px solid #e2e8f0', backgroundColor: 'transparent', padding: '10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800', color: '#64748b', cursor: 'pointer' }}>
-                View Full List
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* BRAIN TEASER / QUIZ AREA (NEW SCREEN) */}
-        {quizActive && (
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={s.layout}>
-            {/* LEFT COLUMN: QUIZ AREA */}
-            <div style={{ flex: 2, display: 'flex', flexDirection: 'column', backgroundColor: 'white', borderRadius: '24px', padding: isMobile ? '20px' : '30px', border: '1px solid #eef2f3' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <button onClick={() => setQuizActive(false)} style={{ padding: '8px', borderRadius: '10px', backgroundColor: 'white', border: '1.5px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                    <ArrowLeft size={16} color="#0B1E3F" />
-                  </button>
-                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0B1E3F', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Zap size={20} color="#0d676c" fill="#0d676c" /> Daily Brain Teaser
-                  </h3>
-                </div>
-              </div>
-
-              {/* INNER PAGE MONSTER HERO */}
-              <div style={{ backgroundColor: '#B2DCE2', borderRadius: '20px', padding: isMobile ? '25px 20px' : '30px 40px', marginBottom: '30px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'center' : 'center', overflow: 'hidden', textAlign: isMobile ? 'center' : 'left' }}>
-                <div>
-                  <h2 style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '900', color: '#0B1E3F', margin: '0 0 10px 0' }}>Thinking Cap On!</h2>
-                  <p style={{ fontSize: '13px', fontWeight: '700', color: '#0B1E3F', opacity: 0.8, maxWidth: '300px', margin: isMobile ? '0 auto' : 0 }}>Answer these questions carefully. You only get one shot to earn those points!</p>
-                </div>
-                <div>
-                  {ReactiveMonster}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '20px' }}>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#94a3b8' }}>
-                    Q {questions.length > 0 ? currentIdx + 1 : 0}/{questions.length}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={() => setCurrentIdx(p => Math.max(0, p - 1))}
-                      disabled={currentIdx === 0}
-                      style={{ backgroundColor: 'white', border: '1.5px solid #eef2f3', borderRadius: '10px', padding: '8px 12px', cursor: currentIdx === 0 ? 'not-allowed' : 'pointer', opacity: currentIdx === 0 ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '12px', fontWeight: '800' }}
-                    >
-                      <ArrowLeft size={14} />
-                    </button>
-
-                    <button
-                      onClick={() => setCurrentIdx(p => Math.min(questions.length - 1, p + 1))}
-                      disabled={currentIdx === questions.length - 1}
-                      style={{ backgroundColor: 'white', border: '1.5px solid #eef2f3', borderRadius: '10px', padding: '8px 16px', cursor: currentIdx === questions.length - 1 ? 'not-allowed' : 'pointer', opacity: currentIdx === questions.length - 1 ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '6px', color: '#0B1E3F', fontSize: '12px', fontWeight: '800' }}
-                    >
-                      Next <ChevronRight size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {isQuestionsLoading ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
-                  <Loader2 className="animate-spin" size={30} color="#0d676c" />
-                </div>
-              ) : questions.length > 0 && currentQ ? (
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentIdx}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
+        <div style={s.layout}>
+          {/* LEFT COLUMN: DYNAMIC CONTENT AREA */}
+          <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: '25px' }}>
+            {!quizActive ? (
+              <>
+                {/* HERO SECTION */}
+                <div style={{ ...s.hero, flex: 1, minHeight: '380px', position: 'relative' }}>
+                  {/* Back button inside hero */}
+                  <button
+                    onClick={() => window.history.back()}
+                    style={{
+                      position: 'absolute',
+                      top: '20px',
+                      left: '20px',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      background: 'white',
+                      border: '1px solid #bfdbfe',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 20,
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                      transition: 'transform 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                   >
-                    {/* Question Status Banner */}
-                    {currentQ.has_answered && (
-                      <div style={{ marginBottom: '20px', padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: currentQ.previous_result === 'correct' ? '#f0fdf4' : '#fef2f2', border: `1.5px solid ${currentQ.previous_result === 'correct' ? '#bbf7d0' : '#fecaca'}` }}>
-                        {currentQ.previous_result === 'correct' ? <CheckIcon size={18} color="#15803d" /> : <XIcon size={18} color="#b91c1c" />}
-                        <span style={{ fontSize: '14px', fontWeight: '800', color: currentQ.previous_result === 'correct' ? '#15803d' : '#b91c1c' }}>
-                          {currentQ.previous_result === 'correct' ? 'You answered this correctly!' : 'You answered this incorrectly.'}
-                        </span>
-                      </div>
-                    )}
+                    <ArrowLeft size={18} color="#64748b" />
+                  </button>
 
-                    <div style={{ fontSize: isMobile ? '18px' : '20px', fontWeight: '900', color: '#0B1E3F', marginBottom: '25px' }}>
-                      Q{currentIdx + 1}. "{currentQ.question}"
+                  <div style={{ position: 'relative', zIndex: 10, flex: 1, paddingTop: isMobile ? '35px' : '20px' }}>
+                    <h2 style={{ ...s.heroTitle, fontSize: isMobile ? '32px' : '48px', marginBottom: '20px' }}>Get Ready for<br />a Fun Quiz!</h2>
+                    <p style={{ ...s.heroDesc, fontSize: '15px', maxWidth: '450px', marginBottom: '40px' }}>Train your brain with smart Quizzes</p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 210px)', gap: '15px', marginBottom: '40px' }}>
+                      <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '15px', border: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                        <div style={{ fontSize: '10px', fontWeight: '1000', color: '#1e40af', textTransform: 'uppercase' }}>Daily Questions</div>
+                        <div style={{ fontSize: '16px', fontWeight: '1000', color: '#0B1E3F' }}>{questions.length}</div>
+                      </div>
+                      <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '15px', border: '1px solid #fef3c7', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                        <div style={{ fontSize: '10px', fontWeight: '1000', color: '#92400e', textTransform: 'uppercase' }}>Points Remaining</div>
+                        <div style={{ fontSize: '16px', fontWeight: '1000', color: '#0B1E3F' }}>
+                          {questions.filter(q => !q.has_answered).reduce((sum, q) => sum + Number(q.points_reward || 0), 0)}
+                        </div>
+                      </div>
+                      <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '15px', border: '1px solid #bfdbfe', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                        <div style={{ fontSize: '10px', fontWeight: '1000', color: '#1e40af', textTransform: 'uppercase' }}>Overall Score</div>
+                        <div style={{ fontSize: '16px', fontWeight: '1000', color: '#0B1E3F' }}>
+                          {questions.reduce((sum, q) => sum + Number(q.points_reward || 0), 0)}
+                        </div>
+                      </div>
+                      <div style={{ backgroundColor: '#ffffff', padding: '12px 16px', borderRadius: '15px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                        <div style={{ fontSize: '10px', fontWeight: '1000', color: '#15803d', textTransform: 'uppercase' }}>Session Score</div>
+                        <div style={{ fontSize: '16px', fontWeight: '1000', color: '#0B1E3F' }}>
+                          {questions.reduce((sum, q) => {
+                            if (q.previous_result === 'correct') return sum + Number(q.points_reward || 0);
+                            return sum;
+                          }, 0)}
+                        </div>
+                      </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '15px' }}>
-                      {currentQ.options.map((optObj, i) => {
-                        const st = s.option(optObj, currentQ.has_answered);
+                    <button onClick={() => setQuizActive(true)} style={{ ...s.heroBtn, padding: '16px 45px', borderRadius: '12px', fontSize: '16px', letterSpacing: '0.5px' }}>Start Quiz</button>
+                  </div>
 
-                        return (
-                          <div
-                            key={i}
-                            style={st}
-                            onClick={() => {
-                              if (!currentQ.has_answered) setSelectedOption(optObj.letter);
+                  {/* Monster Graphic for Landing */}
+                  <div style={{ flexShrink: 0, marginLeft: isMobile ? '0' : '40px', marginTop: isMobile ? '30px' : '0' }}>
+                    <img
+                      src="https://gifdb.com/images/high/quiz-question-eric-cartman-south-park-hrlfxd5qudqyw7n0.gif"
+                      alt="South Park Guide"
+                      style={{
+                        width: isMobile ? '200px' : '280px',
+                        height: 'auto',
+                        borderRadius: '30px',
+                        boxShadow: '0 15px 35px rgba(0,0,0,0.1)'
+                      }}
+                    />
+                    <div style={{
+                      marginTop: '15px',
+                      textAlign: 'center',
+                      fontSize: '18px',
+                      fontWeight: '1000',
+                      color: '#0B1E3F',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px'
+                    }}>
+                      ARE THERE ANY<br />QUESTIONS?
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                style={{ display: 'flex', flexDirection: 'column', backgroundColor: 'white', borderRadius: '24px', padding: isMobile ? '20px' : '30px', border: '1px solid #eef2f3', width: '100%', boxSizing: 'border-box', flex: 1, height: isTablet ? 'auto' : '680px' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <button onClick={() => setQuizActive(false)} style={{ padding: '8px', borderRadius: '10px', backgroundColor: 'white', border: '1.5px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                      <ArrowLeft size={16} color="#0B1E3F" />
+                    </button>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0B1E3F', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Zap size={20} color="#0d676c" fill="#0d676c" /> Daily Brain Teaser
+                    </h3>
+                  </div>
+                </div>
+
+                {/* INNER PAGE MONSTER HERO */}
+                <div style={{ backgroundColor: '#B2DCE2', borderRadius: '20px', padding: isMobile ? '25px 20px' : '30px 40px', marginBottom: '30px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'center' : 'center', overflow: 'hidden', textAlign: isMobile ? 'center' : 'left' }}>
+                  <div>
+                    <h2 style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '900', color: '#0B1E3F', margin: '0 0 10px 0' }}>Thinking Cap On!</h2>
+                    <p style={{ fontSize: '13px', fontWeight: '700', color: '#0B1E3F', opacity: 0.8, maxWidth: '300px', margin: isMobile ? '0 auto' : 0 }}>Answer these questions carefully. You only get one shot to earn those points!</p>
+                  </div>
+                  <div>
+                    {ReactiveMonster}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '800', color: '#94a3b8' }}>
+                      Q {questions.length > 0 ? currentIdx + 1 : 0}/{questions.length}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => setCurrentIdx(p => Math.max(0, p - 1))}
+                        disabled={currentIdx === 0}
+                        style={{ backgroundColor: 'white', border: '1.5px solid #eef2f3', borderRadius: '10px', padding: '8px 12px', cursor: currentIdx === 0 ? 'not-allowed' : 'pointer', opacity: currentIdx === 0 ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '12px', fontWeight: '800' }}
+                      >
+                        <ArrowLeft size={14} />
+                      </button>
+
+                      <button
+                        onClick={() => setCurrentIdx(p => Math.min(questions.length - 1, p + 1))}
+                        disabled={currentIdx === questions.length - 1}
+                        style={{ backgroundColor: 'white', border: '1.5px solid #eef2f3', borderRadius: '10px', padding: '8px 16px', cursor: currentIdx === questions.length - 1 ? 'not-allowed' : 'pointer', opacity: currentIdx === questions.length - 1 ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: '6px', color: '#0B1E3F', fontSize: '12px', fontWeight: '800' }}
+                      >
+                        Next <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {isQuestionsLoading ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+                    <Loader2 className="animate-spin" size={30} color="#0d676c" />
+                  </div>
+                ) : questions.length > 0 && currentQ ? (
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentIdx}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                    >
+                      {/* Question Status Banner */}
+                      {currentQ.has_answered && (
+                        <div style={{ marginBottom: '20px', padding: '12px 16px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: currentQ.previous_result === 'correct' ? '#f0fdf4' : '#fef2f2', border: `1.5px solid ${currentQ.previous_result === 'correct' ? '#bbf7d0' : '#fecaca'}` }}>
+                          {currentQ.previous_result === 'correct' ? <CheckIcon size={18} color="#15803d" /> : <XIcon size={18} color="#b91c1c" />}
+                          <span style={{ fontSize: '14px', fontWeight: '800', color: currentQ.previous_result === 'correct' ? '#15803d' : '#b91c1c' }}>
+                            {currentQ.previous_result === 'correct' ? 'You answered this correctly!' : 'You answered this incorrectly.'}
+                          </span>
+                        </div>
+                      )}
+
+                      <div style={{ fontSize: isMobile ? '18px' : '20px', fontWeight: '900', color: '#0B1E3F', marginBottom: '25px' }}>
+                        Q{currentIdx + 1}. "{currentQ.question}"
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '15px' }}>
+                        {currentQ.options.map((optObj, i) => {
+                          const st = s.option(optObj, currentQ.has_answered);
+
+                          return (
+                            <div
+                              key={i}
+                              style={st}
+                              onClick={() => {
+                                if (!currentQ.has_answered) setSelectedOption(optObj.letter);
+                              }}
+                            >
+                              <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: st.borderColor === '#22c55e' ? '#22c55e' : (st.borderColor === '#ef4444' ? '#ef4444' : '#0d676c'), display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: '900' }}>
+                                {optObj.letter}
+                              </div>
+                              {optObj.text}
+
+                              {currentQ.has_answered && currentQ.correct_answer === optObj.text && (
+                                <div style={{ marginLeft: 'auto', backgroundColor: '#22c55e', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' }}>CORRECT</div>
+                              )}
+                              {currentQ.has_answered && currentQ.user_selected_letter === optObj.letter && currentQ.correct_answer !== optObj.text && (
+                                <div style={{ marginLeft: 'auto', backgroundColor: '#ef4444', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' }}>WRONG</div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                        {currentQ.has_answered && currentIdx < questions.length - 1 ? (
+                          <button
+                            onClick={() => setCurrentIdx(prev => prev + 1)}
+                            style={{
+                              backgroundColor: '#0d676c', color: 'white', border: 'none', padding: '12px 30px',
+                              borderRadius: '12px', fontWeight: '900', fontSize: '14px', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(13,103,108,0.2)'
                             }}
                           >
-                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: st.borderColor === '#22c55e' ? '#22c55e' : (st.borderColor === '#ef4444' ? '#ef4444' : '#0d676c'), display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: '900' }}>
-                              {optObj.letter}
-                            </div>
-                            {optObj.text}
-
-                            {currentQ.has_answered && currentQ.correct_answer === optObj.text && (
-                              <div style={{ marginLeft: 'auto', backgroundColor: '#22c55e', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' }}>CORRECT</div>
-                            )}
-                            {currentQ.has_answered && currentQ.user_selected_letter === optObj.letter && currentQ.correct_answer !== optObj.text && (
-                              <div style={{ marginLeft: 'auto', backgroundColor: '#ef4444', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900' }}>WRONG</div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div style={{ marginTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                      {currentQ.has_answered && currentIdx < questions.length - 1 ? (
-                        <button
-                          onClick={() => setCurrentIdx(prev => prev + 1)}
-                          style={{
-                            backgroundColor: '#0d676c', color: 'white', border: 'none', padding: '12px 30px',
-                            borderRadius: '12px', fontWeight: '900', fontSize: '14px', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(13,103,108,0.2)'
-                          }}
-                        >
-                          Next Question <ChevronRight size={18} />
-                        </button>
-                      ) : currentQ.has_answered && currentIdx === questions.length - 1 ? (
-                        <button
-                          disabled={isSubmitting}
-                          onClick={handleSendTotalResults}
-                          style={{
-                            backgroundColor: '#34A853', color: 'white', border: 'none', padding: '12px 30px',
-                            borderRadius: '12px', fontWeight: '900', fontSize: '14px', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(52,168,83,0.2)'
-                          }}
-                        >
-                          {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Trophy size={18} />}
-                          Submit Final Score ({questions.reduce((sum, q) => {
-                            if (q.previous_result === 'correct') {
-                              return sum + Number(q.points_reward || 0);
-                            }
-                            return sum;
-                          }, 0)} pts)
-                        </button>
-                      ) : (
-                        <button
-                          disabled={currentQ.has_answered || !selectedOption || isSubmitting}
-                          onClick={handleSubmit}
-                          style={{
-                            backgroundColor: currentQ.has_answered || !selectedOption ? '#e2e8f0' : '#0d676c',
-                            color: currentQ.has_answered || !selectedOption ? '#94a3b8' : 'white',
-                            border: 'none', padding: '12px 30px', borderRadius: '12px',
-                            fontWeight: '900', fontSize: '14px',
-                            cursor: currentQ.has_answered || !selectedOption || isSubmitting ? 'not-allowed' : 'pointer',
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                            boxShadow: currentQ.has_answered || !selectedOption ? 'none' : '0 4px 12px rgba(13,103,108,0.2)'
-                          }}
-                        >
-                          {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-                          Check Answer
-                        </button>
-                      )}
-                    </div>
-
-                  </motion.div>
-                </AnimatePresence>
-              ) : (
-                <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontWeight: '800' }}>
-                  No quizzes available for today.
-                </div>
-              )}
-            </div>
-
-            {/* RIGHT COLUMN: LEADERBOARD IN INNER SCREEN */}
-            <div style={s.leaderboard}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Trophy size={18} color="#0d676c" />
-                  <h3 style={{ fontSize: '15px', fontWeight: '900', color: '#0B1E3F', margin: 0 }}>Daily Scores</h3>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b' }}>Attended Users: {leaderboard.length}</div>
-                  <div style={{ fontSize: '9px', fontWeight: '800', background: '#dcfce7', color: '#15803d', padding: '4px 8px', borderRadius: '20px', textTransform: 'uppercase' }}>LIVE</div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-                {leaderboard.map((p, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingBottom: '10px', borderBottom: i === leaderboard.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px', fontWeight: '900' }}>
-                      {p.initial}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '12px', fontWeight: '900', color: '#0B1E3F' }}>{p.name}</div>
-                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8' }}>Rank #{p.rank}</div>
-                    </div>
-                    <div style={{ fontSize: '13px', fontWeight: '900', color: '#0d676c' }}>{p.score}</div>
+                            Next Question <ChevronRight size={18} />
+                          </button>
+                        ) : currentQ.has_answered && currentIdx === questions.length - 1 ? (
+                          <button
+                            disabled={isSubmitting}
+                            onClick={handleSendTotalResults}
+                            style={{
+                              backgroundColor: '#34A853', color: 'white', border: 'none', padding: '12px 30px',
+                              borderRadius: '12px', fontWeight: '900', fontSize: '14px', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(52,168,83,0.2)'
+                            }}
+                          >
+                            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Trophy size={18} />}
+                            Submit Final Score ({questions.reduce((sum, q) => {
+                              if (q.previous_result === 'correct') {
+                                return sum + Number(q.points_reward || 0);
+                              }
+                              return sum;
+                            }, 0)} pts)
+                          </button>
+                        ) : (
+                          <button
+                            disabled={currentQ.has_answered || !selectedOption || isSubmitting}
+                            onClick={handleSubmit}
+                            style={{
+                              backgroundColor: currentQ.has_answered || !selectedOption ? '#e2e8f0' : '#0d676c',
+                              color: currentQ.has_answered || !selectedOption ? '#94a3b8' : 'white',
+                              border: 'none', padding: '12px 30px', borderRadius: '12px',
+                              fontWeight: '900', fontSize: '14px',
+                              cursor: currentQ.has_answered || !selectedOption || isSubmitting ? 'not-allowed' : 'pointer',
+                              display: 'flex', alignItems: 'center', gap: '8px',
+                              boxShadow: currentQ.has_answered || !selectedOption ? 'none' : '0 4px 12px rgba(13,103,108,0.2)'
+                            }}
+                          >
+                            {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                            Check Answer
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                ) : (
+                  <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontWeight: '800' }}>
+                    No quizzes available for today.
                   </div>
-                ))}
-              </div>
+                )}
+              </motion.div>
+            )}
+          </div>
 
-              <button style={{ marginTop: '15px', width: '100%', border: '1.5px solid #e2e8f0', backgroundColor: 'transparent', padding: '10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800', color: '#64748b', cursor: 'pointer' }}>
-                View Full List
-              </button>
+          {/* LEADERBOARD (Right Side Panel - PERSISTENT) */}
+          <div style={s.leaderboard}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Trophy size={18} color="#0d676c" />
+                <h3 style={{ fontSize: '15px', fontWeight: '900', color: '#0B1E3F', margin: 0 }}>
+                  {!quizActive ? "All-Time Scores" : "Daily Scores"}
+                </h3>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b' }}>Attended Users: {leaderboard.length}</div>
+                <div style={{ fontSize: '9px', fontWeight: '800', background: '#dcfce7', color: '#15803d', padding: '4px 8px', borderRadius: '20px', textTransform: 'uppercase' }}>LIVE</div>
+              </div>
             </div>
-          </motion.div>
-        )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+              {leaderboard.map((p, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingBottom: '10px', borderBottom: i === leaderboard.length - 1 ? 'none' : '1px solid #f1f5f9', flexShrink: 0 }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px', fontWeight: '900' }}>
+                    {p.initial}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '12px', fontWeight: '900', color: '#0B1E3F' }}>{p.name}</div>
+                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8' }}>Rank #{p.rank}</div>
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: '900', color: '#0d676c' }}>{p.score}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </main>
       <AppFooter />
     </div>

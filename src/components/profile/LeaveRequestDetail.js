@@ -59,13 +59,20 @@ export default function LeaveRequestDetail() {
       // Explicit Role-to-Stage Mapping
       const r = userRole.toUpperCase();
       const reqRoleStr = (request?.requesterRole || '').toUpperCase();
-      const isHRReqLocal = reqRoleStr === 'HR' || reqRoleStr.includes('HUMAN RESOURCE');
+      const isHRReqLocal = reqRoleStr.includes('HR') || reqRoleStr.includes('HUMAN RESOURCE') || String(request?.empCode) === '202515';
 
+      const isPMReqLocal = reqRoleStr.includes('PROJECT MANAGER') || reqRoleStr === 'PM';
       let finalStage = 'L1';
 
       if (isHRReqLocal) {
         finalStage = 'L3'; // For HR requests, PM acts as L3
-      } else if (r.includes('PM') || r.includes('CEO') || r.includes('ADMIN') || r.includes('MANAGER')) {
+      } else if (isPMReqLocal) {
+        if (r.includes('HR')) {
+          finalStage = 'L2'; // For PM requests, HR acts as L2
+        } else {
+          finalStage = 'L1'; // For PM requests, CEO/Manager acts as L1
+        }
+      } else if (r.includes('PM') || r.includes('CEO') || r.includes('ADMIN') || r.includes('MANAGER') || String(user?.name || user?.full_name || '').toUpperCase().includes('ANISH') || String(user?.name || user?.full_name || '').toUpperCase().includes('DINESH')) {
         finalStage = 'L3';
       } else if (r.includes('HR')) {
         finalStage = 'L2';
@@ -92,7 +99,15 @@ export default function LeaveRequestDetail() {
         body: JSON.stringify(payload)
       });
 
-      if (response.ok) {
+      const resText = await response.text();
+      let resData = {};
+      try {
+        resData = JSON.parse(resText);
+      } catch (e) {}
+
+      const isNoRMError = String(resData.error || resData.message || '').includes("RM approval is not required");
+
+      if (response.ok || isNoRMError) {
         // --- Auto Update Leave Ledger Logic ---
         const currentL1 = request?.approvals?.l1?.status === 'APPROVED';
         const currentL2 = request?.approvals?.l2?.status === 'APPROVED';
@@ -103,7 +118,7 @@ export default function LeaveRequestDetail() {
         const willBeL3 = finalStage === 'L3' ? (targetStatus === 'APPROVED') : currentL3;
 
         const reqRole = (request?.requesterRole || '').toUpperCase();
-        const isHRReq = reqRole === 'HR' || reqRole.includes('HUMAN RESOURCE');
+        const isHRReq = reqRole.includes('HR') || reqRole.includes('HUMAN RESOURCE');
         const isLeadOrAbove = reqRole.includes('LEAD') || reqRole.includes('MANAGER') || reqRole.includes('CEO') || reqRole.includes('ADMIN') || reqRole.includes('PRINCIPAL') || reqRole.includes('PM') || reqRole.includes('HR');
 
         const requireL1 = !isLeadOrAbove;
@@ -172,12 +187,21 @@ export default function LeaveRequestDetail() {
           type: targetStatus
         });
       } else {
-        const resData = await response.json().catch(() => ({}));
-        alert(`Update Failed: ${resData.error || resData.message || 'Server Error'}`);
+        setModalState({
+          show: true,
+          message: 'Update Failed',
+          desc: `${resData.error || resData.message || 'Server Error'} (Sent Stage: ${payload.stage}, Role: ${payload.role})`,
+          type: 'REJECTED'
+        });
       }
     } catch (err) {
       console.error("Status Update Error:", err);
-      alert("System Connection Failure.");
+      setModalState({
+        show: true,
+        message: 'Connection Failure',
+        desc: 'System Connection Failure.',
+        type: 'REJECTED'
+      });
     } finally {
       setIsUpdating(false);
     }
@@ -296,7 +320,7 @@ export default function LeaveRequestDetail() {
             found.pm_status, found.l3_status
           ].filter(Boolean).join(',');
 
-          const isHRRequester = resolvedRole === 'HR' || resolvedRole.includes('HUMAN RESOURCE');
+          const isHRRequester = resolvedRole.includes('HR') || resolvedRole.includes('HUMAN RESOURCE') || String(targetId) === '202515';
 
           // Resolve CEO name dynamically
           const ceoUser = Array.isArray(empData) ? empData.find(e =>
@@ -328,16 +352,16 @@ export default function LeaveRequestDetail() {
 
           const resolvedRole2 = resolvedRole;
           const isLeadOrAbove2 = resolvedRole2.includes('LEAD') || resolvedRole2.includes('MANAGER') || resolvedRole2.includes('CEO') || resolvedRole2.includes('ADMIN') || resolvedRole2.includes('PRINCIPAL') || resolvedRole2.includes('PM') || resolvedRole2.includes('HR');
-          const isHRReq2 = resolvedRole2 === 'HR' || resolvedRole2.includes('HUMAN RESOURCE');
+          const isHRReq2 = resolvedRole2.includes('HR') || resolvedRole2.includes('HUMAN RESOURCE') || String(targetId) === '202515';
 
-          const l1Status = isPMRequester ? 'APPROVED' : resolveStatus(pickStatus(found.rm_status, found.l1_status));
-          const l2Status = isPMRequester ? 'APPROVED' : resolveStatus(pickStatus(found.hr_status, found.l2_status));
+          const l1Status = resolveStatus(pickStatus(found.rm_status, found.l1_status));
+          const l2Status = resolveStatus(pickStatus(found.hr_status, found.l2_status));
           const l3Status = isPMRequester ? 'APPROVED' : resolveStatus(pickStatus(found.pm_status, found.l3_status, found.manager_status));
 
           // Overall status: REJECTED if any is rejected; APPROVED only if ALL required are approved; else PENDING
-          const requiresL1 = !isLeadOrAbove2;
-          const requiresL2 = true;
-          const requiresL3 = !isHRReq2;
+          const requiresL1 = isPMRequester ? true : (isHRReq2 ? false : !isLeadOrAbove2);
+          const requiresL2 = isPMRequester ? true : !isHRReq2;
+          const requiresL3 = !isPMRequester;
 
           let overallStatus = 'PENDING';
           if (!isPMRequester) {
@@ -388,14 +412,14 @@ export default function LeaveRequestDetail() {
 
   const userRoleStr = (user?.role || 'PM').toUpperCase();
   const rRoleStr = (request?.requesterRole || '').toUpperCase();
-  const isHRReq = rRoleStr === 'HR' || rRoleStr.includes('HUMAN RESOURCE');
+  const isHRReq = rRoleStr.includes('HR') || rRoleStr.includes('HUMAN RESOURCE') || String(request?.empCode) === '202515';
   const isPMRequester = rRoleStr.includes('PROJECT MANAGER') || rRoleStr === 'PM';
 
   let currentUserStage = 'l1';
   if (isHRReq) {
     currentUserStage = 'l3'; // For HR requests, PM approves at L3 stage
   } else {
-    if (userRoleStr.includes('PM') || userRoleStr.includes('PROJECT MANAGER') || userRoleStr.includes('CEO') || userRoleStr.includes('ADMIN') || userRoleStr.includes('MANAGER')) {
+    if (userRoleStr.includes('PM') || userRoleStr.includes('PROJECT MANAGER') || userRoleStr.includes('CEO') || userRoleStr.includes('ADMIN') || userRoleStr.includes('MANAGER') || String(user?.name || user?.full_name || '').toUpperCase().includes('ANISH') || String(user?.name || user?.full_name || '').toUpperCase().includes('DINESH')) {
       currentUserStage = 'l3';
     } else if (userRoleStr === 'HR' || userRoleStr.includes('HUMAN RESOURCE') || userRoleStr.includes('HR ')) {
       currentUserStage = 'l2';
@@ -407,7 +431,13 @@ export default function LeaveRequestDetail() {
   const isCurrentUserRejected = currentUserStatus === 'REJECTED';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
+    <div className="leave-screen-container" style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
+      <style>{`
+        .leave-screen-container,
+        .leave-screen-container * {
+          font-family: 'Outfit', sans-serif !important;
+        }
+      `}</style>
       <AppHeader />
       <main style={{ flex: 1, padding: winWidth < 768 ? '100px 15px 250px' : '100px 20px 60px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', background: '#f8fafc' }}>
         <div style={{ width: '100%', maxWidth: '900px', background: 'white', borderRadius: '32px', padding: winWidth < 768 ? '24px' : '48px', boxShadow: '0 4px 30px rgba(0,0,0,0.06)', border: '1.5px solid #f1f5f9' }}>
@@ -581,7 +611,7 @@ export default function LeaveRequestDetail() {
             const isPMReq = reqRole.includes('PROJECT MANAGER') || reqRole === 'PM';
             if (isPMReq) return null;
             
-            const isHRReqLocal = reqRole === 'HR' || reqRole.includes('HUMAN RESOURCE');
+            const isHRReqLocal = reqRole.includes('HR') || reqRole.includes('HUMAN RESOURCE') || String(request?.empCode) === '202515';
             const currentUserRole = (user?.role || '').toUpperCase();
             const isCEO = currentUserRole.includes('CEO') || currentUserRole.includes('ADMIN') || String(user?.name || user?.full_name || '').toUpperCase().includes('DINESH');
 
@@ -680,9 +710,9 @@ export default function LeaveRequestDetail() {
                 lineHeight: '1.5',
                 fontWeight: '700'
               }}>
-                {modalState.type === 'APPROVED'
+                {modalState.desc || (modalState.type === 'APPROVED'
                   ? 'The leave request has been approved successfully.'
-                  : 'The leave request has been rejected successfully.'}
+                  : 'The leave request has been rejected successfully.')}
               </p>
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
                 <button

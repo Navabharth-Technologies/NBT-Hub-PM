@@ -30,6 +30,26 @@ export default function TicketManagement() {
   }, []);
 
   useEffect(() => {
+    if (manageTicket || viewTicket) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100%';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.height = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    };
+  }, [manageTicket, viewTicket]);
+
+  useEffect(() => {
     fetchTickets();
   }, [user]);
 
@@ -123,23 +143,36 @@ export default function TicketManagement() {
 
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
-    doc.text('OFFICIAL TICKET PERFORMANCE REPORT', 14, 28);
+    doc.text('TICKET PERFORMANCE REPORT', 14, 28);
     doc.text(`Generated on: ${today}`, 14, 34);
 
     const tableColumn = ["Ticket ID", "Subject", "Requester", "Priority", "Status", "Created At"];
     const tableRows = filteredTickets.map((t, index) => {
       let dateVal = t.created_at || t.created_date || t.timestamp || t.time_stamp;
-      if (typeof dateVal === 'string' && dateVal.includes('Z20')) {
-        dateVal = dateVal.split('Z')[0] + 'Z';
-      }
 
-      const parsedDate = dateVal ? new Date(dateVal) : null;
-      let formattedDate = 'Unknown';
-      if (parsedDate && !isNaN(parsedDate.getTime())) {
-        formattedDate = parsedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
-      } else if (dateVal) {
-        formattedDate = String(dateVal).split('T')[0];
-      }
+      const formatToDDMMYYYY = (dVal) => {
+        if (!dVal) return 'Unknown';
+        try {
+          let clean = String(dVal).trim();
+          if (clean.includes('Z20')) {
+            clean = clean.split('Z')[0] + 'Z';
+          }
+          const d = new Date(clean);
+          if (isNaN(d.getTime())) {
+            const match = clean.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (match) return `${match[3]}/${match[2]}/${match[1]}`;
+            return clean.split('T')[0];
+          }
+          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const year = d.getFullYear();
+          return `${day}/${month}/${year}`;
+        } catch (e) {
+          return 'Unknown';
+        }
+      };
+
+      const formattedDate = formatToDDMMYYYY(dateVal);
 
       const rName = t.requester || t.requester_name || t.user_name || t.member_name ||
         usersList.find(u => String(u.id) === String(t.user_id || t.userId || t.employee_id))?.name ||
@@ -205,8 +238,8 @@ export default function TicketManagement() {
               <ArrowLeft size={20} />
             </button>
             <div>
-              <h1 style={{ fontSize: winWidth < 768 ? '26px' : '32px', fontWeight: '950', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-1px' }}>Support Hub</h1>
-              <p style={{ color: '#64748b', margin: 0, fontSize: winWidth < 768 ? '14px' : '15px', fontWeight: '600', lineHeight: '1.5' }}>Manage Organization-Wide Support Requests and Resolutions</p>
+              <h1 style={{ fontSize: winWidth < 768 ? '26px' : '32px', fontWeight: '950', color: '#1e293b', margin: '0 0 8px 0', letterSpacing: '-1px' }}>Ticket Management</h1>
+              <p style={{ color: '#64748b', margin: 0, fontSize: winWidth < 768 ? '14px' : '15px', fontWeight: '600', lineHeight: '1.5' }}></p>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
@@ -260,12 +293,30 @@ export default function TicketManagement() {
                     usersList.find(u => String(u.id) === String(ticket.user_id || ticket.userId || ticket.employee_id))?.name ||
                     'Anonymous';
 
-                  let dateVal = ticket.created_at || ticket.created_date || ticket.timestamp || ticket.time_stamp;
-                  if (typeof dateVal === 'string' && dateVal.includes('Z20')) dateVal = dateVal.split('Z')[0] + 'Z';
-                  const parsedDate = new Date(dateVal);
-                  const formattedDate = (parsedDate && !isNaN(parsedDate.getTime()))
-                    ? parsedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')
-                    : (dateVal ? String(dateVal).split('T')[0] : 'N/A');
+                  const dateVal = ticket.created_at || ticket.created_date || ticket.timestamp || ticket.time_stamp;
+                  const formatToDDMMYYYY = (dVal) => {
+                    if (!dVal) return 'N/A';
+                    let clean = String(dVal).trim();
+                    if (clean.includes('Z20')) clean = clean.split('Z')[0] + 'Z';
+                    if (clean.includes('-') && clean.length === 10) {
+                      const parts = clean.split('-');
+                      if (parts[0].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+                    if (clean.includes('T') && clean.includes('-')) {
+                      const datePart = clean.split('T')[0];
+                      if (datePart.length === 10) {
+                        const parts = datePart.split('-');
+                        if (parts[0].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                      }
+                    }
+                    const d = new Date(clean);
+                    if (isNaN(d.getTime())) return clean;
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const year = d.getFullYear();
+                    return `${day}-${month}-${year}`;
+                  };
+                  const formattedDate = formatToDDMMYYYY(dateVal);
 
                   return (
                     <div
@@ -417,18 +468,27 @@ export default function TicketManagement() {
                           </td>
                           <td style={{ padding: '20px 25px', color: '#64748b', fontWeight: '600', fontSize: '12px' }}>
                             {(() => {
-                              let dateVal = ticket.created_at || ticket.created_date || ticket.timestamp || ticket.time_stamp;
+                              const dateVal = ticket.created_at || ticket.created_date || ticket.timestamp || ticket.time_stamp;
                               if (!dateVal) return 'Unknown';
-
-                              // Handle cases where the date might be doubled/concatenated in the DB
-                              if (typeof dateVal === 'string' && dateVal.includes('Z20')) {
-                                dateVal = dateVal.split('Z')[0] + 'Z';
+                              let clean = String(dateVal).trim();
+                              if (clean.includes('Z20')) clean = clean.split('Z')[0] + 'Z';
+                              if (clean.includes('-') && clean.length === 10) {
+                                const parts = clean.split('-');
+                                if (parts[0].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`;
                               }
-
-                              const parsedDate = new Date(dateVal);
-                              if (isNaN(parsedDate.getTime())) return String(dateVal).split('T')[0]; // Fallback to YYYY-MM-DD
-
-                              return parsedDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
+                              if (clean.includes('T') && clean.includes('-')) {
+                                const datePart = clean.split('T')[0];
+                                if (datePart.length === 10) {
+                                  const parts = datePart.split('-');
+                                  if (parts[0].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                                }
+                              }
+                              const d = new Date(clean);
+                              if (isNaN(d.getTime())) return clean;
+                              const day = String(d.getDate()).padStart(2, '0');
+                              const month = String(d.getMonth() + 1).padStart(2, '0');
+                              const year = d.getFullYear();
+                              return `${day}-${month}-${year}`;
                             })()}
                           </td>
                           <td style={{ padding: '20px 25px' }}>

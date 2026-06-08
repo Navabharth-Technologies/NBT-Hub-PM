@@ -72,6 +72,27 @@ export default function MyLeaves() {
     determinePM();
   }, [user]);
 
+  useEffect(() => {
+    const hasActiveModal = showModal || showDetailModal || alertState.show;
+    if (hasActiveModal) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100%';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.height = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    };
+  }, [showModal, showDetailModal, alertState.show]);
+
   const showAlert = (message, type = 'ERROR') => {
     setAlertState({ show: true, message, type });
   };
@@ -495,7 +516,10 @@ export default function MyLeaves() {
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
     } catch (e) {
       return dateStr;
     }
@@ -514,7 +538,13 @@ export default function MyLeaves() {
   const calculatedDays = calculateLeaveDays(formData.start_date, formData.end_date, holidaysSet, formData.is_half_day);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
+    <div className="leave-screen-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
+      <style>{`
+        .leave-screen-container,
+        .leave-screen-container * {
+          font-family: 'Outfit', sans-serif !important;
+        }
+      `}</style>
       <AppHeader />
 
       <main style={{ flex: 1, padding: winWidth < 768 ? '15px' : '30px 40px', marginTop: winWidth < 768 ? '80px' : '100px' }}>

@@ -5,7 +5,7 @@ import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config';
 import { 
-  ChevronLeft, Send, FileText, 
+  ArrowLeft, Send, FileText, 
   CheckCircle, Clock, Info, Check, Package, X,
   ChevronDown, ShieldCheck, AlertCircle
 } from 'lucide-react';
@@ -22,6 +22,11 @@ export default function ServiceCertificateUserScreen() {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Custom centered popup (replaces native alert)
+    const [popup, setPopup] = useState(null); // { msg, type: 'success'|'error' }
+    const showPopup = (msg, type = 'success') => setPopup({ msg, type });
+    const closePopup = () => setPopup(null);
     
     // Form state
     const [formData, setFormData] = useState({
@@ -93,7 +98,7 @@ export default function ServiceCertificateUserScreen() {
     const handleFormSubmit = async () => {
         const finalPurpose = formData.purpose === 'Other' ? formData.other_purpose : formData.purpose;
         if (!finalPurpose || !user?.token) {
-            alert('Please select a purpose for your request.');
+            showPopup('Please select a purpose for your request.', 'error');
             return;
         }
         try {
@@ -113,11 +118,11 @@ export default function ServiceCertificateUserScreen() {
                 })
             });
             if (res.ok) {
-                alert('Application submitted successfully! ✅');
+                showPopup('Application submitted successfully! ✅', 'success');
                 setFormData({ purpose: '', other_purpose: '' });
                 fetchMyRequests();
             } else {
-                alert('Submission failed. Please try again.');
+                showPopup('Submission failed. Please try again.', 'error');
             }
         } catch (error) { console.error('Submit error:', error); }
         finally { setSubmitting(false); }
@@ -126,15 +131,60 @@ export default function ServiceCertificateUserScreen() {
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', display: 'flex', flexDirection: 'column', fontFamily: "'Outfit', sans-serif" }}>
             <AppHeader />
+
+            {/* ── Custom Centered Popup Modal ── */}
+            {popup && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(6px)',
+                    zIndex: 99999,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        background: 'white', borderRadius: '28px', padding: '40px 36px',
+                        maxWidth: '420px', width: '100%', textAlign: 'center',
+                        boxShadow: '0 25px 60px rgba(0,0,0,0.18)',
+                        animation: 'popupIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards'
+                    }}>
+                        <div style={{
+                            width: '64px', height: '64px', borderRadius: '50%',
+                            margin: '0 auto 20px',
+                            background: popup.type === 'success' ? '#f0fdf4' : '#fff1f2',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            {popup.type === 'success'
+                                ? <CheckCircle size={32} color="#22c55e" />
+                                : <AlertCircle size={32} color="#ef4444" />}
+                        </div>
+                        <p style={{
+                            fontSize: '16px', fontWeight: '800', color: '#0f172a',
+                            margin: '0 0 28px', lineHeight: '1.5'
+                        }}>{popup.msg}</p>
+                        <button
+                            onClick={closePopup}
+                            style={{
+                                padding: '14px 48px', borderRadius: '16px', border: 'none',
+                                background: popup.type === 'success' ? '#0f172a' : '#ef4444',
+                                color: 'white', fontWeight: '900', fontSize: '15px',
+                                cursor: 'pointer', fontFamily: 'inherit',
+                                boxShadow: popup.type === 'success'
+                                    ? '0 8px 20px rgba(15,23,42,0.2)'
+                                    : '0 8px 20px rgba(239,68,68,0.25)'
+                            }}
+                        >OK</button>
+                    </div>
+                </div>
+            )}
             
             <main style={{ flex: 1, padding: winWidth < 768 ? '100px 15px 120px' : '100px 26px 40px', maxWidth: '100%', margin: '0 auto', width: '100%' }}>
                 {/* Header Section */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: winWidth < 768 ? '25px' : '40px' }}>
                     <button 
                         onClick={() => navigate(-1)}
-                        style={{ background: 'white', border: 'none', width: '38px', height: '38px', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+                        style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
-                        <ChevronLeft size={22} color="#0f172a" />
+                        <ArrowLeft size={18} color="#64748b" />
                     </button>
                     <div>
                         <h1 style={{ fontSize: winWidth < 768 ? '20px' : '24px', fontWeight: '950', color: '#0f172a', margin: 0 }}>Experience Letter</h1>
@@ -330,7 +380,7 @@ export default function ServiceCertificateUserScreen() {
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(12px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
                     <div className="animate-slide-up" style={{ background: 'white', width: '100%', maxWidth: '900px', borderRadius: '40px', maxHeight: '92vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.3)' }}>
                         
-                        {/* Header Redesign */}
+                        {/* Header */}
                         <div style={{ padding: '30px 40px', background: 'white', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                                 <div style={{ width: '60px', height: '60px', borderRadius: '22px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(49, 99, 170, 0.08)' }}>
@@ -346,8 +396,6 @@ export default function ServiceCertificateUserScreen() {
 
                         <div style={{ padding: '40px', overflowY: 'auto', flex: 1, background: '#fcfdfe' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '35px' }}>
-                                
-                                {/* Laptop Details Grid */}
                                 <div style={{ display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : '1.5fr 1fr', gap: '25px' }}>
                                     <div>
                                         <label style={{ display: 'block', fontSize: '12px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Laptop Brand / Model</label>
@@ -363,13 +411,11 @@ export default function ServiceCertificateUserScreen() {
                                     </div>
                                 </div>
 
-                                {/* Peripherals Section */}
                                 <div style={{ background: 'white', border: '1px solid #f1f5f9', borderRadius: '30px', padding: winWidth < 768 ? '20px' : '30px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '25px' }}>
                                         <div style={{ color: '#22c55e' }}><ShieldCheck size={22} /></div>
                                         <h3 style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Hardware Peripherals Verified</h3>
                                     </div>
-
                                     <div style={{ display: 'grid', gridTemplateColumns: winWidth < 480 ? 'repeat(2, 1fr)' : winWidth < 768 ? 'repeat(3, 1fr)' : 'repeat(5, 1fr)', gap: '15px' }}>
                                         {hardwareItems.map((item, idx) => (
                                             <div key={idx} style={{ 
@@ -411,7 +457,15 @@ export default function ServiceCertificateUserScreen() {
             )}
 
             <AppFooter />
-            <style>{`.animate-fade-in { animation: fadeIn 0.4s ease-out forwards; } .animate-slide-up { animation: slideUp 0.3s ease-out forwards; } @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } @keyframes slideUp { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } } .animate-spin { animation: spin 2s linear infinite; } @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+            <style>{`
+                .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+                .animate-slide-up { animation: slideUp 0.3s ease-out forwards; }
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes slideUp { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+                .animate-spin { animation: spin 2s linear infinite; }
+                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                @keyframes popupIn { from { opacity: 0; transform: scale(0.88); } to { opacity: 1; transform: scale(1); } }
+            `}</style>
         </div>
     );
 }

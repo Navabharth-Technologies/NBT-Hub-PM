@@ -17,6 +17,16 @@ import './PMDashboard.css';
 export default function TaskManagement() {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const formatTaskDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'N/A';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -157,15 +167,19 @@ export default function TaskManagement() {
   }, [user]);
 
   const filteredTasks = tasks.filter(task => {
-    const taskIdString = String(task.task_id || task.id || '');
+    const query = searchTerm.toLowerCase().trim();
+    const statusVal = (task.sprint_status || task.status || '').toLowerCase();
+    const matchesStatus = statusFilter === 'All Status' || statusVal === statusFilter.toLowerCase();
+
+    if (!query) return matchesStatus;
+
+    const taskIdString = String(task.task_id || task.id || '').toLowerCase();
     const taskNameString = String(task.display_title || '').toLowerCase();
     const assigneeNameString = String(task.assignee_name || '').toLowerCase();
     
-    const searchStr = taskIdString + taskNameString + assigneeNameString;
-    const matchesSearch = searchStr.includes(searchTerm.toLowerCase());
-    
-    const statusVal = (task.sprint_status || task.status || '').toLowerCase();
-    const matchesStatus = statusFilter === 'All Status' || statusVal === statusFilter.toLowerCase();
+    const matchesSearch = taskIdString.startsWith(query) || 
+                          taskNameString.startsWith(query) || 
+                          assigneeNameString.startsWith(query);
     
     return matchesSearch && matchesStatus;
   });
@@ -325,6 +339,16 @@ export default function TaskManagement() {
       const doc = new jsPDF('landscape');
       const today = new Date().toLocaleString();
 
+      const formatTaskDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'N/A';
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      };
+
       // 1. Header & Branding
       doc.setFontSize(22);
       doc.setTextColor(30, 41, 59); // Indigo-900
@@ -336,14 +360,15 @@ export default function TaskManagement() {
       doc.text(`Generated on: ${today}`, 14, 34);
 
       // 2. Prepare Data
-      const tableColumn = ["ID", "Work Item Description", "Assignee", "Progress", "Status", "Verification"];
+      const tableColumn = ["ID", "Work Item Description", "Assignee", "Progress", "Status", "Verification", "Date"];
       const tableRows = filteredTasks.map(task => [
         task.id || 'N/A',
         task.display_title,
         task.assignee_name,
         `${task.progress_percentage}%`,
         task.status || 'Pending',
-        task.verify_status || 'Pending'
+        task.verify_status || 'Pending',
+        formatTaskDate(task.deadline || task.updated_at)
       ]);
 
       // 3. Generate Table
@@ -369,7 +394,8 @@ export default function TaskManagement() {
           2: { cellWidth: 40 },
           3: { cellWidth: 20, halign: 'center' },
           4: { cellWidth: 30, halign: 'center' },
-          5: { cellWidth: 30, halign: 'center' }
+          5: { cellWidth: 30, halign: 'center' },
+          6: { cellWidth: 30, halign: 'center' }
         },
         alternateRowStyles: {
           fillColor: [248, 250, 252] // Light Slate
@@ -558,7 +584,7 @@ export default function TaskManagement() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1.5px solid #f8fafc', paddingTop: '15px' }}>
                       <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>
-                         📅 {task.deadline || task.updated_at ? new Date(task.deadline || task.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+                         📅 {formatTaskDate(task.deadline || task.updated_at)}
                       </div>
                       <div style={{ display: 'flex', gap: '10px' }}>
                         {task.has_review ? (
@@ -671,7 +697,7 @@ export default function TaskManagement() {
                           </div>
                         </td>
                          <td style={{ padding: '16px 12px', color: '#64748b', fontWeight: '600', fontSize: '12px' }}>
-                           {task.deadline || task.updated_at ? new Date(task.deadline || task.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+                           {formatTaskDate(task.deadline || task.updated_at)}
                          </td>
                          <td style={{ padding: '16px 12px', width: '100px' }}>
                            {task.has_review ? (

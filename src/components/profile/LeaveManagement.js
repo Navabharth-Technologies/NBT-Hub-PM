@@ -40,7 +40,7 @@ export default function LeaveManagement() {
 
     const resolvedRole = reqRole;
     const isLeadOrAbove = resolvedRole && (resolvedRole.includes('LEAD') || resolvedRole.includes('MANAGER') || resolvedRole.includes('CEO') || resolvedRole.includes('ADMIN') || resolvedRole.includes('PRINCIPAL') || resolvedRole.includes('PM') || resolvedRole.includes('HR'));
-    const isHRRequest = resolvedRole && (resolvedRole === 'HR' || resolvedRole.includes('HUMAN RESOURCE'));
+    const isHRRequest = resolvedRole && (resolvedRole.includes('HR') || resolvedRole.includes('HUMAN RESOURCE') || String(empId) === '202515');
 
     const resolveStatus = (rawStatus) => {
       if (!rawStatus) return 'PENDING';
@@ -59,9 +59,9 @@ export default function LeaveManagement() {
     const l2Status = resolveStatus(pickStatus(req.hr_status, req.l2_status));
     const l3Status = resolveStatus(pickStatus(req.pm_status, req.l3_status, req.manager_status));
 
-    const requiresL1 = !isLeadOrAbove;
-    const requiresL2 = true;
-    const requiresL3 = !isHRRequest;
+    const requiresL1 = isPMReq ? true : (isHRRequest ? false : !isLeadOrAbove);
+    const requiresL2 = isPMReq ? true : !isHRRequest;
+    const requiresL3 = !isPMReq;
 
     const requiredStatuses = [
       ...(requiresL1 ? [l1Status] : []),
@@ -117,6 +117,27 @@ export default function LeaveManagement() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    const hasActiveModal = showLeaveEditModal || modalState.show;
+    if (hasActiveModal) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100%';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.height = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+    };
+  }, [showLeaveEditModal, modalState.show]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -230,7 +251,13 @@ export default function LeaveManagement() {
   };
 
   return (
-    <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
+    <div className="pm-dashboard-container leave-screen-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
+      <style>{`
+        .leave-screen-container,
+        .leave-screen-container * {
+          font-family: 'Outfit', sans-serif !important;
+        }
+      `}</style>
       <AppHeader />
       <main style={{ flex: 1, padding: winWidth < 768 ? '100px 16px 40px' : '120px 26px 40px', width: '100%', boxSizing: 'border-box', margin: '0' }}>
         <div style={{ width: '100%' }}>
@@ -255,7 +282,7 @@ export default function LeaveManagement() {
               Leave Requests <span style={{ background: '#1d4ed8', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '11px' }}>{sortedLeaveRequests.length}</span>
             </button>
             <button onClick={() => setActiveTab('summary')} style={{ padding: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', borderBottom: activeTab === 'summary' ? '3px solid #1d4ed8' : '3px solid transparent', color: activeTab === 'summary' ? '#1d4ed8' : '#64748b', fontWeight: '800', fontSize: winWidth < 600 ? '12px' : '14px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
-              <Table size={14} /> Leaves Summary (XL)
+              <Table size={14} /> Leaves Summary
             </button>
           </div>
 
@@ -467,7 +494,15 @@ export default function LeaveManagement() {
                     displayStatus = 'REJECTED';
                   }
 
-                  const displayDate = req.start_date ? new Date(req.start_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+                  const displayDate = (() => {
+                    if (!req.start_date) return 'N/A';
+                    const d = new Date(req.start_date);
+                    if (isNaN(d.getTime())) return 'N/A';
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const year = d.getFullYear();
+                    return `${day}-${month}-${year}`;
+                  })();
                   return (
                     <div key={req.id} onClick={() => navigate(`/attendance/leave/${req.id}`)} style={{ background: 'white', borderRadius: '24px', padding: '24px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', cursor: 'pointer', transition: '0.2s', display: 'flex', flexDirection: 'column', minHeight: '220px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
@@ -515,7 +550,7 @@ export default function LeaveManagement() {
                         <span style={{ fontSize: '9px', fontWeight: '950', color: sColor, background: sBg, padding: '4px 10px', borderRadius: '100px', textTransform: 'uppercase' }}>{displayStatus}</span>
                       </div>
                       <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px', color: '#1e293b', fontSize: '13.5px', fontWeight: '800' }}><Calendar size={14} color="#1d4ed8" /> {displayDate}</div>
-                      <div style={{ fontSize: '13.5px', color: '#0f172a', fontWeight: '750', fontStyle: 'italic', background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px solid #cbd5e1', flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>"{req.reason || 'No reason provided'}"</div>
+                      <div style={{ fontSize: '13.5px', color: '#0f172a', fontWeight: '600', background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px solid #cbd5e1', flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{req.reason || 'No reason provided'}</div>
                     </div>
                   );
                 })

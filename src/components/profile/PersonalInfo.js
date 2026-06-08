@@ -25,18 +25,13 @@ const SECTIONS = [
       { key: 'gender', label: 'Gender', type: 'select', options: ['Male', 'Female', 'Other'], required: true },
       { key: 'date_of_birth', label: 'Date of Birth', type: 'text', placeholder: 'DD/MM/YYYY', required: true },
       { key: 'age', label: 'Age', type: 'text', placeholder: 'Age' },
-      { key: 'religion', label: 'Religion', type: 'text' },
       { key: 'blood_group', label: 'Blood Group', type: 'text', required: true },
-      { key: 'marital_status', label: 'Marital Status', type: 'select', options: ['Single', 'Married', 'Divorced', 'Widowed'] },
-      { key: 'nationality', label: 'Nationality', type: 'text', placeholder: 'e.g. Indian', required: true },
+      { key: 'marital_status', label: 'Marital Status', type: 'select', options: ['Single', 'Married'] },
       { key: 'father_husband_name', label: "Father/Husband's Name", type: 'text' },
-      { key: 'category', label: 'Category', type: 'select', options: ['General', 'OBC', 'SC', 'ST', 'Other'] },
       { key: 'pan_number', label: 'PAN Number', type: 'text', placeholder: 'Enter valid Pan Number (ABCDE1234F)', required: true },
       { key: 'pancard_photo', label: 'PAN Card Proof', type: 'file', required: true },
       { key: 'aadhar_number', label: 'Aadhar Number', type: 'text', placeholder: 'Enter valid Aadhar Number (1234 5678 9012)', required: true },
       { key: 'adharcard_photo', label: 'Aadhar Card Proof', type: 'file', required: true },
-      { key: 'voter_id', label: 'Voter ID Number', type: 'text' },
-      { key: 'voter_id_photo', label: 'Voter ID', type: 'file' },
     ]
   },
   {
@@ -47,7 +42,6 @@ const SECTIONS = [
     fields: [
       { key: 'designation', label: 'Designation', type: 'text', required: true },
       { key: 'department', label: 'Department', type: 'text', required: true },
-      { key: 'process', label: 'Process', type: 'text' },
       { key: 'supervisor_l1', label: 'Supervisor L1 (Reporting Person)', type: 'text' },
       { key: 'supervisor_l2', label: 'Supervisor L2', type: 'text' },
       { key: 'doj', label: 'Date of Joining', type: 'text', placeholder: 'DD-MM-YYYY', required: true },
@@ -215,7 +209,18 @@ export default function PersonalInfo({ onBack }) {
           bgv_status: '', appointment_letter: '', approved_by_ceo: '', onboarding_doc_completed: '', id_card: '', onboarding_link: '',
           profile_pic: ''
         };
-        setForm(emptyForm);
+        // Load from sessionStorage cache instantly (no blank flash)
+        const cacheKey = `profile_cache_pm_${uid}`;
+        try {
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            setForm(prev => ({ ...prev, ...JSON.parse(cached) }));
+          } else {
+            setForm(emptyForm);
+          }
+        } catch (e) {
+          setForm(emptyForm);
+        }
 
         const token = localStorage.getItem('token');
         const res = await fetch(API_ENDPOINTS.EMPLOYEE_PROFILE_GET(uid), {
@@ -271,49 +276,68 @@ export default function PersonalInfo({ onBack }) {
             // Format date fields to DD/MM/YYYY or DD-MM-YYYY
             if ((targetKey === 'dob' || targetKey === 'date_of_birth' || targetKey === 'separation' || targetKey === 'doj' || targetKey === 'lwd') && normalizedVal) {
               const dateStr = String(normalizedVal);
-              let d;
+              let year = '', month = '', day = '';
+
               if (dateStr.includes('T')) {
-                d = new Date(dateStr);
-              } else if (dateStr.includes('/')) {
-                const parts = dateStr.split('/');
+                const datePart = dateStr.split('T')[0];
+                const parts = datePart.split('-');
                 if (parts.length === 3) {
-                  // Check if it's YYYY/MM/DD or DD/MM/YYYY
-                  if (parts[0].length === 4) {
-                    d = new Date(parts[0], parseInt(parts[1]) - 1, parts[2]);
-                  } else {
-                    d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
-                  }
+                  year = parts[0];
+                  month = parts[1];
+                  day = parts[2];
                 }
               } else if (dateStr.includes('-')) {
                 const parts = dateStr.split('-');
                 if (parts.length === 3) {
-                  // Check if it's YYYY-MM-DD or DD-MM-YYYY
                   if (parts[0].length === 4) {
-                    d = new Date(parts[0], parseInt(parts[1]) - 1, parts[2]);
+                    year = parts[0];
+                    month = parts[1];
+                    day = parts[2];
                   } else {
-                    d = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+                    year = parts[2];
+                    month = parts[1];
+                    day = parts[0];
+                  }
+                }
+              } else if (dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                  if (parts[0].length === 4) {
+                    year = parts[0];
+                    month = parts[1];
+                    day = parts[2];
+                  } else {
+                    year = parts[2];
+                    month = parts[1];
+                    day = parts[0];
                   }
                 }
               }
 
-              if (d && !isNaN(d.getTime())) {
-                const day = String(d.getDate()).padStart(2, '0');
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const year = d.getFullYear();
-                normalizedVal = (targetKey === 'dob' || targetKey === 'date_of_birth' || targetKey === 'lwd') ? `${day}/${month}/${year}` : `${day}-${month}-${year}`;
+              if (year && month && day) {
+                const dd = String(parseInt(day, 10)).padStart(2, '0');
+                const mm = String(parseInt(month, 10)).padStart(2, '0');
+                const yyyy = String(parseInt(year, 10));
+                normalizedVal = (targetKey === 'dob' || targetKey === 'date_of_birth' || targetKey === 'lwd') ? `${dd}/${mm}/${yyyy}` : `${dd}-${mm}-${yyyy}`;
               }
             }
 
-            if (targetKey === 'dob' || targetKey === 'date_of_birth') {
-              cleanData['dob'] = normalizedVal;
-              cleanData['date_of_birth'] = normalizedVal;
-            } else {
-              cleanData[targetKey] = normalizedVal;
-            }
+            cleanData[targetKey] = normalizedVal;
           });
 
+          // Reconcile dob and date_of_birth prioritizing date_of_birth
+          const finalDob = cleanData['date_of_birth'] || cleanData['dob'] || '';
+          cleanData['dob'] = finalDob;
+          cleanData['date_of_birth'] = finalDob;
 
-          setForm(prev => ({ ...prev, ...cleanData }));
+          setForm(prev => {
+            const updated = { ...prev, ...cleanData };
+            const cacheKey = `profile_cache_pm_${uid}`;
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(updated));
+            } catch (e) { }
+            return updated;
+          });
         }
       } catch (err) {
         console.error("Failed to sync profile info:", err);
@@ -442,304 +466,76 @@ export default function PersonalInfo({ onBack }) {
   const handleChange = (key, value) => {
     let sanitizedValue = value;
 
-    if (key === 'dob' || key === 'date_of_birth') {
-      const prevValue = form.dob || form.date_of_birth || '';
+    if (['dob', 'date_of_birth', 'lwd', 'separation', 'doj'].includes(key)) {
+      const prevValue = form[key] || '';
       const isDeleting = prevValue.length > value.length;
-      let clean = value.replace(/\D/g, '');
-
-      if (isDeleting && prevValue.endsWith('/') && !value.endsWith('/')) {
-        if (clean.length > 0) {
-          clean = clean.slice(0, -1);
-        }
-      }
-
-      // Max 8 digits
-      if (clean.length > 8) {
-        clean = clean.slice(0, 8);
-      }
-
-      // Restrict day (dd)
-      if (clean.length >= 1) {
-        const d1 = parseInt(clean.charAt(0), 10);
-        if (d1 > 3) {
-          clean = '0' + clean;
-        }
-      }
-      if (clean.length >= 2) {
-        let dd = clean.slice(0, 2);
-        const ddVal = parseInt(dd, 10);
-        if (ddVal > 31) {
-          dd = '31';
-        } else if (ddVal === 0) {
-          dd = '01';
-        }
-        clean = dd + clean.slice(2);
-      }
-
-      // Restrict month (mm)
-      if (clean.length >= 3) {
-        const m1 = parseInt(clean.charAt(2), 10);
-        if (m1 > 1) {
-          clean = clean.slice(0, 2) + '0' + clean.slice(2);
-        }
-      }
-      if (clean.length >= 4) {
-        let mm = clean.slice(2, 4);
-        const mmVal = parseInt(mm, 10);
-        if (mmVal > 12) {
-          mm = '12';
-        } else if (mmVal === 0) {
-          mm = '01';
-        }
-        clean = clean.slice(0, 2) + mm + clean.slice(4);
-      }
-
-      // Restrict year (yyyy)
-      if (clean.length >= 8) {
-        let yyyy = clean.slice(4, 8);
-        const yyyyVal = parseInt(yyyy, 10);
-        if (yyyyVal > 2090) {
-          yyyy = '2090';
-        }
-        clean = clean.slice(0, 4) + yyyy;
-      }
-
-      // Reconstruct with slashes
-      let formatted = '';
-      if (clean.length > 4) {
-        formatted = clean.slice(0, 2) + '/' + clean.slice(2, 4) + '/' + clean.slice(4);
-      } else if (clean.length > 2) {
-        formatted = clean.slice(0, 2) + '/' + clean.slice(2);
+      
+      if (isDeleting) {
+        sanitizedValue = value.replace(/[^0-9\/\-]/g, '');
       } else {
-        formatted = clean;
-      }
+        let clean = value.replace(/\D/g, '');
 
-      sanitizedValue = formatted;
-    }
-
-    if (key === 'lwd') {
-      const prevValue = form.lwd || '';
-      const isDeleting = prevValue.length > value.length;
-      let clean = value.replace(/\D/g, '');
-
-      if (isDeleting && prevValue.endsWith('/') && !value.endsWith('/')) {
-        if (clean.length > 0) {
-          clean = clean.slice(0, -1);
+        if (clean.length > 8) {
+          clean = clean.slice(0, 8);
         }
-      }
 
-      // Max 8 digits
-      if (clean.length > 8) {
-        clean = clean.slice(0, 8);
-      }
-
-      // Restrict day (dd)
-      if (clean.length >= 1) {
-        const d1 = parseInt(clean.charAt(0), 10);
-        if (d1 > 3) {
-          clean = '0' + clean;
+        if (clean.length >= 1) {
+          const d1 = parseInt(clean.charAt(0), 10);
+          if (d1 > 3) {
+            clean = '0' + clean;
+          }
         }
-      }
-      if (clean.length >= 2) {
-        let dd = clean.slice(0, 2);
-        const ddVal = parseInt(dd, 10);
-        if (ddVal > 31) {
-          dd = '31';
-        } else if (ddVal === 0) {
-          dd = '01';
+        if (clean.length >= 2) {
+          let dd = clean.slice(0, 2);
+          const ddVal = parseInt(dd, 10);
+          if (ddVal > 31) {
+            dd = '31';
+          } else if (ddVal === 0) {
+            dd = '01';
+          }
+          clean = dd + clean.slice(2);
         }
-        clean = dd + clean.slice(2);
-      }
 
-      // Restrict month (mm)
-      if (clean.length >= 3) {
-        const m1 = parseInt(clean.charAt(2), 10);
-        if (m1 > 1) {
-          clean = clean.slice(0, 2) + '0' + clean.slice(2);
+        if (clean.length >= 3) {
+          const m1 = parseInt(clean.charAt(2), 10);
+          if (m1 > 1) {
+            clean = clean.slice(0, 2) + '0' + clean.slice(2);
+          }
         }
-      }
-      if (clean.length >= 4) {
-        let mm = clean.slice(2, 4);
-        const mmVal = parseInt(mm, 10);
-        if (mmVal > 12) {
-          mm = '12';
-        } else if (mmVal === 0) {
-          mm = '01';
+        if (clean.length >= 4) {
+          let mm = clean.slice(2, 4);
+          const mmVal = parseInt(mm, 10);
+          if (mmVal > 12) {
+            mm = '12';
+          } else if (mmVal === 0) {
+            mm = '01';
+          }
+          clean = clean.slice(0, 2) + mm + clean.slice(4);
         }
-        clean = clean.slice(0, 2) + mm + clean.slice(4);
-      }
 
-      // Restrict year (yyyy) max 4 digits, <= 2099
-      if (clean.length >= 8) {
-        let yyyy = clean.slice(4, 8);
-        const yyyyVal = parseInt(yyyy, 10);
-        if (yyyyVal > 2099) {
-          yyyy = '2099';
+        if (clean.length >= 8) {
+          let yyyy = clean.slice(4, 8);
+          const yyyyVal = parseInt(yyyy, 10);
+          if (yyyyVal > 2099) {
+            yyyy = '2099';
+          }
+          clean = clean.slice(0, 4) + yyyy;
         }
-        clean = clean.slice(0, 4) + yyyy;
-      }
 
-      // Reconstruct with slashes
-      let formatted = '';
-      if (clean.length > 4) {
-        formatted = clean.slice(0, 2) + '/' + clean.slice(2, 4) + '/' + clean.slice(4);
-      } else if (clean.length > 2) {
-        formatted = clean.slice(0, 2) + '/' + clean.slice(2);
-      } else {
-        formatted = clean;
-      }
-
-      sanitizedValue = formatted;
-    }
-
-    if (key === 'separation') {
-      const prevValue = form.separation || '';
-      const isDeleting = prevValue.length > value.length;
-      let clean = value.replace(/\D/g, '');
-
-      if (isDeleting && prevValue.endsWith('/') && !value.endsWith('/')) {
-        if (clean.length > 0) {
-          clean = clean.slice(0, -1);
+        // Use '-' for doj/separation (DD-MM-YYYY) and '/' for dob/lwd (DD/MM/YYYY)
+        const useDash = (key === 'doj' || key === 'separation');
+        const sep = useDash ? '-' : '/';
+        let formatted = '';
+        if (clean.length > 4) {
+          formatted = clean.slice(0, 2) + sep + clean.slice(2, 4) + sep + clean.slice(4);
+        } else if (clean.length > 2) {
+          formatted = clean.slice(0, 2) + sep + clean.slice(2);
+        } else {
+          formatted = clean;
         }
-      }
 
-      // Max 8 digits
-      if (clean.length > 8) {
-        clean = clean.slice(0, 8);
+        sanitizedValue = formatted;
       }
-
-      // Restrict day (dd)
-      if (clean.length >= 1) {
-        const d1 = parseInt(clean.charAt(0), 10);
-        if (d1 > 3) {
-          clean = '0' + clean;
-        }
-      }
-      if (clean.length >= 2) {
-        let dd = clean.slice(0, 2);
-        const ddVal = parseInt(dd, 10);
-        if (ddVal > 31) {
-          dd = '31';
-        } else if (ddVal === 0) {
-          dd = '01';
-        }
-        clean = dd + clean.slice(2);
-      }
-
-      // Restrict month (mm)
-      if (clean.length >= 3) {
-        const m1 = parseInt(clean.charAt(2), 10);
-        if (m1 > 1) {
-          clean = clean.slice(0, 2) + '0' + clean.slice(2);
-        }
-      }
-      if (clean.length >= 4) {
-        let mm = clean.slice(2, 4);
-        const mmVal = parseInt(mm, 10);
-        if (mmVal > 12) {
-          mm = '12';
-        } else if (mmVal === 0) {
-          mm = '01';
-        }
-        clean = clean.slice(0, 2) + mm + clean.slice(4);
-      }
-
-      // Restrict year (yyyy) max 4 digits, ≤ 2090
-      if (clean.length >= 8) {
-        let yyyy = clean.slice(4, 8);
-        const yyyyVal = parseInt(yyyy, 10);
-        if (yyyyVal > 2090) {
-          yyyy = '2090';
-        }
-        clean = clean.slice(0, 4) + yyyy;
-      }
-
-      // Reconstruct with slashes dd/mm/yyyy
-      let formatted = '';
-      if (clean.length > 4) {
-        formatted = clean.slice(0, 2) + '/' + clean.slice(2, 4) + '/' + clean.slice(4);
-      } else if (clean.length > 2) {
-        formatted = clean.slice(0, 2) + '/' + clean.slice(2);
-      } else {
-        formatted = clean;
-      }
-
-      sanitizedValue = formatted;
-    }
-
-    if (key === 'doj') {
-      const prevValue = form.doj || '';
-      const isDeleting = prevValue.length > value.length;
-      let clean = value.replace(/\D/g, '');
-
-      if (isDeleting && prevValue.endsWith('/') && !value.endsWith('/')) {
-        if (clean.length > 0) {
-          clean = clean.slice(0, -1);
-        }
-      }
-
-      // Max 8 digits
-      if (clean.length > 8) {
-        clean = clean.slice(0, 8);
-      }
-
-      // Restrict day (dd)
-      if (clean.length >= 1) {
-        const d1 = parseInt(clean.charAt(0), 10);
-        if (d1 > 3) {
-          clean = '0' + clean;
-        }
-      }
-      if (clean.length >= 2) {
-        let dd = clean.slice(0, 2);
-        const ddVal = parseInt(dd, 10);
-        if (ddVal > 31) {
-          dd = '31';
-        } else if (ddVal === 0) {
-          dd = '01';
-        }
-        clean = dd + clean.slice(2);
-      }
-
-      // Restrict month (mm)
-      if (clean.length >= 3) {
-        const m1 = parseInt(clean.charAt(2), 10);
-        if (m1 > 1) {
-          clean = clean.slice(0, 2) + '0' + clean.slice(2);
-        }
-      }
-      if (clean.length >= 4) {
-        let mm = clean.slice(2, 4);
-        const mmVal = parseInt(mm, 10);
-        if (mmVal > 12) {
-          mm = '12';
-        } else if (mmVal === 0) {
-          mm = '01';
-        }
-        clean = clean.slice(0, 2) + mm + clean.slice(4);
-      }
-
-      // Restrict year (yyyy) max 4 digits, ≤ 2090
-      if (clean.length >= 8) {
-        let yyyy = clean.slice(4, 8);
-        const yyyyVal = parseInt(yyyy, 10);
-        if (yyyyVal > 2090) {
-          yyyy = '2090';
-        }
-        clean = clean.slice(0, 4) + yyyy;
-      }
-
-      // Reconstruct with slashes dd/mm/yyyy
-      let formatted = '';
-      if (clean.length > 4) {
-        formatted = clean.slice(0, 2) + '/' + clean.slice(2, 4) + '/' + clean.slice(4);
-      } else if (clean.length > 2) {
-        formatted = clean.slice(0, 2) + '/' + clean.slice(2);
-      } else {
-        formatted = clean;
-      }
-
-      sanitizedValue = formatted;
     }
 
     if (key === 'personal_email' || key === 'official_email') {
@@ -997,20 +793,32 @@ export default function PersonalInfo({ onBack }) {
       const uid = selectedEmpId;
       const token = localStorage.getItem('token');
 
-      // Format dates to YYYY-MM-DD and only include fields from the active section
+      // Format dates: date_of_birth/dob stays DD/MM/YYYY; doj/separation/lwd convert to YYYY-MM-DD
       const payload = { employee_id: uid, id: uid };
       activeSectionFields.forEach(k => {
         let val = form[k];
-        if (['doj', 'separation', 'lwd', 'dob', 'date_of_birth'].includes(k) && val) {
+        if ((k === 'dob' || k === 'date_of_birth') && val && typeof val === 'string') {
+          // Keep DOB as DD/MM/YYYY — normalise dashes to slashes if needed
           if (val.includes('-')) {
             const parts = val.split('-');
             if (parts.length === 3 && parts[0].length === 2) {
-              val = `${parts[2]}-${parts[1]}-${parts[0]}`;
+              val = `${parts[0]}/${parts[1]}/${parts[2]}`; // DD-MM-YYYY → DD/MM/YYYY
+            } else if (parts.length === 3 && parts[0].length === 4) {
+              val = `${parts[2]}/${parts[1]}/${parts[0]}`; // YYYY-MM-DD → DD/MM/YYYY
+            }
+          }
+          // Already DD/MM/YYYY — leave as-is
+        } else if (['doj', 'separation', 'lwd'].includes(k) && val && typeof val === 'string') {
+          // Convert other dates to YYYY-MM-DD for backend
+          if (val.includes('-')) {
+            const parts = val.split('-');
+            if (parts.length === 3 && parts[0].length === 2) {
+              val = `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY → YYYY-MM-DD
             }
           } else if (val.includes('/')) {
             const parts = val.split('/');
             if (parts.length === 3 && parts[0].length === 2) {
-              val = `${parts[2]}-${parts[1]}-${parts[0]}`;
+              val = `${parts[2]}-${parts[1]}-${parts[0]}`; // DD/MM/YYYY → YYYY-MM-DD
             }
           }
         }
@@ -1023,6 +831,31 @@ export default function PersonalInfo({ onBack }) {
         payload.last_working_date = payload.lwd;
       }
 
+      // Fix key mismatches between SECTIONS field keys and backend column names
+      // official_email_id (SECTIONS key) vs official_email (form state key)
+      if (!payload.official_email && form.official_email) payload.official_email = form.official_email;
+      if (!payload.official_email_id && form.official_email) payload.official_email_id = form.official_email;
+
+      // Send ft_pt with all common backend column name variants
+      if (payload.ft_pt) {
+        payload.full_time_part_time = payload.ft_pt;
+        payload.employment_type = payload.ft_pt;
+      } else if (form.ft_pt) {
+        payload.ft_pt = form.ft_pt;
+        payload.full_time_part_time = form.ft_pt;
+        payload.employment_type = form.ft_pt;
+      }
+
+      // Send status with all common backend column name variants
+      if (payload.status) {
+        payload.employee_status = payload.status;
+        payload.emp_status = payload.status;
+      } else if (form.status) {
+        payload.status = form.status;
+        payload.employee_status = form.status;
+        payload.emp_status = form.status;
+      }
+
       const res = await fetch(API_ENDPOINTS.EMPLOYEE_PROFILE_UPDATE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -1030,6 +863,18 @@ export default function PersonalInfo({ onBack }) {
       });
       if (res.ok) {
         setToast({ type: 'success', msg: 'Profile Info updated successfully!' });
+
+        // Save to cache
+        const cacheKey = `profile_cache_pm_${uid}`;
+        try {
+          const cached = sessionStorage.getItem(cacheKey);
+          const currentCache = cached ? JSON.parse(cached) : {};
+          const updatedCache = { ...currentCache, ...payload };
+          updatedCache.dob = form.dob;
+          updatedCache.date_of_birth = form.date_of_birth;
+          sessionStorage.setItem(cacheKey, JSON.stringify(updatedCache));
+        } catch (e) { }
+
         if (shouldGoNext) {
           const currentIndex = SECTIONS.findIndex(s => s.id === activeSection);
           const nextSection = SECTIONS[currentIndex + 1];
@@ -1354,69 +1199,118 @@ export default function PersonalInfo({ onBack }) {
                 return (
                   <div key={field.key} style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
                     <label style={{ fontSize: '13px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase' }}>
-                      {field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
+                      {field.key === 'father_husband_name'
+                        ? (form.marital_status === 'Married' ? 'Spouse Name' : 'Father Name')
+                        : field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
                     </label>
                     {field.type === 'file' ? (
-                      <div
-                        style={{
-                          border: isMobile ? '2px dashed #cbd5e1' : '3px dashed #cbd5e1', borderRadius: '16px', padding: '20px',
-                          display: 'flex', flexDirection: 'column', alignItems: 'center',
-                          background: '#f8fafc', position: 'relative', transition: 'all 0.3s ease',
-                          cursor: 'pointer', width: '100%', boxSizing: 'border-box'
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.borderColor = '#315A9E';
-                          e.currentTarget.style.transform = 'translateY(-5px)';
-                          e.currentTarget.style.boxShadow = '0 10px 20px rgba(49, 90, 158, 0.1)';
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.borderColor = '#cbd5e1';
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = 'none';
-                        }}
-                      >
-                        {form[field.key] ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                            <FileCheck size={24} color="#10b981" />
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const rawUrl = form[field.key];
-                                if (!rawUrl) return;
+                        <div
+                          style={{
+                            border: isMobile ? '2px dashed #cbd5e1' : '3px dashed #cbd5e1', borderRadius: '16px', padding: '20px',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center',
+                            background: '#f8fafc', position: 'relative', transition: 'all 0.3s ease',
+                            cursor: isDisabled ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box'
+                          }}
+                          onMouseEnter={e => {
+                            if (!isDisabled) {
+                              e.currentTarget.style.borderColor = '#315A9E';
+                              e.currentTarget.style.transform = 'translateY(-5px)';
+                              e.currentTarget.style.boxShadow = '0 10px 20px rgba(49, 90, 158, 0.1)';
+                            }
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.borderColor = '#cbd5e1';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                        >
+                          {form[field.key] ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                              <FileCheck size={24} color="#10b981" />
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const rawUrl = form[field.key];
+                                  if (!rawUrl) return;
 
-                                let url = rawUrl;
-                                // Fix case where backend mistakenly prepends BASE_URL to base64 string
-                                if (typeof url === 'string' && url.includes('data:') && url.includes('base64')) {
-                                  url = url.substring(url.indexOf('data:'));
-                                } else if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('data:')) {
-                                  url = `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
-                                }
-                                setPreviewDoc({ url, label: field.label });
-                              }}
-                              style={{
-                                border: 'none', background: 'transparent', fontSize: '12px',
-                                color: '#315A9E', fontWeight: '900', cursor: 'pointer',
-                                padding: '4px 8px', borderRadius: '8px'
-                              }}
-                            >
-                              VIEW PROOF
-                            </button>
-                            {isEditing && (
-                              <button onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, [field.key]: '' })); }} style={{ border: 'none', background: 'transparent', color: '#ef4444', fontSize: '11px', fontWeight: '900', cursor: 'pointer' }}>REMOVE</button>
-                            )}
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                            <Upload size={24} color="#315A9E" />
-                            <div style={{ fontSize: '12px', fontWeight: '900', color: '#0B1E3F' }}>UPLOAD DOCUMENT</div>
-                            <input type="file" onChange={e => handleFileSelect(field.key, e.target.files[0])} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
-                          </div>
-                        )}
-                        {uploadingFiles[field.key] && (
-                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}>
-                            <RefreshCw size={24} className="spin" color="#315A9E" />
-                          </div>
-                        )}
+                                  let url = rawUrl;
+                                  // Fix case where backend mistakenly prepends BASE_URL to base64 string
+                                  if (typeof url === 'string' && url.includes('data:') && url.includes('base64')) {
+                                    url = url.substring(url.indexOf('data:'));
+                                  } else if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('data:')) {
+                                    url = `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+                                  }
+                                  setPreviewDoc({ url, label: field.label });
+                                }}
+                                style={{
+                                  border: 'none', background: 'transparent', fontSize: '12px',
+                                  color: '#315A9E', fontWeight: '900', cursor: 'pointer',
+                                  padding: '4px 8px', borderRadius: '8px'
+                                }}
+                              >
+                                VIEW PROOF
+                              </button>
+                              {((isEditing) || (!isEditing)) && (
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    setForm(prev => ({ ...prev, [field.key]: '' }));
+                                    if (!isEditing) {
+                                      try {
+                                        const token = localStorage.getItem('token');
+                                        let docType = field.key;
+                                        if (field.key === 'pancard_photo') docType = 'pan_card';
+                                        if (field.key === 'adharcard_photo') docType = 'aadhar_card';
+                                        if (field.key === 'voter_id_photo') docType = 'voter_id_proof';
+                                        if (field.key === 'passport_photo') docType = 'passport_proof';
+                                        if (field.key === 'sslc_markscard') docType = 'sslc_markscard';
+                                        if (field.key === 'puc_markscard') docType = 'puc_markscard';
+                                        if (field.key === 'ug_pg_markscard') docType = 'ug_pg_markscard';
+                                        if (field.key === 'passbook_photo') docType = 'bank_passbook';
+                                        if (field.key === 'experience_letter') docType = 'experience_letter';
+                                        if (field.key === 'previous_company_payslip') docType = 'previous_payslip';
+
+                                        const updatePayload = {
+                                          employee_id: selectedEmpId,
+                                          id: selectedEmpId,
+                                          [field.key]: '',
+                                          [docType]: '',
+                                          experience_letter_photo: field.key === 'experience_letter' ? '' : undefined,
+                                          previous_payslip_photo: field.key === 'previous_company_payslip' ? '' : undefined
+                                        };
+                                        Object.keys(updatePayload).forEach(k => updatePayload[k] === undefined && delete updatePayload[k]);
+
+                                        await fetch(API_ENDPOINTS.EMPLOYEE_PROFILE_UPDATE, {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                          body: JSON.stringify(updatePayload)
+                                        });
+                                        setToast({ type: 'success', msg: `${field.label} removed successfully` });
+                                      } catch (err) {
+                                        console.error("Failed to remove file:", err);
+                                      }
+                                    }
+                                  }}
+                                  style={{
+                                    border: 'none', background: '#ef444415', color: '#ef4444',
+                                    fontSize: '11px', fontWeight: '900', cursor: 'pointer',
+                                    padding: '4px 10px', borderRadius: '8px', marginTop: '2px'
+                                  }}
+                                >REMOVE</button>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', opacity: isDisabled ? 0.5 : 1 }}>
+                              <Upload size={24} color="#315A9E" />
+                              <div style={{ fontSize: '12px', fontWeight: '900', color: '#0B1E3F' }}>UPLOAD DOCUMENT</div>
+                              {!isDisabled && <input type="file" onChange={e => handleFileSelect(field.key, e.target.files[0])} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />}
+                            </div>
+                          )}
+                          {uploadingFiles[field.key] && (
+                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}>
+                              <RefreshCw size={24} className="spin" color="#315A9E" />
+                            </div>
+                          )}
                       </div>
                     ) : field.type === 'select' ? (
                       <select
@@ -1433,7 +1327,7 @@ export default function PersonalInfo({ onBack }) {
                         <input
                           type="text"
                           value={form[field.key]}
-                          placeholder=""
+                          placeholder={field.placeholder || ''}
                           readOnly={isDisabled}
                           onChange={e => handleChange(field.key, e.target.value)}
                           style={{
@@ -1458,28 +1352,28 @@ export default function PersonalInfo({ onBack }) {
                               return null;
                             }
                             const isInvalid = val.length > 0;
-                            return (
-                              <div style={{ fontSize: '13px', color: isInvalid ? '#ef4444' : '#64748b', fontWeight: '500', marginTop: '-2px', paddingLeft: '4px' }}>
-                                {isInvalid ? 'Enter valid format! (ABCDE1234F)' : field.placeholder}
-                              </div>
-                            );
+                            if (isInvalid) {
+                              return (
+                                <div style={{ fontSize: '13px', color: '#ef4444', fontWeight: '500', marginTop: '-2px', paddingLeft: '4px' }}>
+                                  Enter valid format! (ABCDE1234F)
+                                </div>
+                              );
+                            }
                           }
                           if (field.key === 'aadhar_number') {
                             if (/^[0-9]{12}$/.test(val)) {
                               return null;
                             }
                             const isInvalid = val.length > 0;
-                            return (
-                              <div style={{ fontSize: '13px', color: isInvalid ? '#ef4444' : '#64748b', fontWeight: '500', marginTop: '-2px', paddingLeft: '4px' }}>
-                                {isInvalid ? 'Enter valid format! (1234 5678 9012)' : field.placeholder}
-                              </div>
-                            );
+                            if (isInvalid) {
+                              return (
+                                <div style={{ fontSize: '13px', color: '#ef4444', fontWeight: '500', marginTop: '-2px', paddingLeft: '4px' }}>
+                                  Enter valid format! (1234 5678 9012)
+                                </div>
+                              );
+                            }
                           }
-                          return (
-                            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500', marginTop: '-2px', paddingLeft: '4px' }}>
-                              {field.placeholder}
-                            </div>
-                          );
+                          return null;
                         })()}
                       </>
                     )}
