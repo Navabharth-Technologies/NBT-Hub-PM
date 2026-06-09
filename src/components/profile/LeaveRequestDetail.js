@@ -26,6 +26,15 @@ export default function LeaveRequestDetail() {
   };
 
   useEffect(() => {
+    if (modalState.show) {
+      const timer = setTimeout(() => {
+        handleModalClose();
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [modalState.show]);
+
+  useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -714,43 +723,7 @@ export default function LeaveRequestDetail() {
                   ? 'The leave request has been approved successfully.'
                   : 'The leave request has been rejected successfully.')}
               </p>
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                <button
-                  onClick={handleModalClose}
-                  style={{
-                    flex: 1,
-                    padding: '14px 24px',
-                    borderRadius: '16px',
-                    border: 'none',
-                    background: modalState.type === 'APPROVED' ? '#16a34a' : '#ef4444',
-                    color: 'white',
-                    fontSize: '14px',
-                    fontWeight: '900',
-                    cursor: 'pointer',
-                    boxShadow: `0 8px 20px ${modalState.type === 'APPROVED' ? 'rgba(22, 163, 74, 0.25)' : 'rgba(239, 68, 68, 0.25)'}`,
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  OK
-                </button>
-                <button
-                  onClick={handleModalClose}
-                  style={{
-                    flex: 1,
-                    padding: '14px 24px',
-                    borderRadius: '16px',
-                    border: '1.5px solid #e2e8f0',
-                    background: '#f8fafc',
-                    color: '#64748b',
-                    fontSize: '14px',
-                    fontWeight: '900',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
+
             </div>
           </div>
         </>

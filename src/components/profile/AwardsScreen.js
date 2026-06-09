@@ -121,9 +121,51 @@ export default function AwardsScreen() {
     const [granting, setGranting] = React.useState(false);
     const [history, setHistory] = React.useState({ pm: [] });
     const [feedback, setFeedback] = React.useState(null);
-    const [startDate, setStartDate] = React.useState('');
-    const [endDate, setEndDate] = React.useState('');
+    const [deleteConfirmId, setDeleteConfirmId] = React.useState(null);
+    const [deleteSuccess, setDeleteSuccess] = React.useState(false);
+    const [startDate, setStartDate] = React.useState(() => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        return `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    });
+    const [endDate, setEndDate] = React.useState(() => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const lastDayDate = new Date(year, month + 1, 0);
+        return `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+    });
     const [selectedHistoryUser, setSelectedHistoryUser] = React.useState(null);
+    const [quizDateForSelectedUser, setQuizDateForSelectedUser] = React.useState(null);
+
+    React.useEffect(() => {
+        if (selectedHistoryUser && user?.token) {
+            setQuizDateForSelectedUser(null);
+            fetch(`${BASE_URL}/api/quiz_completion?employee_id=${selectedHistoryUser}`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            })
+                .then(res => res.ok ? res.json() : null)
+                .then(data => {
+                    if (data) {
+                        const list = Array.isArray(data) ? data : (data.data || []);
+                        let maxDateObj = null;
+                        let latestDateStr = null;
+                        list.forEach(q => {
+                            const qdStr = q.created_at || q.completion_date || q.date || q.completed_at;
+                            if (!qdStr) return;
+                            const clean = String(qdStr).replace(/GMT[+-]\d{4}.*/, '').trim();
+                            const qd = new Date(clean);
+                            if (!isNaN(qd.getTime()) && (!maxDateObj || qd > maxDateObj)) {
+                                maxDateObj = qd;
+                                latestDateStr = qdStr;
+                            }
+                        });
+                        if (latestDateStr) setQuizDateForSelectedUser(latestDateStr);
+                    }
+                }).catch(() => { });
+        }
+    }, [selectedHistoryUser, user?.token]);
     const [showAllFeed, setShowAllFeed] = React.useState(false);
     const [showRecipientDropdown, setShowRecipientDropdown] = React.useState(false);
     const [recipientSearch, setRecipientSearch] = React.useState('');
@@ -198,9 +240,10 @@ export default function AwardsScreen() {
             let qList = [];
             let fetchSuccess = false;
             try {
-                const [allRes, rewHistoryRes] = await Promise.all([
+                const [allRes, rewHistoryRes, quizLboardRes] = await Promise.all([
                     fetch(API_ENDPOINTS.LEADERBOARD_ALL || `${BASE_URL}/api/employees/leaderboard/all`, { headers: { 'Authorization': `Bearer ${user.token}` } }),
-                    fetch(API_ENDPOINTS.REWARDS_HISTORY || `${BASE_URL}/api/admin/rewards/history`, { headers: { 'Authorization': `Bearer ${user.token}` } })
+                    fetch(API_ENDPOINTS.REWARDS_HISTORY || `${BASE_URL}/api/admin/rewards/history`, { headers: { 'Authorization': `Bearer ${user.token}` } }),
+                    fetch(API_ENDPOINTS.QUIZ_LEADERBOARD || `${BASE_URL}/api/fun-quizzes/leaderboard`, { headers: { 'Authorization': `Bearer ${user.token}` } }).catch(() => null)
                 ]);
                 if (allRes.ok && rewHistoryRes.ok) {
                     const allJson = await allRes.json();
@@ -215,7 +258,7 @@ export default function AwardsScreen() {
                         }
                     });
 
-                    qList = employeesList.map(emp => {
+                    const cumulativeQuizPoints = employeesList.map(emp => {
                         const empId = String(emp.id || emp.employee_id || '');
                         const totalPoints = emp.totalPointsNum || emp.totalRepNum || parsePoints(emp.total_points || emp.total_rep || 0);
                         const rewardPoints = rewardSums[empId] || 0;
@@ -223,9 +266,28 @@ export default function AwardsScreen() {
                         return {
                             employee_id: empId,
                             points: quizPoints,
-                            created_at: null
+                            created_at: emp.completion_date || emp.quiz_completion_date || emp.created_at || null
                         };
                     }).filter(item => item.employee_id && item.points > 0);
+
+                    let datedQuizPoints = [];
+                    if (quizLboardRes && quizLboardRes.ok) {
+                        try {
+                            const qData = await quizLboardRes.json();
+                            const rawList = Array.isArray(qData) ? qData : (qData.data || []);
+                            datedQuizPoints = rawList.map(item => {
+                                return {
+                                    employee_id: String(item.employee_id || item.user_id || item.id || ''),
+                                    points: parsePoints(item.total_score || item.points || item.quiz_score || item.score || 0),
+                                    created_at: item.created_at || item.completion_date || item.date || null
+                                };
+                            }).filter(item => item.employee_id && item.points > 0);
+                        } catch (e) {
+                            console.error('Error parsing quiz leaderboard data:', e);
+                        }
+                    }
+
+                    qList = [...cumulativeQuizPoints, ...datedQuizPoints];
                     fetchSuccess = true;
                 }
             } catch (e) { console.error('Quiz leaderboard fetch failed:', e); }
@@ -470,65 +532,80 @@ export default function AwardsScreen() {
     });
 
     React.useEffect(() => {
-        const mergedMap = new Map();
+        if (!user?.token) return;
+        let filterType = 'range';
+        let dateValue = '';
+        let monthValue = '';
 
-        filteredRewards.forEach(r => {
-            const rawId = String(r.employee_id || r.user_id || r.userId || r.id);
-            const emp = employees.find(e =>
-                String(e.id) === rawId ||
-                String(e.employee_id) === rawId ||
-                String(e.userId) === rawId ||
-                String(e.emp_id) === rawId
-            );
-            const id = emp ? String(emp.id || emp.employee_id || emp.userId || rawId) : rawId;
-            const isQuiz = String(r.id).startsWith('quiz-');
-
-            if (!mergedMap.has(id)) {
-                mergedMap.set(id, {
-                    id: isNaN(id) ? id : Number(id),
-                    name: resolveEmployeeName(id),
-                    total_reward_points: 0,
-                    total_quiz_points: 0
-                });
-            }
-
-            const existing = mergedMap.get(id);
-            if (isQuiz) {
-                existing.total_quiz_points += parsePoints(r.points);
+        if (startDate && endDate) {
+            if (startDate === endDate) {
+                filterType = 'date';
+                dateValue = startDate;
             } else {
-                existing.total_reward_points += parsePoints(r.points);
+                const sDate = new Date(startDate);
+                const eDate = new Date(endDate);
+                if (sDate.getDate() === 1 && sDate.getMonth() === eDate.getMonth() && sDate.getFullYear() === eDate.getFullYear()) {
+                    const lastDay = new Date(eDate.getFullYear(), eDate.getMonth() + 1, 0).getDate();
+                    if (eDate.getDate() === lastDay) {
+                        filterType = 'month';
+                        monthValue = startDate.substring(0, 7);
+                    }
+                }
             }
-        });
+        }
 
-        const finalLeaderboard = Array.from(mergedMap.values()).map(item => {
-            const empId = String(item.id);
-            const emp = employees.find(e =>
-                String(e.id) === empId ||
-                String(e.employee_id) === empId ||
-                String(e.userId) === empId ||
-                String(e.emp_id) === empId
-            );
-            const total_points = item.total_reward_points + item.total_quiz_points;
-            return {
-                id: item.id,
-                name: emp ? (emp.name || emp.employee_name || item.name) : item.name,
-                role: emp ? (emp.designation || emp.role || 'Team Member') : 'Team Member',
-                team: emp ? (emp.team || emp.department || 'Bytes Blasters✨') : 'Bytes Blasters✨',
-                total_reward_points: item.total_reward_points,
-                total_quiz_points: item.total_quiz_points,
-                total_points: total_points
-            };
-        });
+        const fetchLeaderboard = async () => {
+            let url = `${BASE_URL}/api/rewards/leaderboard`;
+            if (filterType === 'date' && dateValue) {
+                url += `?date=${dateValue}`;
+            } else if (filterType === 'month' && monthValue) {
+                url += `?month=${monthValue}`;
+            } else if (startDate && endDate) {
+                url += `?startDate=${startDate}&endDate=${endDate}`;
+            }
 
-        finalLeaderboard.sort((a, b) => b.total_points - a.total_points);
+            try {
+                const response = await fetch(url, { headers: { 'Authorization': `Bearer ${user.token}` } });
+                const data = await response.json();
+                const list = Array.isArray(data) ? data : (data.data || []);
+                const mappedList = list.map((item) => {
+                    const empId = item.employee_id || item.id;
+                    const emp = employees.find(e => String(e.id) === String(empId) || String(e.employee_id) === String(empId) || String(e.userId) === String(empId));
 
-        const rankedLeaderboard = finalLeaderboard.map((item, index) => ({
-            ...item,
-            rank: String(index + 1)
-        }));
+                    let itemHistory = [];
+                    if (Array.isArray(item.history)) itemHistory = item.history;
+                    else if (Array.isArray(item.logs)) itemHistory = item.logs;
+                    else if (Array.isArray(item.records)) itemHistory = item.records;
+                    else if (Array.isArray(item.details)) itemHistory = item.details;
+                    else if (Array.isArray(item.reward_history) || Array.isArray(item.quiz_history)) {
+                        itemHistory = [...(item.reward_history || []), ...(item.quiz_history || [])];
+                    }
 
-        setLeaderboard(rankedLeaderboard.filter(item => item.total_points > 0));
-    }, [filteredRewards, employees]);
+                    return {
+                        id: empId,
+                        name: item.employee_name || item.name || (emp ? (emp.name || emp.employee_name) : 'Team Member'),
+                        role: item.designation || item.role || (emp ? (emp.designation || emp.role) : 'Team Member'),
+                        team: item.team || item.department || (emp ? (emp.team || emp.department) : 'Bytes Blasters✨'),
+                        total_reward_points: parsePoints(item.reward_points || item.total_reward_points || item.rewardPoints),
+                        total_quiz_points: parsePoints(item.quiz_points || item.total_quiz_points || item.quizPoints),
+                        total_points: parsePoints(item.total_points || item.score || item.totalPoints || 0),
+                        profile_picture: item.profile_picture || item.profile_pic || item.photo || (emp ? (emp.profile_picture || emp.profile_pic || emp.photo) : null),
+                        history: itemHistory
+                    };
+                });
+                mappedList.sort((a, b) => b.total_points - a.total_points);
+                const rankedList = mappedList.map((item, index) => ({
+                    ...item,
+                    rank: String(index + 1)
+                })).filter(item => item.total_points > 0);
+
+                setLeaderboard(rankedList);
+            } catch (err) {
+                console.error('Error fetching backend leaderboard:', err);
+            }
+        };
+        fetchLeaderboard();
+    }, [startDate, endDate, user, employees]);
 
 
     const topContributor = React.useMemo(() => {
@@ -591,12 +668,19 @@ export default function AwardsScreen() {
         finally { setGranting(false); }
     };
 
-    const handleDeleteReward = async (id) => {
-        if (!window.confirm("Revoke this recognition?")) return;
+    const initiateDeleteReward = (id) => {
+        setDeleteConfirmId(id);
+    };
+
+    const handleDeleteReward = async () => {
+        const id = deleteConfirmId;
+        if (!id) return;
+        setDeleteConfirmId(null);
         try {
             const res = await fetch(API_ENDPOINTS.REWARD_DELETE(id), { method: 'DELETE', headers: { 'Authorization': `Bearer ${user.token}` } });
             if (res.ok) {
                 setRewards(prev => prev.filter(r => r.id !== id));
+                setDeleteSuccess(true);
             }
         } catch (err) { }
     };
@@ -697,7 +781,7 @@ export default function AwardsScreen() {
                         <div style={{ textAlign: winWidth < 768 ? 'left' : 'center', borderRight: winWidth < 768 ? 'none' : '1.5px solid rgba(255,255,255,0.1)', borderBottom: winWidth < 768 ? '1.5px solid rgba(255,255,255,0.1)' : 'none', paddingBottom: winWidth < 768 ? '20px' : '0' }}>
                             <p style={{ margin: '0 0 5px 0', fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Top Contributor Score</p>
                             <h3 style={{ margin: 0, fontSize: winWidth < 768 ? '22px' : '28px', fontWeight: '950', color: '#facc15' }}>
-                                {topContributor ? formatPoints(topContributor.total_points) : '0'} <span style={{ fontSize: '18px' }}>REP</span>
+                                {topContributor ? formatPoints(topContributor.total_points) : '0'} <span style={{ fontSize: '18px' }}></span>
                             </h3>
                         </div>
                         <div style={{ textAlign: winWidth < 768 ? 'left' : 'right' }}>
@@ -720,7 +804,7 @@ export default function AwardsScreen() {
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <div style={{ position: 'relative', width: '100%' }}>
-                                        <input type="text" placeholder="Search by Recipient, Giver, or Recognition Tier..." value={auditSearch} onChange={e => setAuditSearch(e.target.value)}
+                                        <input type="text" placeholder="Search by Recipient Name..." value={auditSearch} onChange={e => setAuditSearch(e.target.value)}
                                             style={{ width: '100%', padding: '14px 20px 14px 50px', borderRadius: '16px', border: '1.5px solid #cbd5e1', fontSize: '13px', fontWeight: '600', outline: 'none', color: '#1e293b', boxShadow: '0 4px 6px rgba(0,0,0,0.02)', boxSizing: 'border-box' }} />
                                         <div style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
                                             <Search size={18} />
@@ -731,10 +815,10 @@ export default function AwardsScreen() {
                                             const auditLogs = filteredRewards.filter(r => {
                                                 if (String(r.id).startsWith('quiz-')) return false;
                                                 const rn = resolveEmployeeName(r.employee_id).toLowerCase();
-                                                const gn = resolveEmployeeName(r.granted_by).toLowerCase();
-                                                const rwn = (r.reward_name || '').toLowerCase();
-                                                const s = auditSearch.toLowerCase();
-                                                return rn.includes(s) || gn.includes(s) || rwn.includes(s);
+                                                const s = auditSearch.trim().toLowerCase();
+                                                if (!s) return true;
+
+                                                return rn.startsWith(s);
                                             });
                                             if (auditLogs.length === 0) {
                                                 return (
@@ -757,13 +841,13 @@ export default function AwardsScreen() {
                                                                 </div>
                                                                 <div>
                                                                     <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a' }}>{resolveEmployeeName(r.employee_id)}</div>
-                                                                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Recipient ID: {r.employee_id}</div>
+                                                                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700' }}>Employee ID: {r.employee_id}</div>
                                                                 </div>
                                                             </div>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                <div style={{ background: '#ecfdf5', color: '#10b981', fontWeight: '900', fontSize: '12px', padding: '4px 12px', borderRadius: '8px' }}>+{formatPoints(r.points)} REP</div>
+                                                                <div style={{ background: '#ecfdf5', color: '#10b981', fontWeight: '900', fontSize: '12px', padding: '4px 12px', borderRadius: '8px' }}>+{formatPoints(r.points)}</div>
                                                                 {canRevoke && (
-                                                                    <button onClick={() => handleDeleteReward(r.id)} style={{ background: '#fef2f2', border: 'none', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }} title="Revoke Recognition">
+                                                                    <button onClick={() => initiateDeleteReward(r.id)} style={{ background: '#fef2f2', border: 'none', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }} title="Revoke Recognition">
                                                                         <Trash2 size={14} />
                                                                     </button>
                                                                 )}
@@ -783,7 +867,7 @@ export default function AwardsScreen() {
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        {r.note && <div style={{ fontSize: '11px', color: '#475569', fontWeight: '600', fontStyle: 'italic', borderLeft: '3px solid #cbd5e1', paddingLeft: '10px', margin: '2px 0' }}>"{r.note}"</div>}
+                                                        {r.note && <div style={{ fontSize: '11px', color: '#475569', fontWeight: '600', borderLeft: '3px solid #cbd5e1', paddingLeft: '10px', margin: '2px 0' }}>"{r.note}"</div>}
                                                         <div style={{ fontSize: '9px', color: '#94a3b8', textAlign: 'right', fontWeight: '700' }}>
                                                             Awarded on: {(() => {
                                                                 const d = parseToDate(r.created_at || r.date);
@@ -974,7 +1058,49 @@ export default function AwardsScreen() {
                                             {resolveEmployeeName(selectedHistoryUser)}'s Recognitions
                                         </div>
                                         {(() => {
-                                            const allUserHistory = filteredRewards.filter(r => isSameEmployee(r.employee_id, selectedHistoryUser));
+                                            const selectedUserObj = leaderboard.find(l => String(l.id) === String(selectedHistoryUser));
+
+                                            let allUserHistory = [];
+                                            if (selectedUserObj && selectedUserObj.history && selectedUserObj.history.length > 0) {
+                                                allUserHistory = [...selectedUserObj.history];
+                                            } else {
+                                                allUserHistory = filteredRewards.filter(r => isSameEmployee(r.employee_id, selectedHistoryUser));
+                                                // Remove all existing individual quiz logs to show "one complete log only"
+                                                allUserHistory = allUserHistory.filter(r => !(String(r.id).startsWith('quiz-') || String(r.reward_name).toLowerCase().includes('quiz')));
+
+                                                const totalQuizPointsFromAPI = selectedUserObj ? selectedUserObj.total_quiz_points : 0;
+
+                                                if (totalQuizPointsFromAPI > 0) {
+                                                    // Fetch newly attended quiz date for this individual
+                                                    const todayStr = new Date().toISOString();
+                                                    const isEndDateFuture = new Date(endDate || todayStr) > new Date();
+                                                    const defaultFallback = isEndDateFuture ? todayStr : (endDate || todayStr);
+
+                                                    let latestQuizDate = quizDateForSelectedUser || defaultFallback;
+
+                                                    if (!quizDateForSelectedUser) {
+                                                        const userQuizzes = quizScores.filter(q => isSameEmployee(q.employee_id || q.user_id || q.userId || q.id, selectedHistoryUser));
+
+                                                        let maxDateObj = null;
+                                                        userQuizzes.forEach(q => {
+                                                            const qdStr = q.created_at || q.completion_date || q.date;
+                                                            const qd = parseToDate(qdStr);
+                                                            if (qd && (!maxDateObj || qd > maxDateObj)) {
+                                                                maxDateObj = qd;
+                                                                latestQuizDate = qdStr;
+                                                            }
+                                                        });
+                                                    }
+
+                                                    allUserHistory.push({
+                                                        id: `quiz-synthetic-${selectedHistoryUser}`,
+                                                        reward_name: 'Quiz Excellence',
+                                                        points: totalQuizPointsFromAPI,
+                                                        created_at: latestQuizDate,
+                                                        note: 'Quiz points (Period Total)'
+                                                    });
+                                                }
+                                            }
 
                                             allUserHistory.sort((a, b) => {
                                                 const dA = parseToDate(a.created_at || a.date);
@@ -1028,6 +1154,53 @@ export default function AwardsScreen() {
                                 <button onClick={() => setShowEditModal(false)} style={{ flex: 1, padding: '14px', borderRadius: '50px', background: 'white', fontWeight: '900' }}>Cancel</button>
                                 <button onClick={handleUpdateReward} disabled={isSubmitting} style={{ flex: 1, padding: '14px', borderRadius: '50px', background: '#0f172a', color: 'white', fontWeight: '900' }}>{isSubmitting ? 'Saving...' : 'Save'}</button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirmId && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ background: 'white', borderRadius: '28px', padding: '36px 40px', maxWidth: '440px', width: '90%', textAlign: 'center', boxShadow: '0 25px 60px rgba(0,0,0,0.25)' }}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fee2e2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: '28px' }}>
+                            ⚠️
+                        </div>
+                        <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '0 0 8px', letterSpacing: '-0.3px', fontFamily: "'Outfit', sans-serif" }}>
+                            Revoke Recognition
+                        </h3>
+                        <p style={{ fontSize: '14px', color: '#475569', margin: '0 0 24px', lineHeight: '1.6', fontWeight: '600', fontFamily: "'Outfit', sans-serif" }}>
+                            Revoke this recognition?
+                        </p>
+                        <div style={{ display: 'flex', gap: '14px', justifyContent: 'center' }}>
+                            <button onClick={() => setDeleteConfirmId(null)} style={{ flex: 1, padding: '12px 20px', background: 'white', color: '#64748b', border: '2px solid #e2e8f0', borderRadius: '14px', fontWeight: '900', fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s', fontFamily: "'Outfit', sans-serif" }}>
+                                Cancel
+                            </button>
+                            <button onClick={handleDeleteReward} style={{ flex: 1.2, padding: '12px 20px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '14px', cursor: 'pointer', boxShadow: '0 6px 16px rgba(239, 68, 68, 0.35)', transition: 'all 0.2s', fontFamily: "'Outfit', sans-serif" }}>
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Success Modal */}
+            {deleteSuccess && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)', zIndex: 2500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ background: 'white', borderRadius: '28px', padding: '36px 40px', maxWidth: '440px', width: '90%', textAlign: 'center', boxShadow: '0 25px 60px rgba(0,0,0,0.25)' }}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#d1fae5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: '28px' }}>
+                            ✅
+                        </div>
+                        <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', margin: '0 0 8px', letterSpacing: '-0.3px', fontFamily: "'Outfit', sans-serif" }}>
+                            Success
+                        </h3>
+                        <p style={{ fontSize: '14px', color: '#475569', margin: '0 0 24px', lineHeight: '1.6', fontWeight: '600', fontFamily: "'Outfit', sans-serif" }}>
+                            deleted successfully
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <button onClick={() => setDeleteSuccess(false)} style={{ padding: '12px 32px', background: '#10b981', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '14px', cursor: 'pointer', boxShadow: '0 6px 16px rgba(16, 185, 129, 0.35)', transition: 'all 0.2s', fontFamily: "'Outfit', sans-serif" }}>
+                                OK
+                            </button>
                         </div>
                     </div>
                 </div>

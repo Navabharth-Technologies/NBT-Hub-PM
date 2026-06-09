@@ -102,12 +102,12 @@ export default function EmployeeModule() {
         overflow: 'linebreak'
       },
       columnStyles: {
-        0: { cellWidth: 22, halign: 'center' }, // ID (Expanded to prevent wrapping of 6-digit IDs)
-        1: { cellWidth: 31 },                  // Name
-        2: { cellWidth: 33 },                  // Role
-        3: { cellWidth: 31 },                  // Team
-        4: { cellWidth: 51 },                  // Email
-        5: { cellWidth: 18, halign: 'center' }  // Status
+        0: { cellWidth: 16, halign: 'center' }, // ID
+        1: { cellWidth: 'auto' },               // Name (auto-sized to fit complete name)
+        2: { cellWidth: 'auto' },               // Role
+        3: { cellWidth: 'auto' },               // Team
+        4: { cellWidth: 'auto' },               // Email
+        5: { cellWidth: 16, halign: 'center' }  // Status
       },
       headStyles: { fillColor: [49, 99, 170], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [248, 250, 252] },

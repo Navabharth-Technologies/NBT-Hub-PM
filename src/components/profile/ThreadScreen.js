@@ -46,6 +46,16 @@ export default function ThreadScreen() {
     const [reactorModal, setReactorModal] = useState(null); // { postId, emoji, users, count }
     const [loadingReactors, setLoadingReactors] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, postId: null, userId: null });
+    const [replaceConfirmPost, setReplaceConfirmPost] = useState(null);
+
+    const handleReplaceMediaClick = (post) => {
+        const hasExistingMedia = !!(post.media_url || post.mediaUrl || post.media || post.image || post.media_path || post.file_path);
+        if (hasExistingMedia && !editRemoveMedia) {
+            setReplaceConfirmPost(post);
+        } else {
+            editFileInputRef.current?.click();
+        }
+    };
 
     useEffect(() => {
         if (clearNotifications) clearNotifications();
@@ -583,17 +593,6 @@ export default function ThreadScreen() {
                                         value={editContent}
                                         onChange={(e) => setEditContent(e.target.value)}
                                     />
-                                    <input type="file" ref={editFileInputRef} onChange={handleEditFileSelect} hidden accept="image/*,video/*" />
-                                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                                        <div style={styles.mediaBtn} onClick={() => editFileInputRef.current?.click()}>
-                                            <ImageIcon size={18} color="#10b981" /> Replace Photo/Video
-                                        </div>
-                                        {(editMediaPreview || post.media_url || post.mediaUrl || post.media || post.image) && !editRemoveMedia && (
-                                            <div style={{ ...styles.mediaBtn, color: '#ef4444' }} onClick={() => { setEditRemoveMedia(true); setEditMediaFile(null); setEditMediaPreview(null); }}>
-                                                <Trash2 size={18} color="#ef4444" /> Remove Media
-                                            </div>
-                                        )}
-                                    </div>
 
                                     {(editMediaPreview && !editRemoveMedia) && (
                                         <div style={{ marginTop: '10px', position: 'relative', borderRadius: '15px', overflow: 'hidden', maxWidth: '300px' }}>
@@ -621,7 +620,7 @@ export default function ThreadScreen() {
                                                     content: editContent,
                                                     file: editMediaFile,
                                                     mediaType: editMediaType,
-                                                    removeMedia: editRemoveMedia
+                                                    removeMedia: editRemoveMedia || !!editMediaFile
                                                 }, post.userId || post.user_id || post.employee_id);
                                                 setEditingPostId(null);
                                                 setEditMediaFile(null);
@@ -972,6 +971,42 @@ export default function ThreadScreen() {
                             </div>
                         </motion.div>
                     </motion.div>
+                )}
+
+                {replaceConfirmPost && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(6px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                        <div style={{ background: 'white', borderRadius: '24px', padding: '36px 32px', maxWidth: '420px', width: '100%', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)', border: '1.5px solid #cbd5e1' }}>
+                            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <ImageIcon size={24} color="#ef4444" />
+                            </div>
+                            <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0B1E3F', margin: '0 0 8px 0', fontFamily: "'Outfit', sans-serif" }}>Replace Media</h3>
+                            <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 28px 0', lineHeight: '1.5', fontWeight: '700', fontFamily: "'Outfit', sans-serif" }}>
+                                First remove the uploaded image then upload new image.
+                            </p>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button 
+                                    onClick={() => setReplaceConfirmPost(null)} 
+                                    style={{ flex: 1, padding: '12px', borderRadius: '14px', border: '1.5px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '14px', fontWeight: '800', cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setReplaceConfirmPost(null);
+                                        setEditRemoveMedia(true);
+                                        setEditMediaFile(null);
+                                        setEditMediaPreview(null);
+                                        setTimeout(() => {
+                                            editFileInputRef.current?.click();
+                                        }, 100);
+                                    }}
+                                    style={{ flex: 1, padding: '12px', borderRadius: '14px', border: 'none', background: '#315A9E', color: 'white', fontSize: '14px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 12px rgba(49, 90, 158, 0.3)', fontFamily: "'Outfit', sans-serif" }}
+                                >
+                                    OK
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>

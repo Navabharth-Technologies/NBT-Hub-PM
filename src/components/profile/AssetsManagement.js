@@ -207,22 +207,28 @@ export default function AssetsManagement() {
           // Helper to convert 1/0 or boolean to Yes/No
           const mapBinary = (val) => (val === 1 || val === '1' || val === true || val === 'true' || val === 'Yes') ? 'Yes' : 'No';
 
+          const existingAsset = assetMap[id];
+          const hasExistingAsset = !!existingAsset;
+
           // Merge into assetMap (avoid overwriting if already exists and is from a newer request)
+          // Prefer existing dedicated asset data over cert data for hardware fields
+          // so that user edits are not overwritten by stale certificate values on re-fetch
           assetMap[id] = {
-            ...(assetMap[id] || {}),
-            ...c,
-            employee_name: c.employee_name || c.name || assetMap[id]?.employee_name || 'Certificate Employee',
+            ...(existingAsset || c),
+            employee_name: c.employee_name || c.name || existingAsset?.employee_name || 'Certificate Employee',
             employee_id: id,
-            laptop_details: c.laptop_details || c.laptop_unit_details || assetMap[id]?.laptop_details,
-            mouse: mapBinary(c.mouse),
-            keyboard: mapBinary(c.keyboard),
-            laptop_stand: mapBinary(c.laptop_stand),
-            ruf_pad: mapBinary(c.ref_pad),
-            pendrive: mapBinary(c.pendrive),
-            mobile: mapBinary(c.company_mobile),
-            camera: mapBinary(c.external_camera),
-            earphone: mapBinary(c.earphone_headphone),
-            tablet: mapBinary(c.tablet),
+            laptop_details: hasExistingAsset
+              ? (existingAsset.laptop_details || c.laptop_details || c.laptop_unit_details)
+              : (c.laptop_details || c.laptop_unit_details),
+            mouse: hasExistingAsset ? existingAsset.mouse : mapBinary(c.mouse),
+            keyboard: hasExistingAsset ? existingAsset.keyboard : mapBinary(c.keyboard),
+            laptop_stand: hasExistingAsset ? existingAsset.laptop_stand : mapBinary(c.laptop_stand),
+            ruf_pad: hasExistingAsset ? existingAsset.ruf_pad : mapBinary(c.ref_pad),
+            pendrive: hasExistingAsset ? existingAsset.pendrive : mapBinary(c.pendrive),
+            mobile: hasExistingAsset ? existingAsset.mobile : mapBinary(c.company_mobile),
+            camera: hasExistingAsset ? existingAsset.camera : mapBinary(c.external_camera),
+            earphone: hasExistingAsset ? existingAsset.earphone : mapBinary(c.earphone_headphone),
+            tablet: hasExistingAsset ? existingAsset.tablet : mapBinary(c.tablet),
             is_from_certificate: true
           };
         });
@@ -676,14 +682,41 @@ export default function AssetsManagement() {
       const result = await response.json().catch(() => ({}));
 
       if (response.ok) {
+        // Optimistically update local assets state immediately so re-opening edit shows new values
+        if (!isAddAll) {
+          setAssets(prev => ({
+            ...prev,
+            [empId]: {
+              ...(prev[empId] || {}),
+              employee_id: form.employee_id || String(empId),
+              employee_name: form.employee_name,
+              designation: form.designation,
+              joining_date: isoDate,
+              last_working_date: isoLwd,
+              laptop_details: form.laptop_details,
+              laptop_count: form.laptop_count,
+              mouse: form.mouse,
+              keyboard: form.keyboard,
+              laptop_stand: form.laptop_stand,
+              ruf_pad: form.ruf_pad,
+              pendrive: form.pendrive,
+              mobile: form.mobile,
+              camera: form.camera,
+              earphone: form.earphone,
+              tablet: form.tablet,
+              id: editModal.assetId || prev[empId]?.id,
+            }
+          }));
+        }
+
         setToastMessage(`Updated Successfully! ✅`);
         setToastType('success');
         setShowToast(true);
         setTimeout(() => setShowToast(false), 3000);
 
         closeEditModal();
-        // Force a brief delay before re-fetching to allow DB indexing
-        setTimeout(() => fetchData(), 500);
+        // Re-fetch in background to sync with server
+        setTimeout(() => fetchData(), 1500);
       } else {
         setToastMessage(`Storage Error: ${result.message || result.error || 'Server rejected the entry'}`);
         setToastType('error');
@@ -1368,7 +1401,7 @@ export default function AssetsManagement() {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {editModal.isReadOnly && (
+                {editModal.isReadOnly && !editModal.isCertificate && (
                   <button
                     onClick={() => setEditModal(prev => ({ ...prev, isReadOnly: false }))}
                     style={{
@@ -1491,16 +1524,6 @@ export default function AssetsManagement() {
                           <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#000000', marginBottom: '8px', paddingLeft: '4px' }}>DESIGNATION</label>
                           <input type="text" placeholder="e.g. Lead Software Engineer" value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value.replace(/[^a-zA-Z\s]/g, '') })} style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #1e3a8a', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }} />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#000000', marginBottom: '8px', paddingLeft: '4px' }}>JOINING DATE</label>
-                            <input type="date" value={form.joining_date} onChange={(e) => setForm({ ...form, joining_date: e.target.value })} style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #1e3a8a', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none', fontFamily: "'Outfit', sans-serif" }} />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#000000', marginBottom: '8px', paddingLeft: '4px' }}>LWD</label>
-                            <input type="date" value={form.last_working_date} onChange={(e) => setForm({ ...form, last_working_date: e.target.value })} style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #1e3a8a', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none', fontFamily: "'Outfit', sans-serif" }} />
-                          </div>
-                        </div>
                       </>
                     )}
 
@@ -1508,63 +1531,6 @@ export default function AssetsManagement() {
                       <h3 style={{ fontSize: '11px', fontWeight: '900', color: '#3163aa', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                         <Laptop size={14} /> Hardware Inventory
                       </h3>
-                      {!editModal.isReadOnly && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isAddAll) {
-                              const allOne = ['laptop_count', 'mouse', 'keyboard', 'laptop_stand', 'ruf_pad', 'pendrive', 'mobile', 'camera', 'earphone', 'tablet'].every(k => Number(form[k]) === 1);
-                              const newVal = allOne ? '0' : '1';
-                              setForm(prev => ({
-                                ...prev,
-                                laptop_count: newVal,
-                                mouse: newVal,
-                                keyboard: newVal,
-                                laptop_stand: newVal,
-                                ruf_pad: newVal,
-                                pendrive: newVal,
-                                mobile: newVal,
-                                camera: newVal,
-                                earphone: newVal,
-                                tablet: newVal
-                              }));
-                            } else {
-                              const allYes = ['laptop_count', 'mouse', 'keyboard', 'laptop_stand', 'ruf_pad', 'pendrive', 'mobile', 'camera', 'earphone', 'tablet'].every(k => form[k] === 'Yes');
-                              const newVal = allYes ? '' : 'Yes';
-                              setForm(prev => ({
-                                ...prev,
-                                laptop_count: newVal,
-                                mouse: newVal,
-                                keyboard: newVal,
-                                laptop_stand: newVal,
-                                ruf_pad: newVal,
-                                pendrive: newVal,
-                                mobile: newVal,
-                                camera: newVal,
-                                earphone: newVal,
-                                tablet: newVal
-                              }));
-                            }
-                          }}
-                          style={{
-                            background: '#eff6ff',
-                            color: '#2563eb',
-                            border: '1px solid #dbeafe',
-                            padding: '4px 10px',
-                            borderRadius: '8px',
-                            fontSize: '11px',
-                            fontWeight: '800',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          {isAddAll ? (
-                            ['laptop_count', 'mouse', 'keyboard', 'laptop_stand', 'ruf_pad', 'pendrive', 'mobile', 'camera', 'earphone', 'tablet'].every(k => Number(form[k]) === 1) ? 'Deselect All' : 'Select All'
-                          ) : (
-                            ['laptop_count', 'mouse', 'keyboard', 'laptop_stand', 'ruf_pad', 'pendrive', 'mobile', 'camera', 'earphone', 'tablet'].every(k => form[k] === 'Yes') ? 'Deselect All' : 'Select All'
-                          )}
-                        </button>
-                      )}
                     </div>
 
                     <div style={{ gridColumn: 'span 2' }}>
@@ -1625,7 +1591,7 @@ export default function AssetsManagement() {
                             onChange={(e) => setForm({ ...form, [item.key]: e.target.value })}
                             style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #1e3a8a', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
                           >
-                            <option value="">Select Option</option>
+                            <option value="" disabled>Select Option</option>
                             <option value="Yes">Yes</option>
                             <option value="No">No</option>
                           </select>

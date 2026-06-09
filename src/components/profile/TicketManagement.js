@@ -22,6 +22,12 @@ export default function TicketManagement() {
   const [manageResponse, setManageResponse] = useState('');
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [usersList, setUsersList] = useState([]);
+  const [toast, setToast] = useState({ show: false, msg: '', type: 'success' });
+
+  const triggerToast = (msg, type = 'success') => {
+    setToast({ show: true, msg, type });
+    setTimeout(() => setToast({ show: false, msg: '', type: 'success' }), 3000);
+  };
 
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -215,6 +221,19 @@ export default function TicketManagement() {
   return (
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
+
+      {toast.show && (
+        <div style={{
+          position: 'fixed', top: '90px', left: '50%', transform: 'translateX(-50%)',
+          backgroundColor: toast.type === 'success' ? '#10b981' : '#ef4444',
+          color: 'white', padding: '12px 30px', borderRadius: '15px', zIndex: 9999,
+          display: 'flex', alignItems: 'center', gap: '10px', fontWeight: '800', fontSize: '14px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+        }}>
+          {toast.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          {toast.msg}
+        </div>
+      )}
 
       <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px' : '40px 26px', maxWidth: '100%', width: '100%', boxSizing: 'border-box', marginTop: '70px' }}>
         <header style={{
@@ -599,10 +618,12 @@ export default function TicketManagement() {
                         ticket_id: ticketId,
                         action: manageResponse,
                         response: manageResponse,
+                        action: manageResponse,
                         status: 'Resolved'
                       })
                     });
                     if (res.ok) {
+                      triggerToast('Action submitted successfully');
                       setTickets(prev => prev.map(t => (t.id === ticketId || t.ticket_id === ticketId) ? { ...t, action: manageResponse, response: manageResponse, status: 'Resolved' } : t));
                       setManageTicket(null);
                       setManageResponse('');
@@ -616,15 +637,18 @@ export default function TicketManagement() {
                           ticket_id: ticketId,
                           action: manageResponse,
                           response: manageResponse,
+                          action: manageResponse,
                           status: 'Resolved'
                         })
                       });
+                      triggerToast('Action submitted successfully');
                       setTickets(prev => prev.map(t => (t.id === ticketId || t.ticket_id === ticketId) ? { ...t, action: manageResponse, response: manageResponse, status: 'Resolved' } : t));
                       setManageTicket(null);
                       setManageResponse('');
                     }
                   } catch (err) {
                     console.error('Response submission error:', err);
+                    triggerToast('Failed to submit action', 'error');
                   }
                 }}
                 disabled={!manageResponse.trim()}

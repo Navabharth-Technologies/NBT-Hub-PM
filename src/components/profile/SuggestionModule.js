@@ -14,6 +14,52 @@ export default function SuggestionModule() {
   const navigate = useNavigate();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
+  // Parse a date string like "22/5/2026" or "5/22/2026" or "22-05-2026" safely
+  const parseDate = (dateStr) => {
+    if (!dateStr || dateStr === 'Today') return new Date();
+    
+    const parts = dateStr.includes('-') ? dateStr.split('-') : dateStr.split('/');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        // YYYY-MM-DD
+        const d = new Date(`${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`);
+        if (!isNaN(d)) return d;
+      } else {
+        // Try d/m/yyyy or dd-mm-yyyy
+        const d = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
+        if (!isNaN(d)) return d;
+        // Try m/d/yyyy or mm-dd-yyyy
+        const d2 = new Date(`${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`);
+        if (!isNaN(d2)) return d2;
+      }
+    }
+
+    // Try ISO fallback
+    const iso = new Date(dateStr);
+    if (!isNaN(iso)) return iso;
+
+    return null;
+  };
+
+  const filteredSubmissions = submissions.filter((s) => {
+    if (!fromDate && !toDate) return true;
+    const d = parseDate(s.date);
+    if (!d) return true;
+    const from = fromDate ? new Date(fromDate) : null;
+    const to = toDate ? new Date(toDate) : null;
+    if (to) to.setHours(23, 59, 59, 999);
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  });
+
+  const clearFilter = () => {
+    setFromDate('');
+    setToDate('');
+  };
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
@@ -27,9 +73,17 @@ export default function SuggestionModule() {
     // Subtitle
     doc.setFontSize(11);
     doc.setTextColor(100, 116, 139);
-    doc.text(`Total Submissions: ${submissions.length}`, 14, 30);
+    doc.text(`Total Submissions: ${filteredSubmissions.length}`, 14, 30);
 
     doc.text(`Generated on: ${new Date().toLocaleString('en-GB')}`, 14, 42);
+    
+    let currentY = 50;
+    if (fromDate || toDate) {
+      const fromStr = fromDate ? new Date(fromDate).toLocaleDateString('en-GB') : 'Start';
+      const toStr = toDate ? new Date(toDate).toLocaleDateString('en-GB') : 'Today';
+      doc.text(`Date Range: ${fromStr} to ${toStr}`, 14, 48);
+      currentY = 56;
+    }
 
     const cleanText = (str) => {
       if (!str) return 'N/A';
@@ -41,7 +95,7 @@ export default function SuggestionModule() {
     };
 
     const tableColumn = ["Submitted By", "Emp ID / Team", "Date", "Suggestion Content", "Engagement"];
-    const tableRows = submissions.map(s => [
+    const tableRows = filteredSubmissions.map(s => [
       cleanText(s.user),
       cleanText(s.team),
       cleanText(s.date),
@@ -52,7 +106,7 @@ export default function SuggestionModule() {
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
-      startY: 50,
+      startY: currentY,
       styles: {
         fontSize: 8.5,
         cellPadding: { top: 5, bottom: 5, left: 3, right: 3 },
@@ -202,6 +256,76 @@ export default function SuggestionModule() {
           </div>
         </header>
 
+        {/* Date Filter Bar */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
+          background: '#ffffff', borderRadius: '16px', padding: '14px 20px',
+          border: '1.5px solid #e2e8f0', marginBottom: '20px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#315A9E' }}>
+            <span style={{ fontSize: '18px' }}>📅</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>From</label>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              style={{
+                padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1',
+                fontSize: '13px', fontWeight: '700', color: '#1e293b', cursor: 'pointer',
+                outline: 'none', background: '#f8fafc', transition: 'border-color 0.2s'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#315A9E'}
+              onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>To</label>
+            <input
+              type="date"
+              value={toDate}
+              min={fromDate || ''}
+              onChange={(e) => setToDate(e.target.value)}
+              style={{
+                padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1',
+                fontSize: '13px', fontWeight: '700', color: '#1e293b', cursor: 'pointer',
+                outline: 'none', background: '#f8fafc', transition: 'border-color 0.2s'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#315A9E'}
+              onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+            />
+          </div>
+
+          {(fromDate || toDate) && (
+            <button
+              onClick={clearFilter}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                background: '#fef2f2', color: '#ef4444', border: '1.5px solid #fecaca',
+                borderRadius: '10px', padding: '7px 12px', fontSize: '12px', fontWeight: '800',
+                cursor: 'pointer', transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = '#fff'; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#ef4444'; }}
+            >
+              <span style={{ fontSize: '13px' }}>✕</span> Clear
+            </button>
+          )}
+
+          {/* Result count */}
+          <span style={{
+            marginLeft: 'auto', fontSize: '12px', fontWeight: '800',
+            color: '#64748b', background: '#f1f5f9', padding: '6px 14px',
+            borderRadius: '20px'
+          }}>
+            {loading ? '...' : `${filteredSubmissions.length} result${filteredSubmissions.length !== 1 ? 's' : ''}`}
+          </span>
+        </div>
+
         <section className="dashboard-section animate-fade-in">
           <h2 className="section-title">Recent Submissions</h2>
           <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -209,13 +333,13 @@ export default function SuggestionModule() {
               <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--card-bg)', borderRadius: '20px', border: '1px dashed var(--border-color)' }}>
                 <p style={{ fontWeight: '800' }}>Fetching latest suggestions...</p>
               </div>
-            ) : submissions.length === 0 ? (
+            ) : filteredSubmissions.length === 0 ? (
               <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--card-bg)', borderRadius: '20px', border: '1px dashed var(--border-color)' }}>
                 <p style={{ fontWeight: '800' }}>No submissions found.</p>
-                <p style={{ fontSize: '12px' }}>New suggestions will appear here once submitted.</p>
+                <p style={{ fontSize: '12px' }}>{submissions.length === 0 ? 'New suggestions will appear here once submitted.' : 'No submissions match your date filter.'}</p>
               </div>
             ) : (
-              submissions.map((s, i) => (
+              filteredSubmissions.map((s, i) => (
                 <div key={i} className="team-card" style={{ padding: '24px', borderLeft: '4px solid var(--primary-color)', cursor: 'default' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -253,7 +377,7 @@ export default function SuggestionModule() {
                   </p>
                   <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-muted)' }}>Engagement:</span>
+                      <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-muted)' }}>Note:</span>
                       <span style={{ fontSize: '10px', background: 'rgba(56, 99, 168, 0.1)', color: 'var(--primary-color)', padding: '4px 10px', borderRadius: '12px', fontWeight: '800' }}>
                         {s.participation}
                       </span>
