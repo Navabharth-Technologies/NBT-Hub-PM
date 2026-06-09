@@ -597,12 +597,13 @@ export default function TicketManagement() {
                       body: JSON.stringify({
                         id: ticketId,
                         ticket_id: ticketId,
+                        action: manageResponse,
                         response: manageResponse,
                         status: 'Resolved'
                       })
                     });
                     if (res.ok) {
-                      setTickets(prev => prev.map(t => (t.id === ticketId || t.ticket_id === ticketId) ? { ...t, response: manageResponse, status: 'Resolved' } : t));
+                      setTickets(prev => prev.map(t => (t.id === ticketId || t.ticket_id === ticketId) ? { ...t, action: manageResponse, response: manageResponse, status: 'Resolved' } : t));
                       setManageTicket(null);
                       setManageResponse('');
                     } else {
@@ -613,11 +614,12 @@ export default function TicketManagement() {
                         body: JSON.stringify({
                           id: ticketId,
                           ticket_id: ticketId,
+                          action: manageResponse,
                           response: manageResponse,
                           status: 'Resolved'
                         })
                       });
-                      setTickets(prev => prev.map(t => (t.id === ticketId || t.ticket_id === ticketId) ? { ...t, response: manageResponse, status: 'Resolved' } : t));
+                      setTickets(prev => prev.map(t => (t.id === ticketId || t.ticket_id === ticketId) ? { ...t, action: manageResponse, response: manageResponse, status: 'Resolved' } : t));
                       setManageTicket(null);
                       setManageResponse('');
                     }
