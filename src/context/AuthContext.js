@@ -93,6 +93,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     localStorage.removeItem('userRole');
+    // Hard reload kills all background polling intervals instantly
+    window.location.replace(window.location.pathname + '#/login');
   };
 
   const updateUserData = (newData) => {

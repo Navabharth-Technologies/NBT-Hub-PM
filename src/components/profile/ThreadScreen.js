@@ -827,10 +827,12 @@ export default function ThreadScreen() {
                                                                         </button>
                                                                         <button
                                                                             onClick={async () => {
-                                                                                const success = await deleteComment(post.id, c.id, c.userId || c.user_id || c.employee_id || c.EmpID);
-                                                                                if (success) {
-                                                                                    const updated = await fetchComments(post.id);
-                                                                                    setPostComments(prev => ({ ...prev, [post.id]: updated }));
+                                                                                if (window.confirm('Are you sure you want to delete this comment?')) {
+                                                                                    const success = await deleteComment(post.id, c.id, c.userId || c.user_id || c.employee_id || c.EmpID);
+                                                                                    if (success) {
+                                                                                        const updated = await fetchComments(post.id);
+                                                                                        setPostComments(prev => ({ ...prev, [post.id]: updated }));
+                                                                                    }
                                                                                 }
                                                                             }}
                                                                             title="Delete comment"
