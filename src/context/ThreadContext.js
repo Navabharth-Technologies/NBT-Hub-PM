@@ -559,7 +559,25 @@ export const ThreadProvider = ({ children }) => {
     const authorId = postAuthorId || post?.userId || post?.user_id || post?.employee_id;
     const finalUserId = authorId || user?.id || user?.employee_id || user?.EmpID;
     try {
-      const actualContent = typeof contentText === 'object' && contentText !== null ? contentText.content : contentText;
+      let actualContent = contentText;
+      let mediaData = undefined;
+      let mediaType = undefined;
+      let removeMedia = undefined;
+
+      if (typeof contentText === 'object' && contentText !== null) {
+        actualContent = contentText.content;
+        removeMedia = contentText.removeMedia;
+        if (contentText.file) {
+          mediaData = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(contentText.file);
+          });
+          mediaType = contentText.mediaType;
+          removeMedia = true;
+        }
+      }
+
       const res = await fetch(API_ENDPOINTS.THREAD_UPDATE(id), {
         method: 'PUT',
         headers: {
@@ -570,7 +588,10 @@ export const ThreadProvider = ({ children }) => {
           content: actualContent,
           userId: finalUserId,
           employee_id: finalUserId,
-          user_id: finalUserId
+          user_id: finalUserId,
+          media: mediaData,
+          mediaType: mediaType,
+          removeMedia: removeMedia
         })
       });
       if (res.ok) {
@@ -578,7 +599,9 @@ export const ThreadProvider = ({ children }) => {
         await fetchThreads(true);
         return true;
       }
-    } catch { }
+    } catch (err) {
+      console.error("updatePost Error:", err);
+    }
     return false;
   };
 

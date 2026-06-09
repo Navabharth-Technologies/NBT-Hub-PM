@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Pencil, Trash2, ArrowLeft } from 'lucide-react';
@@ -70,6 +70,17 @@ export default function NewJoineeModule() {
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [showAddDropdown, setShowAddDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowAddDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const [toastType, setToastType] = useState('success');
   const [leads, setLeads] = useState([]);
   const [deleteConfirmJoinee, setDeleteConfirmJoinee] = useState(null);
@@ -83,6 +94,8 @@ export default function NewJoineeModule() {
   const [dismissedCompletions, setDismissedCompletions] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('dismissedCompletions_pm') || '[]'); } catch { return []; }
   });
+  const [promoteEmpId, setPromoteEmpId] = useState('');
+  const [showPromoteInput, setShowPromoteInput] = useState(false);
 
   useEffect(() => {
     const visibleCompleted = completedJoinees.filter(j => {
@@ -679,7 +692,7 @@ export default function NewJoineeModule() {
                 🔓 {unblocking ? 'UNBLOCKING...' : 'Unblock All'}
               </button>
             )}
-            <div style={{ position: 'relative' }}>
+            <div ref={dropdownRef} style={{ position: 'relative' }}>
               <button className="btn-primary" onClick={() => setShowAddDropdown(!showAddDropdown)}>+ Add member</button>
               {showAddDropdown && (
                 <div style={{
@@ -910,6 +923,8 @@ export default function NewJoineeModule() {
                   />
                 </div>
 
+
+
                 <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2', display: 'flex', gap: '16px', marginTop: '12px' }}>
                   <button
                     type="button"
@@ -1031,72 +1046,110 @@ export default function NewJoineeModule() {
                 <span style={{ fontWeight: '900', color: '#0f172a' }}>{currentJoinee.name}</span>'s {isIntern ? 'internship' : 'probation'} period has been completed.
                 Would you like to allow them to continue employment in this company?
               </p>
-              <div style={{ display: 'flex', gap: '14px', justifyContent: 'center' }}>
-                <button
-                  onClick={() => {
-                    const updated = [...dismissedCompletions, jId];
-                    setDismissedCompletions(updated);
-                    try { sessionStorage.setItem('dismissedCompletions_pm', JSON.stringify(updated)); } catch { }
-                  }}
-                  style={{
-                    flex: 1, padding: '12px 20px', background: '#fee2e2', color: '#dc2626',
-                    border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '14px',
-                    cursor: 'pointer', transition: 'all 0.2s'
-                  }}
-                >
-                  No
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      const promoteRes = await fetch(API_ENDPOINTS.ONBOARDING_PROMOTE, {
-                        method: 'POST',
-                        headers: {
-                          'Authorization': `Bearer ${user.token}`,
-                          'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                          id: currentJoinee.id || currentJoinee._id,
-                          employee_id: currentJoinee.employee_id || currentJoinee.intern_id,
-                          name: currentJoinee.name,
-                          email: currentJoinee.email_id || currentJoinee.emailId || currentJoinee.email,
-                          role: currentJoinee.role,
-                          is_intern: !!currentJoinee.is_intern,
-                          type: currentJoinee.is_intern ? 'intern' : 'new_joinee'
-                        })
-                      });
-                      if (promoteRes.ok) {
-                        setToastMessage(`${currentJoinee.name} has been promoted to full employee! 🎉`);
-                        setToastType('success');
-                      } else {
-                        setToastMessage(`${currentJoinee.name} confirmed for continued employment! 🎉`);
-                        setToastType('success');
-                      }
-                    } catch (err) {
-                      console.error('Promote error:', err);
-                      setToastMessage(`${currentJoinee.name} confirmed for continued employment! 🎉`);
-                      setToastType('success');
-                    }
-                    // Dismiss this notification
-                    const updated = [...dismissedCompletions, jId];
-                    setDismissedCompletions(updated);
-                    try { sessionStorage.setItem('dismissedCompletions_pm', JSON.stringify(updated)); } catch { }
-                    setShowSuccessToast(true);
-                    setTimeout(() => setShowSuccessToast(false), 3000);
-                    // Refresh data
-                    fetchJoinees();
-                    fetchReminders();
-                  }}
-                  style={{
-                    flex: 1, padding: '12px 20px', background: '#22c55e', color: 'white',
-                    border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '14px',
-                    cursor: 'pointer', boxShadow: '0 6px 16px rgba(34, 197, 94, 0.35)',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  Yes
-                </button>
-              </div>
+              {showPromoteInput ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <input
+                    type="text"
+                    placeholder="Enter permanent Employee ID"
+                    value={promoteEmpId}
+                    onChange={(e) => setPromoteEmpId(e.target.value)}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '12px 18px', borderRadius: '14px', border: '2px solid #e2e8f0', background: '#f8fafc', fontWeight: '800', fontSize: '13px', outline: 'none', color: '#0f172a', textAlign: 'center' }}
+                  />
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={() => {
+                        setShowPromoteInput(false);
+                        setPromoteEmpId('');
+                      }}
+                      style={{ flex: 1, padding: '12px', background: 'white', color: '#64748b', border: '2px solid #e2e8f0', borderRadius: '14px', fontWeight: '900', fontSize: '13px', cursor: 'pointer' }}
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!promoteEmpId) {
+                          setToastMessage('Please enter an Employee ID');
+                          setToastType('error');
+                          setShowSuccessToast(true);
+                          setTimeout(() => setShowSuccessToast(false), 3000);
+                          return;
+                        }
+                        try {
+                          const promoteRes = await fetch(API_ENDPOINTS.ONBOARDING_PROMOTE, {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${user.token}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              id: currentJoinee.id || currentJoinee._id,
+                              employee_id: promoteEmpId,
+                              name: currentJoinee.name,
+                              email: currentJoinee.email_id || currentJoinee.emailId || currentJoinee.email,
+                              role: currentJoinee.role,
+                              is_intern: !!currentJoinee.is_intern,
+                              type: currentJoinee.is_intern ? 'intern' : 'new_joinee'
+                            })
+                          });
+                          if (promoteRes.ok) {
+                            setToastMessage(`${currentJoinee.name} has been promoted to full employee! 🎉`);
+                            setToastType('success');
+                          } else {
+                            setToastMessage(`${currentJoinee.name} confirmed for continued employment! 🎉`);
+                            setToastType('success');
+                          }
+                        } catch (err) {
+                          console.error('Promote error:', err);
+                          setToastMessage(`${currentJoinee.name} confirmed for continued employment! 🎉`);
+                          setToastType('success');
+                        }
+                        const updated = [...dismissedCompletions, jId];
+                        setDismissedCompletions(updated);
+                        try { sessionStorage.setItem('dismissedCompletions_pm', JSON.stringify(updated)); } catch { }
+                        setShowSuccessToast(true);
+                        setTimeout(() => setShowSuccessToast(false), 3000);
+                        setShowPromoteInput(false);
+                        setPromoteEmpId('');
+                        fetchJoinees();
+                        fetchReminders();
+                      }}
+                      style={{ flex: 1.5, padding: '12px', background: '#315A9E', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '13px', cursor: 'pointer', boxShadow: '0 6px 16px rgba(49, 90, 158, 0.35)' }}
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '14px', justifyContent: 'center' }}>
+                  <button
+                    onClick={() => {
+                      const updated = [...dismissedCompletions, jId];
+                      setDismissedCompletions(updated);
+                      try { sessionStorage.setItem('dismissedCompletions_pm', JSON.stringify(updated)); } catch { }
+                    }}
+                    style={{
+                      flex: 1, padding: '12px 20px', background: '#fee2e2', color: '#dc2626',
+                      border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '14px',
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                  >
+                    No
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowPromoteInput(true);
+                    }}
+                    style={{
+                      flex: 1, padding: '12px 20px', background: '#22c55e', color: 'white',
+                      border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '14px',
+                      cursor: 'pointer', boxShadow: '0 6px 16px rgba(34, 197, 94, 0.35)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Yes
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         );

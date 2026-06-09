@@ -5,7 +5,7 @@ import {
   ArrowLeft, Save, Building2,
   AlertCircle, CheckCircle2, User, Landmark, RefreshCw,
   MapPin, GraduationCap, History,
-  FileCheck, Users, Pencil, Upload, ChevronDown, ChevronLeft, ChevronRight, X
+  FileCheck, Users, Pencil, Upload, ChevronDown, ChevronLeft, ChevronRight, X, Maximize2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { BASE_URL, API_ENDPOINTS } from '../../config';
@@ -171,6 +171,8 @@ export default function PersonalInfo({ onBack }) {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [docRemoveConfirm, setDocRemoveConfirm] = useState(null); // { fieldKey, fieldLabel, isEditingCtx }
+  const [fullscreenUrl, setFullscreenUrl] = useState(null); // fullscreen doc preview
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const isMobile = winWidth < 768;
   const [activeSection, setActiveSection] = useState(() => {
@@ -1190,8 +1192,23 @@ export default function PersonalInfo({ onBack }) {
                   overflow: 'hidden'
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, paddingRight: '40px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, paddingRight: '84px' }}>
                   <h3 style={{ margin: 0, color: '#0B1E3F', fontWeight: '900', fontSize: '18px', textTransform: 'uppercase' }}>{previewDoc.label}</h3>
+                  {/* Zoom / Fullscreen button */}
+                  <button
+                    onClick={() => setFullscreenUrl(previewDoc.url)}
+                    title="View fullscreen"
+                    style={{
+                      position: 'absolute', top: '15px', right: '59px', width: '36px', height: '36px',
+                      borderRadius: '50%', backgroundColor: '#f1f5f9', border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                      color: '#315A9E', transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#e0f2fe'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                  >
+                    <Maximize2 size={17} />
+                  </button>
                   <button
                     onClick={() => setPreviewDoc(null)}
                     style={{
@@ -1238,12 +1255,14 @@ export default function PersonalInfo({ onBack }) {
                     <img
                       src={previewDoc.url}
                       alt="Proof Preview"
+                      onClick={() => setFullscreenUrl(previewDoc.url)}
                       style={{
                         maxWidth: '100%',
                         maxHeight: '55vh',
                         display: 'block',
                         borderRadius: '20px',
-                        objectFit: 'contain'
+                        objectFit: 'contain',
+                        cursor: 'zoom-in'
                       }}
                       onError={(e) => {
                         e.target.style.display = 'none';
@@ -1272,7 +1291,7 @@ export default function PersonalInfo({ onBack }) {
                     rel="noreferrer"
                     style={{ fontSize: '13px', color: '#315A9E', fontWeight: '900', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
-                    OPEN DOCUMENT IN NEW TAB ↗
+
                   </a>
                 </div>
               </motion.div>
@@ -1321,7 +1340,15 @@ export default function PersonalInfo({ onBack }) {
         </div>
 
         <div style={{ display: isMobile ? 'flex' : 'grid', flexDirection: isMobile ? 'column' : 'row', gridTemplateColumns: isMobile ? 'none' : '280px 1fr', gap: isMobile ? '20px' : '24px', alignItems: 'start', width: '100%', boxSizing: 'border-box' }}>
-          <div style={{ width: '100%', margin: '0', boxSizing: 'border-box', flexShrink: 0 }}>
+            <div style={{
+              width: '100%',
+              margin: '0',
+              boxSizing: 'border-box',
+              flexShrink: 0,
+              position: !isMobile ? 'sticky' : 'static',
+              top: !isMobile ? '120px' : 'auto',
+              zIndex: 10
+            }}>
             {isMobile ? (
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1408,7 +1435,16 @@ export default function PersonalInfo({ onBack }) {
             key={activeSection}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            style={{ backgroundColor: 'white', borderRadius: '28px', padding: isMobile ? '24px' : '40px', border: '1.5px solid #e2e8f0' }}
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '28px',
+              padding: isMobile ? '24px' : '40px',
+              border: '1.5px solid #e2e8f0',
+              maxHeight: !isMobile ? 'calc(100vh - 280px)' : 'none',
+              overflowY: !isMobile ? 'auto' : 'visible',
+              position: !isMobile ? 'sticky' : 'static',
+              top: !isMobile ? '120px' : 'auto'
+            }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '32px' }}>
               <div style={{ padding: '12px', borderRadius: '16px', backgroundColor: `${currentSection.color}15`, color: currentSection.color }}>
@@ -1433,113 +1469,78 @@ export default function PersonalInfo({ onBack }) {
                         : field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
                     </label>
                     {field.type === 'file' ? (
-                        <div
-                          style={{
-                            border: isMobile ? '2px dashed #cbd5e1' : '3px dashed #cbd5e1', borderRadius: '16px', padding: '20px',
-                            display: 'flex', flexDirection: 'column', alignItems: 'center',
-                            background: '#f8fafc', position: 'relative', transition: 'all 0.3s ease',
-                            cursor: isDisabled ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box'
-                          }}
-                          onMouseEnter={e => {
-                            if (!isDisabled) {
-                              e.currentTarget.style.borderColor = '#315A9E';
-                              e.currentTarget.style.transform = 'translateY(-5px)';
-                              e.currentTarget.style.boxShadow = '0 10px 20px rgba(49, 90, 158, 0.1)';
-                            }
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.borderColor = '#cbd5e1';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
-                        >
-                          {form[field.key] ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                              <FileCheck size={24} color="#10b981" />
+                      <div
+                        style={{
+                          border: isMobile ? '2px dashed #cbd5e1' : '3px dashed #cbd5e1', borderRadius: '16px', padding: '20px',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center',
+                          background: '#f8fafc', position: 'relative', transition: 'all 0.3s ease',
+                          cursor: isDisabled ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box'
+                        }}
+                        onMouseEnter={e => {
+                          if (!isDisabled) {
+                            e.currentTarget.style.borderColor = '#315A9E';
+                            e.currentTarget.style.transform = 'translateY(-5px)';
+                            e.currentTarget.style.boxShadow = '0 10px 20px rgba(49, 90, 158, 0.1)';
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.borderColor = '#cbd5e1';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        {form[field.key] ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                            <FileCheck size={24} color="#10b981" />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const rawUrl = form[field.key];
+                                if (!rawUrl) return;
+
+                                let url = rawUrl;
+                                // Fix case where backend mistakenly prepends BASE_URL to base64 string
+                                if (typeof url === 'string' && url.includes('data:') && url.includes('base64')) {
+                                  url = url.substring(url.indexOf('data:'));
+                                } else if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('data:')) {
+                                  url = `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+                                }
+                                setPreviewDoc({ url, label: field.label });
+                              }}
+                              style={{
+                                border: 'none', background: 'transparent', fontSize: '12px',
+                                color: '#315A9E', fontWeight: '900', cursor: 'pointer',
+                                padding: '4px 8px', borderRadius: '8px'
+                              }}
+                            >
+                              VIEW PROOF
+                            </button>
+                            {((isEditing) || (!isEditing)) && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const rawUrl = form[field.key];
-                                  if (!rawUrl) return;
-
-                                  let url = rawUrl;
-                                  // Fix case where backend mistakenly prepends BASE_URL to base64 string
-                                  if (typeof url === 'string' && url.includes('data:') && url.includes('base64')) {
-                                    url = url.substring(url.indexOf('data:'));
-                                  } else if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('data:')) {
-                                    url = `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
-                                  }
-                                  setPreviewDoc({ url, label: field.label });
+                                  setDocRemoveConfirm({ fieldKey: field.key, fieldLabel: field.label, isEditingCtx: isEditing });
                                 }}
                                 style={{
-                                  border: 'none', background: 'transparent', fontSize: '12px',
-                                  color: '#315A9E', fontWeight: '900', cursor: 'pointer',
-                                  padding: '4px 8px', borderRadius: '8px'
+                                  border: 'none', background: '#ef444415', color: '#ef4444',
+                                  fontSize: '11px', fontWeight: '900', cursor: 'pointer',
+                                  padding: '4px 10px', borderRadius: '8px', marginTop: '2px'
                                 }}
-                              >
-                                VIEW PROOF
-                              </button>
-                              {((isEditing) || (!isEditing)) && (
-                                <button
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    setForm(prev => ({ ...prev, [field.key]: '' }));
-                                    if (!isEditing) {
-                                      try {
-                                        const token = localStorage.getItem('token');
-                                        let docType = field.key;
-                                        if (field.key === 'pancard_photo') docType = 'pan_card';
-                                        if (field.key === 'adharcard_photo') docType = 'aadhar_card';
-                                        if (field.key === 'voter_id_photo') docType = 'voter_id_proof';
-                                        if (field.key === 'passport_photo') docType = 'passport_proof';
-                                        if (field.key === 'sslc_markscard') docType = 'sslc_markscard';
-                                        if (field.key === 'puc_markscard') docType = 'puc_markscard';
-                                        if (field.key === 'ug_pg_markscard') docType = 'ug_pg_markscard';
-                                        if (field.key === 'passbook_photo') docType = 'bank_passbook';
-                                        if (field.key === 'experience_letter') docType = 'experience_letter';
-                                        if (field.key === 'previous_company_payslip') docType = 'previous_payslip';
-
-                                        const updatePayload = {
-                                          employee_id: selectedEmpId,
-                                          id: selectedEmpId,
-                                          [field.key]: '',
-                                          [docType]: '',
-                                          experience_letter_photo: field.key === 'experience_letter' ? '' : undefined,
-                                          previous_payslip_photo: field.key === 'previous_company_payslip' ? '' : undefined
-                                        };
-                                        Object.keys(updatePayload).forEach(k => updatePayload[k] === undefined && delete updatePayload[k]);
-
-                                        await fetch(API_ENDPOINTS.EMPLOYEE_PROFILE_UPDATE, {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                                          body: JSON.stringify(updatePayload)
-                                        });
-                                        setToast({ type: 'success', msg: `${field.label} removed successfully` });
-                                      } catch (err) {
-                                        console.error("Failed to remove file:", err);
-                                      }
-                                    }
-                                  }}
-                                  style={{
-                                    border: 'none', background: '#ef444415', color: '#ef4444',
-                                    fontSize: '11px', fontWeight: '900', cursor: 'pointer',
-                                    padding: '4px 10px', borderRadius: '8px', marginTop: '2px'
-                                  }}
-                                >REMOVE</button>
-                              )}
-                            </div>
-                          ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', opacity: isDisabled ? 0.5 : 1 }}>
-                              <Upload size={24} color="#315A9E" />
-                              <div style={{ fontSize: '12px', fontWeight: '900', color: '#0B1E3F' }}>UPLOAD DOCUMENT</div>
-                              {!isDisabled && <input type="file" onChange={e => handleFileSelect(field.key, e.target.files[0])} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />}
-                            </div>
-                          )}
-                          {uploadingFiles[field.key] && (
-                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}>
-                              <RefreshCw size={24} className="spin" color="#315A9E" />
-                            </div>
-                          )}
+                              >REMOVE</button>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', opacity: isDisabled ? 0.5 : 1 }}>
+                            <Upload size={24} color="#315A9E" />
+                            <div style={{ fontSize: '12px', fontWeight: '900', color: '#0B1E3F' }}>UPLOAD DOCUMENT</div>
+                            {!isDisabled && <input type="file" onChange={e => handleFileSelect(field.key, e.target.files[0])} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />}
+                          </div>
+                        )}
+                        {uploadingFiles[field.key] && (
+                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}>
+                            <RefreshCw size={24} className="spin" color="#315A9E" />
+                          </div>
+                        )}
                       </div>
                     ) : field.type === 'select' ? (
                       <select
@@ -1700,7 +1701,111 @@ export default function PersonalInfo({ onBack }) {
       <style>{`
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        input::placeholder, textarea::placeholder {
+          font-family: 'Outfit', sans-serif !important;
+          font-weight: 900 !important;
+          color: #94a3b8 !important;
+        }
       `}</style>
+
+      {/* Fullscreen Image Overlay */}
+      {fullscreenUrl && (
+        <div
+          onClick={() => setFullscreenUrl(null)}
+          style={{
+            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.95)',
+            zIndex: 99998, display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}
+        >
+          <button
+            onClick={() => setFullscreenUrl(null)}
+            style={{
+              position: 'fixed', top: '20px', right: '20px', width: '44px', height: '44px',
+              borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: 'white', zIndex: 99999
+            }}
+          >
+            <X size={22} />
+          </button>
+          {(fullscreenUrl.toLowerCase().endsWith('.pdf') || fullscreenUrl.includes('application/pdf')) ? (
+            <iframe
+              src={fullscreenUrl}
+              style={{ width: '100vw', height: '100vh', border: 'none' }}
+              title="Fullscreen Preview"
+              onClick={e => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={fullscreenUrl}
+              alt="Fullscreen"
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: '100vw', maxHeight: '100vh', objectFit: 'contain', borderRadius: '4px' }}
+            />
+          )}
+        </div>
+      )}
+      {docRemoveConfirm && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(6px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'white', borderRadius: '24px', padding: '36px 32px', maxWidth: '420px', width: '100%', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)', border: '1.5px solid #fee2e2' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', margin: '0 0 8px 0' }}>Delete Document?</h3>
+            <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 28px 0', lineHeight: '1.5' }}>
+              Are you sure you want to delete <strong style={{ color: '#0f172a' }}>{docRemoveConfirm.fieldLabel}</strong>? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button onClick={() => setDocRemoveConfirm(null)} style={{ flex: 1, padding: '12px', borderRadius: '14px', border: '1.5px solid #e2e8f0', background: 'white', color: '#64748b', fontSize: '14px', fontWeight: '800', cursor: 'pointer' }}>Cancel</button>
+              <button
+                onClick={async () => {
+                  const { fieldKey, fieldLabel, isEditingCtx } = docRemoveConfirm;
+                  setDocRemoveConfirm(null);
+                  setForm(prev => ({ ...prev, [fieldKey]: '' }));
+                  if (!isEditingCtx) {
+                    try {
+                      const token = localStorage.getItem('token');
+                      let docType = fieldKey;
+                      if (fieldKey === 'pancard_photo') docType = 'pan_card';
+                      if (fieldKey === 'adharcard_photo') docType = 'aadhar_card';
+                      if (fieldKey === 'voter_id_photo') docType = 'voter_id_proof';
+                      if (fieldKey === 'passport_photo') docType = 'passport_proof';
+                      if (fieldKey === 'sslc_markscard') docType = 'sslc_markscard';
+                      if (fieldKey === 'puc_markscard') docType = 'puc_markscard';
+                      if (fieldKey === 'ug_pg_markscard') docType = 'ug_pg_markscard';
+                      if (fieldKey === 'passbook_photo') docType = 'bank_passbook';
+                      if (fieldKey === 'experience_letter') docType = 'experience_letter';
+                      if (fieldKey === 'previous_company_payslip') docType = 'previous_payslip';
+
+                      const updatePayload = {
+                        employee_id: selectedEmpId,
+                        id: selectedEmpId,
+                        [fieldKey]: '',
+                        [docType]: '',
+                        experience_letter_photo: fieldKey === 'experience_letter' ? '' : undefined,
+                        previous_payslip_photo: fieldKey === 'previous_company_payslip' ? '' : undefined
+                      };
+                      Object.keys(updatePayload).forEach(k => updatePayload[k] === undefined && delete updatePayload[k]);
+
+                      await fetch(API_ENDPOINTS.EMPLOYEE_PROFILE_UPDATE, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify(updatePayload)
+                      });
+                      setToast({ type: 'success', msg: `${fieldLabel} removed successfully` });
+                    } catch (err) {
+                      console.error("Failed to remove file:", err);
+                    }
+                  }
+                }}
+                style={{ flex: 1, padding: '12px', borderRadius: '14px', border: 'none', background: '#ef4444', color: 'white', fontSize: '14px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }}
+              >Yes, Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

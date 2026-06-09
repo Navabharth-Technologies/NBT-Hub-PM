@@ -550,7 +550,26 @@ export default function LeaveManagement() {
                         <span style={{ fontSize: '9px', fontWeight: '950', color: sColor, background: sBg, padding: '4px 10px', borderRadius: '100px', textTransform: 'uppercase' }}>{displayStatus}</span>
                       </div>
                       <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px', color: '#1e293b', fontSize: '13.5px', fontWeight: '800' }}><Calendar size={14} color="#1d4ed8" /> {displayDate}</div>
-                      <div style={{ fontSize: '13.5px', color: '#0f172a', fontWeight: '600', background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px solid #cbd5e1', flex: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}>{req.reason || 'No reason provided'}</div>
+                      <div style={{ fontSize: '13.5px', color: '#0f172a', fontWeight: '600', background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px solid #cbd5e1', flex: 1, position: 'relative' }}>
+                        <div style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 1,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word'
+                        }}>
+                          {req.reason || 'No reason provided'}
+                        </div>
+                        {req.reason && (req.reason.length > 40 || req.reason.includes('\n')) && (
+                          <div 
+                            onClick={(e) => { e.stopPropagation(); navigate(`/attendance/leave/${req.id}`); }} 
+                            style={{ color: '#1d4ed8', fontSize: '11px', fontWeight: '800', cursor: 'pointer', marginTop: '6px', display: 'inline-block' }}
+                          >
+                            View More
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })

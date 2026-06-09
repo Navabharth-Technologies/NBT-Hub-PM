@@ -286,6 +286,21 @@ export default function AttendanceManagement() {
 
       const data = await res.json();
       if (res.ok) {
+        try {
+          await fetch((API_ENDPOINTS.ATTENDANCE_LOGS_GET || '').split('/api/')[0] + '/api/attendance_logs/punch', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${user?.token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: punchEditData.empId,
+              EmpID: punchEditData.empId,
+              status: 'P',
+              remark: 'MANUAL_EDIT_IN',
+              punch_time: punchEditData.newTime,
+              punch_date: punchEditData.date
+            })
+          });
+        } catch (err) { console.error('Failed to log in attendance_logs', err); }
+
         showAlert(`✅ Punch-in time updated to ${punchEditData.newTime} for ${punchEditData.empName}!`);
         setShowPunchEditModal(false);
         setPunchEditData({ empId: '', empName: '', actualTime: '', newTime: '', date: new Date().toISOString().split('T')[0] });
@@ -353,6 +368,21 @@ export default function AttendanceManagement() {
       });
       const data = await res.json();
       if (res.ok) {
+        try {
+          await fetch((API_ENDPOINTS.ATTENDANCE_LOGS_GET || '').split('/api/')[0] + '/api/attendance_logs/punch', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${user?.token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              user_id: punchOutEditData.empId,
+              EmpID: punchOutEditData.empId,
+              status: 'O',
+              remark: 'MANUAL_EDIT_OUT',
+              punch_time: punchOutEditData.newTime,
+              punch_date: punchOutEditData.date
+            })
+          });
+        } catch (err) { console.error('Failed to log out attendance_logs', err); }
+
         showAlert(`✅ Punch-out time updated to ${punchOutEditData.newTime} for ${punchOutEditData.empName}!`);
         setShowPunchOutEditModal(false);
         setPunchOutEditData({ empId: '', empName: '', actualTime: '', newTime: '', date: new Date().toISOString().split('T')[0] });
@@ -493,23 +523,28 @@ export default function AttendanceManagement() {
         }).sort((a, b) => new Date(a?.created_at || a?.punch_time || 0) - new Date(b?.created_at || b?.punch_time || 0));
 
         if (myTodayLogs.length > 0) {
-          const firstLog = myTodayLogs[0];
-          const lastLog = myTodayLogs[myTodayLogs.length - 1];
-
-          const in_time = firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time || firstLog?.PunchTime;
-
           const checkHasPunchOut = (record) => {
             if (!record) return null;
             const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric || record.PunchTime || record.punch_time;
             return (outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00') ? outVal : null;
           };
 
-          let out_time = '----';
-          if (lastLog && lastLog !== firstLog) {
-            out_time = checkHasPunchOut(lastLog) || checkHasPunchOut(firstLog) || '----';
-          } else {
-            out_time = checkHasPunchOut(firstLog) || '----';
-          }
+          const latestInLog = [...myTodayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_IN' || (!log.remark?.includes('OUT') && !checkHasPunchOut(log))) || myTodayLogs[0];
+          const latestOutLog = [...myTodayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_OUT' || (checkHasPunchOut(log) && log.remark !== 'MANUAL_EDIT_IN'));
+
+          const extractTime = (log) => {
+            if (!log) return '----';
+            const t = log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime || log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric;
+            if (t && t !== '----' && t !== '--:--' && t !== '00:00' && t !== '00:00:00') return t;
+            if (log.created_at) {
+              const d = new Date(log.created_at);
+              if (!isNaN(d.getTime())) return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            }
+            return '----';
+          };
+
+          const in_time = extractTime(latestInLog);
+          const out_time = latestOutLog ? extractTime(latestOutLog) : '----';
 
           const outLocVal = (logRec) => {
             if (!logRec) return null;
@@ -517,18 +552,11 @@ export default function AttendanceManagement() {
             return (locVal && locVal !== '----') ? locVal : null;
           };
 
-          let out_loc = '----';
-          if (lastLog && lastLog !== firstLog) {
-            out_loc = outLocVal(lastLog) || outLocVal(firstLog) || '----';
-          } else {
-            out_loc = outLocVal(firstLog) || '----';
-          }
-
           setPersonalAttendance({
-            ...firstLog,
+            ...latestInLog,
             in_time: in_time && in_time !== '----' ? in_time : null,
             out_time: out_time || '----',
-            PunchOut_location: out_loc || '----'
+            PunchOut_location: outLocVal(latestOutLog) || outLocVal(latestInLog) || '----'
           });
         } else {
           setPersonalAttendance(null);
@@ -714,29 +742,36 @@ export default function AttendanceManagement() {
           })
           .sort((a, b) => new Date(a?.created_at || a?.punch_time) - new Date(b?.created_at || b?.punch_time));
 
-        const firstLog = logsForEmp[0];
-        const lastLog = logsForEmp.length > 1 ? logsForEmp[logsForEmp.length - 1] : null;
-
         const checkHasPunchOut = (record) => {
           if (!record) return false;
           const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric;
           return outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00';
         };
 
-        const hasDayPunchOut = logsForEmp.some(checkHasPunchOut);
-        const dayPunchOutLog = [...logsForEmp].reverse().find(checkHasPunchOut) || lastLog || firstLog;
-        const dayPunchOutVal = dayPunchOutLog?.out_time || dayPunchOutLog?.OUTTime || dayPunchOutLog?.PunchOut || dayPunchOutLog?.punch_time_out || dayPunchOutLog?.out_time_biometric || '----';
+        const dayPunchInLog = [...logsForEmp].reverse().find(log => log.remark === 'MANUAL_EDIT_IN' || (!log.remark?.includes('OUT') && !checkHasPunchOut(log))) || logsForEmp[0];
+        const dayPunchOutLog = [...logsForEmp].reverse().find(log => log.remark === 'MANUAL_EDIT_OUT' || (checkHasPunchOut(log) && log.remark !== 'MANUAL_EDIT_IN'));
 
-        const inTime = firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time || '----';
-        const outTime = firstLog ? ((targetDate === todayStr && !hasDayPunchOut) ? '----' : dayPunchOutVal) : '----';
+        const extractTime = (log) => {
+          if (!log) return '----';
+          const t = log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime || log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric;
+          if (t && t !== '----' && t !== '--:--' && t !== '00:00' && t !== '00:00:00') return t;
+          if (log.created_at) {
+            const d = new Date(log.created_at);
+            if (!isNaN(d.getTime())) return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+          }
+          return '----';
+        };
+
+        const inTime = extractTime(dayPunchInLog);
+        const outTime = logsForEmp.length > 0 ? ((targetDate === todayStr && !dayPunchOutLog) ? '----' : (dayPunchOutLog ? extractTime(dayPunchOutLog) : '----')) : '----';
 
         let displayStatus = 'Absent';
-        if (firstLog) {
+        if (logsForEmp.length > 0) {
           const pIn = parseTimeStr(inTime);
           const pOut = parseTimeStr(outTime);
           const isHalfDayTime = (pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60));
 
-          let rawStatus = isHalfDayTime ? 'HALF_DAY' : String(firstLog.status || firstLog.Status || 'PRESENT').trim().toUpperCase();
+          let rawStatus = isHalfDayTime ? 'HALF_DAY' : String(logsForEmp[0].status || logsForEmp[0].Status || 'PRESENT').trim().toUpperCase();
           if (inTime !== '----' && inTime !== '--:--' && rawStatus === 'ABSENT') rawStatus = 'PRESENT';
 
           if (rawStatus === 'PRESENT' || rawStatus === 'P' || rawStatus === 'IN OFFICE' || rawStatus === 'IN-OFFICE') {
@@ -748,13 +783,13 @@ export default function AttendanceManagement() {
           } else if (rawStatus === 'LATE' || rawStatus === 'L') {
             displayStatus = 'Late';
           } else {
-            displayStatus = firstLog.status || 'In Office';
+            displayStatus = logsForEmp[0].status || 'In Office';
           }
         }
 
-        const inLoc = firstLog ? (firstLog.punchin_location || firstLog.in_location || '----') : '----';
-        const outLoc = firstLog ? ((targetDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog?.punchout_location || dayPunchOutLog?.out_location || '----')) : '----';
-        const workHrs = firstLog ? getWorkHrs(inTime, outTime, targetDate) : '00:00';
+        const inLoc = dayPunchInLog ? (dayPunchInLog.punchin_location || dayPunchInLog.in_location || '----') : '----';
+        const outLoc = dayPunchOutLog ? (dayPunchOutLog.punchout_location || dayPunchOutLog.out_location || '----') : '----';
+        const workHrs = logsForEmp.length > 0 ? getWorkHrs(inTime, outTime, targetDate) : '00:00';
 
         const formatToDDMMYYYY = (dStr) => {
           if (!dStr || dStr === '----') return '----';
@@ -892,11 +927,22 @@ export default function AttendanceManagement() {
             const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric;
             return outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00';
           };
-          const hasDayPunchOut = sortedDayLogs.some(checkHasPunchOut);
-          const dayPunchOutLog = [...sortedDayLogs].reverse().find(checkHasPunchOut) || (sortedDayLogs.length > 1 ? sortedDayLogs[sortedDayLogs.length - 1] : firstLog);
+          const dayPunchInLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_IN' || (!log.remark?.includes('OUT') && !checkHasPunchOut(log))) || firstLog;
+          const dayPunchOutLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_OUT' || (checkHasPunchOut(log) && log.remark !== 'MANUAL_EDIT_IN'));
 
-          const punchIn = firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time || '----';
-          const punchOut = (latestDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog?.out_time || dayPunchOutLog?.OUTTime || dayPunchOutLog?.PunchOut || dayPunchOutLog?.punch_time_out || dayPunchOutLog?.out_time_biometric || '----');
+          const extractTime = (log) => {
+            if (!log) return '----';
+            const t = log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime || log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric;
+            if (t && t !== '----' && t !== '--:--' && t !== '00:00' && t !== '00:00:00') return t;
+            if (log.created_at) {
+              const d = new Date(log.created_at);
+              if (!isNaN(d.getTime())) return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            }
+            return '----';
+          };
+
+          const punchIn = extractTime(dayPunchInLog);
+          const punchOut = (latestDate === todayStr && !dayPunchOutLog) ? '----' : (dayPunchOutLog ? extractTime(dayPunchOutLog) : '----');
 
           const hasValidPunchIn = punchIn && punchIn !== '----' && punchIn !== '--:--' && punchIn !== '00:00';
           const status = String(firstLog?.status || firstLog?.Status || '').toUpperCase();
@@ -907,9 +953,9 @@ export default function AttendanceManagement() {
             punch_date: latestDate,
             in_time: punchIn,
             out_time: punchOut,
-            in_location: firstLog?.punchin_location || firstLog?.in_location || '----',
-            out_location: (latestDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog?.punchout_location || dayPunchOutLog?.out_location || '----'),
-            work_hrs: (latestDate === todayStr && !hasDayPunchOut) ? '00:00' : (dayPunchOutLog?.work_hrs || firstLog?.work_hrs || '00:00')
+            in_location: dayPunchInLog?.punchin_location || dayPunchInLog?.in_location || '----',
+            out_location: dayPunchOutLog?.punchout_location || dayPunchOutLog?.out_location || '----',
+            work_hrs: (latestDate === todayStr && !dayPunchOutLog) ? '00:00' : (dayPunchOutLog?.work_hrs || firstLog?.work_hrs || '00:00')
           };
 
           if (isPresent && !status.includes('ABSENT')) {
@@ -1361,7 +1407,7 @@ export default function AttendanceManagement() {
                         const logDate = parseLogDate(l);
                         return empId && logId && (logId === empId) && (logDate >= fromDate && logDate <= toDate);
                       })
-                      .sort((a, b) => new Date(a?.created_at || a?.punch_time) - new Date(b?.created_at || b?.punch_time));
+                      .sort((a, b) => new Date(a?.created_at || a?.punch_time || 0) - new Date(b?.created_at || b?.punch_time || 0));
 
                     // 1. Group logs by date to prevent cross-day data leaking
                     const groupedByDate = (logsForEmp || []).reduce((acc, log) => {
@@ -1379,31 +1425,38 @@ export default function AttendanceManagement() {
                     const latestDayLogs = groupedByDate[latestDate] || [];
 
                     // 3. Sort logs within THAT day only
-                    const sortedDayLogs = latestDayLogs.sort((a, b) => new Date(a.created_at || a.punch_time) - new Date(b.created_at || b.punch_time));
-
-                    const firstLog = sortedDayLogs[0];
-                    const lastLog = sortedDayLogs.length > 1 ? sortedDayLogs[sortedDayLogs.length - 1] : null;
+                    const sortedDayLogs = latestDayLogs.sort((a, b) => new Date(a.created_at || a.punch_time || 0) - new Date(b.created_at || b.punch_time || 0));
 
                     const checkHasPunchOut = (record) => {
                       if (!record) return false;
                       const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric;
                       return outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00';
                     };
-                    const hasDayPunchOut = sortedDayLogs.some(checkHasPunchOut);
-                    const dayPunchOutLog = [...sortedDayLogs].reverse().find(checkHasPunchOut) || lastLog || firstLog;
-                    const dayPunchOutVal = dayPunchOutLog?.out_time || dayPunchOutLog?.OUTTime || dayPunchOutLog?.PunchOut || dayPunchOutLog?.punch_time_out || dayPunchOutLog?.out_time_biometric || '----';
+                    const dayPunchInLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_IN' || (!log.remark?.includes('OUT') && !checkHasPunchOut(log))) || sortedDayLogs[0];
+                    const dayPunchOutLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_OUT' || (checkHasPunchOut(log) && log.remark !== 'MANUAL_EDIT_IN'));
+                    const hasDayPunchOut = !!dayPunchOutLog;
+                    const extractTime = (log) => {
+                      if (!log) return '----';
+                      const t = log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime || log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric;
+                      if (t && t !== '----' && t !== '--:--' && t !== '00:00' && t !== '00:00:00') return t;
+                      if (log.created_at) {
+                        const d = new Date(log.created_at);
+                        if (!isNaN(d.getTime())) return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                      }
+                      return '----';
+                    };
 
-                    const punchIn = firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time || '----';
-                    const punchOut = (latestDate === todayStr && !hasDayPunchOut) ? '----' : dayPunchOutVal;
+                    const punchIn = extractTime(dayPunchInLog);
+                    const punchOut = (latestDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog ? extractTime(dayPunchOutLog) : '----');
                     const pDate = latestDate;
-                    const workHrs = (latestDate === todayStr && !hasDayPunchOut) ? '00:00' : (dayPunchOutLog?.work_hrs || firstLog?.work_hrs || '00:00');
+                    const workHrs = (latestDate === todayStr && !hasDayPunchOut) ? '00:00' : (dayPunchOutLog?.work_hrs || sortedDayLogs[0]?.work_hrs || '00:00');
 
-                    const log = firstLog ? {
-                      ...firstLog,
+                    const log = sortedDayLogs[0] ? {
+                      ...sortedDayLogs[0],
                       punch_date: latestDate,
                       in_time: punchIn,
                       out_time: punchOut,
-                      in_location: firstLog?.punchin_location || firstLog?.in_location || '----',
+                      in_location: dayPunchInLog?.punchin_location || dayPunchInLog?.in_location || '----',
                       out_location: (latestDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog?.punchout_location || dayPunchOutLog?.out_location || '----'),
                       work_hrs: workHrs
                     } : null;
@@ -1466,8 +1519,8 @@ export default function AttendanceManagement() {
                             <MapPin size={12} /> {log?.in_location || log?.location || '----'}
                           </div>
                           {(() => {
-                            const todayPunchIn = log?.in_time || log?.INTime || log?.PunchIn || log?.punch_time;
-                            const todayPunchOut = log?.out_time || log?.OUTTime || log?.PunchOut || log?.punch_time_out || log?.out_time_biometric;
+                            const todayPunchIn = log?.in_time;
+                            const todayPunchOut = log?.out_time;
                             const pIn = parseTimeStr(todayPunchIn);
                             const pOut = parseTimeStr(todayPunchOut);
                             const isHalfDayTime = (pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60));
@@ -1524,25 +1577,13 @@ export default function AttendanceManagement() {
                             }
 
                             // Fallback if no backend status is set
-                            const today = new Date();
-                            const isSunday = today.getDay() === 0;
-                            const month = today.toLocaleDateString('en-US', { month: 'short' });
-                            const dateDay = String(today.getDate()).padStart(2, '0');
-                            const dayMonth = `${month} ${dateDay}`;
-                            const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
-                            const isHoliday = holidays.includes(dayMonth);
-
                             const hasValidPunchIn = todayPunchIn && todayPunchIn !== '----' && todayPunchIn !== '--:--' && todayPunchIn !== '00:00';
                             let fallbackStatus = hasValidPunchIn ? 'In Office' : 'Absent';
                             if (!hasValidPunchIn) {
-                              if (isSunday) fallbackStatus = 'WO';
-                              else if (isHoliday) fallbackStatus = 'NH';
-                              else fallbackStatus = 'Absent';
+                               fallbackStatus = 'Absent';
                             }
 
                             const isPresent = fallbackStatus === 'In Office' || fallbackStatus.toUpperCase().includes('PRESENT');
-                            const isWO = fallbackStatus === 'WO';
-                            const isNH = fallbackStatus === 'NH';
 
                             return (
                               <div style={{
@@ -1551,9 +1592,9 @@ export default function AttendanceManagement() {
                                 gap: '6px',
                                 padding: '6px 14px',
                                 borderRadius: '100px',
-                                background: isPresent ? '#f1f5f9' : (isWO || isNH ? '#eff6ff' : '#fef2f2'),
-                                border: `1.5px solid ${isPresent ? '#cbd5e1' : (isWO || isNH ? '#dbeafe' : '#fee2e2')}`,
-                                color: isPresent ? '#000000' : (isWO || isNH ? '#3b82f6' : '#ef4444'),
+                                background: isPresent ? '#f1f5f9' : '#fef2f2',
+                                border: `1.5px solid ${isPresent ? '#cbd5e1' : '#fee2e2'}`,
+                                color: isPresent ? '#000000' : '#ef4444',
                                 fontWeight: '950'
                               }}>
                                 {fallbackStatus}
@@ -1588,7 +1629,7 @@ export default function AttendanceManagement() {
                           const logDate = parseLogDate(l);
                           return empId && logId && (logId === empId) && (logDate >= fromDate && logDate <= toDate);
                         })
-                        .sort((a, b) => new Date(a?.created_at || a?.punch_time) - new Date(b?.created_at || b?.punch_time));
+                        .sort((a, b) => new Date(a?.created_at || a?.punch_time || 0) - new Date(b?.created_at || b?.punch_time || 0));
 
                       // 1. Group logs by date to prevent cross-day data leaking
                       const groupedByDate = (logsForEmp || []).reduce((acc, log) => {
@@ -1606,28 +1647,38 @@ export default function AttendanceManagement() {
                       const latestDayLogs = groupedByDate[latestDate] || [];
 
                       // 3. Sort logs within THAT day only
-                      const sortedDayLogs = latestDayLogs.sort((a, b) => new Date(a.created_at || a.punch_time) - new Date(b.created_at || b.punch_time));
-
-                      const firstLog = sortedDayLogs[0];
-                      const lastLog = sortedDayLogs.length > 1 ? sortedDayLogs[sortedDayLogs.length - 1] : null;
+                      const sortedDayLogs = latestDayLogs.sort((a, b) => new Date(a.created_at || a.punch_time || 0) - new Date(b.created_at || b.punch_time || 0));
 
                       const checkHasPunchOut = (record) => {
                         if (!record) return false;
                         const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric;
                         return outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00';
                       };
-                      const hasDayPunchOut = sortedDayLogs.some(checkHasPunchOut);
-                      const dayPunchOutLog = [...sortedDayLogs].reverse().find(checkHasPunchOut) || lastLog || firstLog;
-                      const dayPunchOutVal = dayPunchOutLog?.out_time || dayPunchOutLog?.OUTTime || dayPunchOutLog?.PunchOut || dayPunchOutLog?.punch_time_out || dayPunchOutLog?.out_time_biometric || '----';
+                      const dayPunchInLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_IN' || (!log.remark?.includes('OUT') && !checkHasPunchOut(log))) || sortedDayLogs[0];
+                      const dayPunchOutLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_OUT' || (checkHasPunchOut(log) && log.remark !== 'MANUAL_EDIT_IN'));
+                      const hasDayPunchOut = !!dayPunchOutLog;
+                      const extractTime = (log) => {
+                        if (!log) return '----';
+                        const t = log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime || log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric;
+                        if (t && t !== '----' && t !== '--:--' && t !== '00:00' && t !== '00:00:00') return t;
+                        if (log.created_at) {
+                          const d = new Date(log.created_at);
+                          if (!isNaN(d.getTime())) return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                        }
+                        return '----';
+                      };
 
-                      const log = firstLog ? {
-                        ...firstLog,
+                      const punchIn = extractTime(dayPunchInLog);
+                      const punchOut = (latestDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog ? extractTime(dayPunchOutLog) : '----');
+
+                      const log = sortedDayLogs[0] ? {
+                        ...sortedDayLogs[0],
                         punch_date: latestDate,
-                        in_time: firstLog?.in_time || firstLog?.INTime || firstLog?.PunchIn || firstLog?.punch_time || '----',
-                        out_time: (latestDate === todayStr && !hasDayPunchOut) ? '----' : dayPunchOutVal,
-                        in_location: firstLog?.punchin_location || firstLog?.in_location || '----',
+                        in_time: punchIn,
+                        out_time: punchOut,
+                        in_location: dayPunchInLog?.punchin_location || dayPunchInLog?.in_location || '----',
                         out_location: (latestDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog?.punchout_location || dayPunchOutLog?.out_location || '----'),
-                        work_hrs: (latestDate === todayStr && !hasDayPunchOut) ? '00:00' : (dayPunchOutLog?.work_hrs || firstLog?.work_hrs || '00:00')
+                        work_hrs: (latestDate === todayStr && !hasDayPunchOut) ? '00:00' : (dayPunchOutLog?.work_hrs || sortedDayLogs[0]?.work_hrs || '00:00')
                       } : null;
 
                       const getCleanAttendance = (record) => {

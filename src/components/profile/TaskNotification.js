@@ -144,7 +144,7 @@ const TaskNotification = ({ onOpenTask }) => {
     const W = window.innerWidth;
     const H = window.innerHeight;
     const iconW = mbl ? 50 : 60;
-    const iconH = mbl ? 50 : 60;
+    const iconH = mbl ? 110 : 60;
 
     let iconLeft = W - (mbl ? 10 : 30) - iconW;
     let iconTop  = H - (mbl ? 15 : 20) - iconH;
@@ -417,8 +417,37 @@ const TaskNotification = ({ onOpenTask }) => {
           touchAction: 'none',
           userSelect: 'none',
           WebkitUserSelect: 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
         }}
       >
+        {isMobile && (
+          <motion.div
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
+            onPointerDown={(e) => dragControls.start(e)}
+            onClick={() => {
+              if (!isDragging) {
+                navigate('/awards');
+              }
+            }}
+            style={{
+              background: 'linear-gradient(135deg, #facc15 0%, #f59e0b 100%)',
+              color: '#0f172a',
+              width: '50px',
+              height: '50px',
+              borderRadius: '50%',
+              boxShadow: '0 18px 38px rgba(250,204,21,0.42)',
+              cursor: isDragging ? 'grabbing' : 'grab',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Award size={22} color="#0f172a" />
+          </motion.div>
+        )}
         <motion.div
           whileHover={{ scale: 1.06 }}
           whileTap={{ scale: 0.94 }}
