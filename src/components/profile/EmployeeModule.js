@@ -213,15 +213,7 @@ export default function EmployeeModule() {
                     <h3 style={{ fontSize: winWidth < 480 ? '14px' : '16px', fontWeight: '800', color: '#1e293b', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.name}</h3>
                     <div style={{ fontSize: winWidth < 480 ? '9px' : '11px', fontWeight: '700', color: '#312e81' }}>{emp.role}</div>
                   </div>
-                  <div style={{
-                    marginLeft: 'auto', padding: '2px 8px', borderRadius: '5px', fontSize: winWidth < 480 ? '8px' : '9px', fontWeight: '900',
-                    background: emp.status === 'Active' ? '#f0fdf4' : '#f8fafc',
-                    color: emp.status === 'Active' ? '#166534' : '#64748b',
-                    border: `1px solid ${emp.status === 'Active' ? '#bcf0da' : '#e2e8f0'}`,
-                    flexShrink: 0
-                  }}>
-                    {(emp.status || 'Active').toUpperCase()}
-                  </div>
+
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: winWidth < 480 ? '5px' : '8px' }}>

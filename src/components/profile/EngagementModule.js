@@ -554,7 +554,6 @@ export default function EngagementModule() {
                                             minWidth: '120px',
                                             justifyContent: 'center'
                                         }} 
-                                        onClick={() => onToggleLike(post.id)}
                                     >
                                         <Heart size={20} fill={pLiked ? "white" : "none"} stroke={pLiked ? "white" : "currentColor"} /> 
                                         <span style={{ textTransform: 'uppercase', fontSize: '14px', letterSpacing: '0.5px' }}>{pLiked ? 'LIKED' : 'Like'}</span>

@@ -114,6 +114,8 @@ export default function ServiceCertificateUserScreen() {
                     employee_name: user.name,
                     purpose: finalPurpose,
                     status: 'Pending',
+                    laptop_details: formData.laptop_details,
+                    serial_number: formData.serial_number,
                     ...assetData
                 })
             });

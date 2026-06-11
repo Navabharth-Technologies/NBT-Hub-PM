@@ -96,6 +96,7 @@ export default function EmployeeAttendanceDetail() {
   useEffect(() => {
     localStorage.setItem('nbtAttendanceDetailToDate', endDate);
   }, [endDate]);
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
 
@@ -215,18 +216,20 @@ export default function EmployeeAttendanceDetail() {
           const lastPunch = dayPunches[dayPunches.length - 1] || {};
 
           const punchInTime = firstPunch?.in_time || firstPunch?.INTime || firstPunch?.PunchIn || firstPunch?.punch_in || firstPunch?.punch_time || '----';
-          const punchOutTime = lastPunch?.out_time || lastPunch?.OUTTime || lastPunch?.PunchOut || lastPunch?.punch_out || lastPunch?.punch_time || lastPunch?.PunchIn || lastPunch?.in_time || '----';
+          const punchOutTime = dayPunches.length > 1 
+            ? (lastPunch?.out_time || lastPunch?.OUTTime || lastPunch?.PunchOut || lastPunch?.punch_out || lastPunch?.punch_time || lastPunch?.PunchIn || lastPunch?.in_time || '----') 
+            : (firstPunch?.out_time || firstPunch?.OUTTime || firstPunch?.PunchOut || firstPunch?.punch_out || '----');
 
           const isToday = date === new Date().toLocaleDateString('en-CA') || date === new Date().toISOString().split('T')[0];
           return {
             ...firstPunch,
             punch_date: date,
             in_time: punchInTime,
-            out_time: (isToday && dayPunches.length === 1) ? '----' : punchOutTime,
+            out_time: punchOutTime,
             in_location: firstPunch?.punchin_location || firstPunch?.in_location || firstPunch?.location || '----',
-            out_location: (isToday && dayPunches.length === 1) ? '----' : (lastPunch?.punchout_location || lastPunch?.out_location || lastPunch?.location || '----'),
+            out_location: dayPunches.length > 1 ? (lastPunch?.punchout_location || lastPunch?.out_location || lastPunch?.location || '----') : (firstPunch?.out_location || '----'),
             status: firstPunch?.status || (punchInTime !== '----' ? 'P' : 'ABSENT'),
-            work_hrs: calculateWorkHours(punchInTime, (isToday && dayPunches.length === 1) ? null : (punchOutTime !== '----' ? punchOutTime : null))
+            work_hrs: calculateWorkHours(punchInTime, punchOutTime !== '----' ? punchOutTime : null)
           };
         });
 
@@ -243,13 +246,36 @@ export default function EmployeeAttendanceDetail() {
   const getFilteredLogs = () => {
     // Filter the already fetched and grouped logs by the user-selected startDate
     return logs.filter(log => {
-      if (!startDate) return true;
-      return log.punch_date >= startDate;
+      if (startDate && log.punch_date < startDate) return false;
+      if (endDate && log.punch_date > endDate) return false;
+
+      if (statusFilter !== 'ALL') {
+        const d = new Date(log.punch_date);
+        const isSunday = d.getDay() === 0;
+        const month = d.toLocaleDateString('en-US', { month: 'short' });
+        const dateDay = String(d.getDate()).padStart(2, '0');
+        const dayMonth = `${month} ${dateDay}`;
+        const holidays = ['Jan 01', 'Jan 26', 'Mar 04', 'Mar 19', 'Mar 21', 'Mar 26', 'Mar 31', 'Apr 03', 'May 01', 'May 27', 'Jun 26', 'Aug 15', 'Aug 26', 'Sep 04', 'Oct 02', 'Oct 20', 'Nov 08', 'Nov 24', 'Dec 25'];
+        const isHoliday = holidays.includes(dayMonth);
+
+        let resolvedStatus = String(log.status || (log.in_time && log.in_time !== '----' ? 'P' : 'ABSENT')).toUpperCase();
+        if ((!log.in_time || log.in_time === '----') || resolvedStatus === 'A' || resolvedStatus === 'ABSENT') {
+          if (isSunday) resolvedStatus = 'WO';
+          else if (isHoliday) resolvedStatus = 'NH';
+          else resolvedStatus = 'A';
+        }
+        
+        const statusText = getFullStatusText(resolvedStatus, log.in_time, log.out_time, resolveWorkHrs(log));
+        if (statusFilter === 'PRESENT' && !statusText.includes('Present') && !statusText.includes('In Office')) return false;
+        if (statusFilter === 'ABSENT' && !statusText.includes('Absent')) return false;
+        if (statusFilter === 'HALF DAY' && !statusText.includes('Half Day')) return false;
+      }
+      return true;
     });
   };
 
   const handleExportPDF = () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF('l', 'mm', 'a4');
     const filteredLogs = getFilteredLogs();
     const empName = employee?.name || 'Employee';
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -263,7 +289,7 @@ export default function EmployeeAttendanceDetail() {
 
     // --- Header ---
     doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 220, 50, 'F');
+    doc.rect(0, 0, 297, 50, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
@@ -314,10 +340,10 @@ export default function EmployeeAttendanceDetail() {
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(150);
-      doc.text(`Page ${i} of ${pageCount}  |  Confidential - HR System`, 14, doc.internal.pageSize.height - 10);
+      doc.text(`Page ${i} of ${pageCount}`, 14, doc.internal.pageSize.height - 10);
     }
 
-    doc.save(`Attendance_${empName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Attendance_${empName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0].split('-').reverse().join('-')}.pdf`);
     setShowExportMenu(false);
   };
 
@@ -345,7 +371,7 @@ export default function EmployeeAttendanceDetail() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `Attendance_${empName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Attendance_${empName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0].split('-').reverse().join('-')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -363,7 +389,7 @@ export default function EmployeeAttendanceDetail() {
   return (
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
-      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 16px 40px' : '40px 26px 40px', maxWidth: '100%', margin: '0 auto', width: '100%', boxSizing: 'border-box', marginTop: winWidth < 768 ? '85px' : '100px' }}>
+      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 16px 120px' : '40px 26px 120px', maxWidth: '100%', margin: '0 auto', width: '100%', boxSizing: 'border-box', marginTop: winWidth < 768 ? '85px' : '100px' }}>
         
         {/* Header Section */}
         <div style={{ display: 'flex', flexDirection: winWidth < 1024 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 1024 ? 'stretch' : 'flex-start', marginBottom: '32px', gap: '20px' }}>
@@ -378,64 +404,50 @@ export default function EmployeeAttendanceDetail() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Stats Row */}
+        <div style={{ display: 'flex', flexDirection: winWidth < 1024 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 1024 ? 'stretch' : 'center', marginBottom: '32px', gap: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: winWidth < 480 ? 'column' : 'row', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: 'white', borderRadius: '20px', border: '1.5px solid #f1f5f9' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#f0fdf4', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FileText size={18} /></div>
+              <div>
+                <div style={{ fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TOTAL LOGS</div>
+                <div style={{ fontSize: '18px', fontWeight: '950', color: '#0f172a' }}>{getFilteredLogs().length}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: 'white', borderRadius: '20px', border: '1.5px solid #f1f5f9' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShieldCheck size={18} /></div>
+              <div>
+                <div style={{ fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>VERIFICATION</div>
+                <div style={{ fontSize: '16px', fontWeight: '950', color: '#0f172a' }}>Biometrics API</div>
+              </div>
+            </div>
+          </div>
 
           <div style={{ display: 'flex', flexDirection: winWidth < 480 ? 'column' : 'row', gap: '16px', alignItems: 'stretch' }}>
-            <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '6px 12px', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '6px 12px', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
               <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '800', color: '#1e293b', width: '100%' }} />
               <div style={{ width: '1.5px', height: '14px', background: '#e2e8f0' }}></div>
               <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '800', color: '#1e293b', width: '100%' }} />
             </div>
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{ background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '0 16px', fontSize: '13px', fontWeight: '800', color: '#1e293b', outline: 'none', cursor: 'pointer', height: '44px' }}
+            >
+              <option value="ALL">All Status</option>
+              <option value="PRESENT">Present</option>
+              <option value="ABSENT">Absent</option>
+              <option value="HALF DAY">Half Day</option>
+            </select>
             <div style={{ position: 'relative', display: 'flex', gap: '8px' }}>
               <button 
-                onClick={() => setShowExportMenu(!showExportMenu)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 20px', borderRadius: '14px', background: '#0f172a', color: 'white', border: 'none', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.1)', flex: 1, whiteSpace: 'nowrap' }}
+                onClick={handleExportPDF}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0 20px', height: '44px', borderRadius: '14px', background: '#0f172a', color: 'white', border: 'none', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.1)', whiteSpace: 'nowrap' }}
               >
-                <Download size={18} /> Export
+                <Download size={18} /> Export PDF
               </button>
-
-              {showExportMenu && (
-                <>
-                  <div onClick={() => setShowExportMenu(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }} />
-                  <div style={{ 
-                    position: 'absolute', top: '120%', right: 0, width: '180px', background: 'white', borderRadius: '16px', 
-                    padding: '8px', border: '1.5px solid #f1f5f9', zIndex: 999,
-                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'
-                  }}>
-                    <button 
-                      onClick={handleExportPDF}
-                      className="export-menu-item"
-                      style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', gap: '10px', color: '#1e293b', fontWeight: '700', fontSize: '12px', cursor: 'pointer', transition: '0.2s' }}
-                    >
-                      <FileText size={16} color="#ef4444" /> Export as PDF
-                    </button>
-                    <button 
-                      onClick={handleExportExcel}
-                      className="export-menu-item"
-                      style={{ width: '100%', padding: '12px', borderRadius: '12px', background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', gap: '10px', color: '#1e293b', fontWeight: '700', fontSize: '12px', cursor: 'pointer', transition: '0.2s' }}
-                    >
-                      <FileSpreadsheet size={16} color="#22c55e" /> Export as XL
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Row */}
-        <div style={{ display: 'flex', flexDirection: winWidth < 480 ? 'column' : 'row', gap: '16px', marginBottom: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: 'white', borderRadius: '20px', border: '1.5px solid #f1f5f9', flex: 1 }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#f0fdf4', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FileText size={18} /></div>
-            <div>
-              <div style={{ fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>TOTAL LOGS</div>
-              <div style={{ fontSize: '18px', fontWeight: '950', color: '#0f172a' }}>{logs.length}</div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', background: 'white', borderRadius: '20px', border: '1.5px solid #f1f5f9', flex: 1 }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#eff6ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShieldCheck size={18} /></div>
-            <div>
-              <div style={{ fontSize: '9px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>VERIFICATION</div>
-              <div style={{ fontSize: '16px', fontWeight: '950', color: '#0f172a' }}>Biometrics API</div>
             </div>
           </div>
         </div>

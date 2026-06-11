@@ -46,6 +46,7 @@ export default function ThreadScreen() {
     const [reactorModal, setReactorModal] = useState(null); // { postId, emoji, users, count }
     const [loadingReactors, setLoadingReactors] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState({ show: false, postId: null, userId: null });
+    const [deleteCommentConfirm, setDeleteCommentConfirm] = useState({ show: false, postId: null, commentId: null, userId: null });
     const [replaceConfirmPost, setReplaceConfirmPost] = useState(null);
 
     const handleReplaceMediaClick = (post) => {
@@ -437,6 +438,32 @@ export default function ThreadScreen() {
                     </div>
                 </div>
             )}
+            {deleteCommentConfirm.show && (
+                <div style={styles.modalOverlay}>
+                    <div style={styles.modalContent}>
+                    <h2 style={{ marginBottom: '1rem', fontSize: '20px', fontWeight: '900', color: '#0B1E3F', textAlign: 'center' }}>Confirm Deletion</h2>
+                    <p style={{ color: '#475569', fontSize: '14px', marginBottom: '20px', textAlign: 'center' }}>Are you sure you want to delete this comment?</p>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
+                        <button
+                        onClick={async () => {
+                            const { postId, commentId, userId } = deleteCommentConfirm;
+                            const success = await deleteComment(postId, commentId, userId);
+                            if (success) {
+                                const comments = await fetchComments(postId);
+                                setPostComments(prev => ({ ...prev, [postId]: comments }));
+                            }
+                            setDeleteCommentConfirm({ show: false, postId: null, commentId: null, userId: null });
+                        }}
+                        style={{ flex: 1, padding: '10px', backgroundColor: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}
+                        >Delete</button>
+                        <button
+                        onClick={() => setDeleteCommentConfirm({ show: false, postId: null, commentId: null, userId: null })}
+                        style={{ flex: 1, padding: '10px', backgroundColor: '#f1f5f9', color: '#0B1E3F', border: 'none', borderRadius: '10px', fontWeight: '800', cursor: 'pointer' }}
+                        >Cancel</button>
+                    </div>
+                    </div>
+                </div>
+            )}
             {/* CREATE THREAD */}
             <div style={{ ...styles.card, borderTop: '5px solid #FDB913' }}>
                 <textarea style={styles.mainInput} placeholder="Share an update with the team..." value={newPost} onChange={e => setNewPost(e.target.value)} />
@@ -825,13 +852,7 @@ export default function ThreadScreen() {
                                                                             <Edit3 size={13} />
                                                                         </button>
                                                                         <button
-                                                                            onClick={async () => {
-                                                                                const success = await deleteComment(post.id, c.id, c.userId || c.user_id || c.employee_id || c.EmpID);
-                                                                                if (success) {
-                                                                                    const updated = await fetchComments(post.id);
-                                                                                    setPostComments(prev => ({ ...prev, [post.id]: updated }));
-                                                                                }
-                                                                            }}
+                                                                            onClick={() => setDeleteCommentConfirm({ show: true, postId: post.id, commentId: c.id, userId: c.userId || c.user_id || c.employee_id || c.EmpID })}
                                                                             title="Delete comment"
                                                                             style={{ border: 'none', background: '#fef2f2', color: '#ef4444', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
                                                                         >

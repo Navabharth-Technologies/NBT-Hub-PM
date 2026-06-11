@@ -650,7 +650,7 @@ const QuizModule = ({ onBack }) => {
                       textTransform: 'uppercase',
                       letterSpacing: '1px'
                     }}>
-                      ARE THERE ANY<br />QUESTIONS?
+
                     </div>
                   </div>
                 </div>

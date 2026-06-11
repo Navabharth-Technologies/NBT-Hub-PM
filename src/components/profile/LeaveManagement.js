@@ -85,8 +85,9 @@ export default function LeaveManagement() {
       const isPendingB = overallB === 'PENDING';
       if (isPendingA && !isPendingB) return -1;
       if (!isPendingA && isPendingB) return 1;
-      const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
-      const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+      const getVal = (x) => x.created_at ? new Date(x.created_at).getTime() : (x.timestamp ? new Date(x.timestamp).getTime() : (x.applied_on ? new Date(x.applied_on).getTime() : (x.start_date ? new Date(x.start_date).getTime() : 0)));
+      const dateA = getVal(a);
+      const dateB = getVal(b);
       return dateB - dateA;
     });
   }, [leaveRequests, allEmployees]);
@@ -291,7 +292,6 @@ export default function LeaveManagement() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '950', color: '#0f172a' }}>Employee Leave Ledger</h3>
-                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>Comprehensive summary of all employee leave balances.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexDirection: winWidth < 768 ? 'column' : 'row' }}>
                   <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '0 12px', height: '40px' }}>

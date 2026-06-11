@@ -235,7 +235,7 @@ export default function TicketManagement() {
         </div>
       )}
 
-      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px' : '40px 26px', maxWidth: '100%', width: '100%', boxSizing: 'border-box', marginTop: '70px' }}>
+      <main style={{ flex: 1, padding: winWidth < 768 ? '20px 15px 120px' : '40px 26px 160px', maxWidth: '100%', width: '100%', boxSizing: 'border-box', marginTop: '70px' }}>
         <header style={{
           marginBottom: '32px',
           display: 'flex',
@@ -618,7 +618,6 @@ export default function TicketManagement() {
                         ticket_id: ticketId,
                         action: manageResponse,
                         response: manageResponse,
-                        action: manageResponse,
                         status: 'Resolved'
                       })
                     });
@@ -637,7 +636,6 @@ export default function TicketManagement() {
                           ticket_id: ticketId,
                           action: manageResponse,
                           response: manageResponse,
-                          action: manageResponse,
                           status: 'Resolved'
                         })
                       });

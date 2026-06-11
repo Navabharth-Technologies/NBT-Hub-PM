@@ -41,6 +41,7 @@ export default function PerformanceModule() {
   const [tempDob, setTempDob] = useState('');
   const [toast, setToast] = useState({ show: false, message: '' });
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState(null);
 
   // Crop States
   const [showCropModal, setShowCropModal] = useState(false);
@@ -52,6 +53,20 @@ export default function PerformanceModule() {
 
   const fileInputRef = useRef(null);
   const dobInputRef = useRef(null);
+
+  useEffect(() => {
+    if (fullscreenImage) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [fullscreenImage]);
 
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -622,7 +637,16 @@ export default function PerformanceModule() {
           <div style={dashboardStyles.profileCard}>
             <div style={{ display: 'flex', flexDirection: winWidth < 1024 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 1024 ? 'center' : 'flex-start', gap: winWidth < 1024 ? '30px' : '0', textAlign: winWidth < 1024 ? 'center' : 'left' }}>
               <div style={{ display: 'flex', flexDirection: winWidth < 600 ? 'column' : 'row', gap: '24px', alignItems: 'center' }}>
-                <div style={dashboardStyles.avatar}>
+                <div
+                  style={{ ...dashboardStyles.avatar, cursor: 'pointer' }}
+                  onClick={() => {
+                    const pic = user?.profile_pic || user?.profile_picture;
+                    if (pic) {
+                      const fullUrl = pic.startsWith('http') || pic.startsWith('data:') ? pic : `${BASE_URL}${pic.startsWith('/') ? '' : '/'}${pic}`;
+                      setFullscreenImage(fullUrl);
+                    }
+                  }}
+                >
                   {(user?.profile_pic || user?.profile_picture) ? (
                     <img
                       src={(user.profile_pic || user.profile_picture).startsWith('http') || (user.profile_pic || user.profile_picture).startsWith('data:') ? (user.profile_pic || user.profile_picture) : `${BASE_URL}${(user.profile_pic || user.profile_picture).startsWith('/') ? '' : '/'}${user.profile_pic || user.profile_picture}`}
@@ -631,8 +655,11 @@ export default function PerformanceModule() {
                     />
                   ) : user?.name?.[0] || 'U'}
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: winWidth < 768 ? '32px' : '36px', height: winWidth < 768 ? '32px' : '36px', background: 'white', border: '1px solid #f1f5f9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                    style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: winWidth < 768 ? '32px' : '36px', height: winWidth < 768 ? '32px' : '36px', background: 'white', border: '1px solid #f1f5f9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', cursor: 'pointer' }}
                   >
                     <Camera size={winWidth < 768 ? 16 : 18} color="#0f172a" />
                   </button>
@@ -893,13 +920,23 @@ export default function PerformanceModule() {
 
       {/* Toast Notification */}
       {toast.show && (
-        <div style={{ position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)', background: '#0f172a', color: 'white', padding: '12px 24px', borderRadius: '16px', fontSize: '14px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', zIndex: 9999, border: '1px solid rgba(255,255,255,0.1)' }}>
+        <div style={{ position: 'fixed', top: '100px', left: '50%', transform: 'translateX(-50%)', background: '#0f172a', color: 'white', padding: '12px 24px', borderRadius: '16px', fontSize: '14px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)', zIndex: 9999, border: '1px solid rgba(255,255,255,0.1)' }}>
           <div style={{ background: toast.type === 'success' ? '#22c55e' : '#ef4444', width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {toast.type === 'success' ? <Check size={12} color="white" strokeWidth={4} /> : <X size={12} color="white" strokeWidth={4} />}
           </div>
           {toast.message}
         </div>
       )}
+      {/* Fullscreen Image Modal */}
+      {fullscreenImage && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10000, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }} onClick={() => setFullscreenImage(null)}>
+          <button onClick={() => setFullscreenImage(null)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10001 }}>
+            <X size={20} color="#0f172a" />
+          </button>
+          <img src={fullscreenImage} alt="Profile Fullscreen" style={{ maxWidth: '90%', maxHeight: '90vh', objectFit: 'contain', borderRadius: '16px' }} onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
+
       {showCropModal && selectedImageSrc && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ position: 'relative', width: '90%', maxWidth: '500px', height: '400px', background: '#333', borderRadius: '16px', overflow: 'hidden' }}>

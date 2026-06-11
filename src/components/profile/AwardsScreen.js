@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Trophy, Star, Award, Zap, ArrowLeft, ShieldCheck, UserCheck, Flame, Edit, Trash2, Plus, Users, Search, ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { Trophy, Star, Award, Zap, ArrowLeft, ShieldCheck, UserCheck, Flame, Edit, Trash2, Plus, Users, Search, ChevronRight, ChevronLeft, X, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
@@ -555,7 +555,7 @@ export default function AwardsScreen() {
         }
 
         const fetchLeaderboard = async () => {
-            let url = `${BASE_URL}/api/rewards/leaderboard`;
+            let url = `${BASE_URL}/api/employees/leaderboard/all`;
             if (filterType === 'date' && dateValue) {
                 url += `?date=${dateValue}`;
             } else if (filterType === 'month' && monthValue) {
@@ -586,9 +586,9 @@ export default function AwardsScreen() {
                         name: item.employee_name || item.name || (emp ? (emp.name || emp.employee_name) : 'Team Member'),
                         role: item.designation || item.role || (emp ? (emp.designation || emp.role) : 'Team Member'),
                         team: item.team || item.department || (emp ? (emp.team || emp.department) : 'Bytes Blasters✨'),
-                        total_reward_points: parsePoints(item.reward_points || item.total_reward_points || item.rewardPoints),
-                        total_quiz_points: parsePoints(item.quiz_points || item.total_quiz_points || item.quizPoints),
-                        total_points: parsePoints(item.total_points || item.score || item.totalPoints || 0),
+                        total_reward_points: parsePoints(item.reward_points || item.total_reward_points || item.rewardPoints || 0),
+                        total_quiz_points: parsePoints(item.quiz_points || item.total_quiz_points || item.quizPoints || 0),
+                        total_points: parsePoints(item.total_points || item.score || item.totalPoints || item.totalPointsNum || item.totalRepNum || item.total_rep || 0),
                         profile_picture: item.profile_picture || item.profile_pic || item.photo || (emp ? (emp.profile_picture || emp.profile_pic || emp.photo) : null),
                         history: itemHistory
                     };
@@ -763,6 +763,18 @@ export default function AwardsScreen() {
                                     <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: '10px', fontWeight: '700', outline: 'none', width: '90px' }} />
                                 </div>
                             </div>
+                            <button
+                                onClick={() => {
+                                    fetchInitialData();
+                                    fetchGrantedHistory();
+                                }}
+                                title="Refresh rewards for selected date range"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0', width: '38px', height: '38px', borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s ease', background: 'white', color: '#64748b', border: '1.5px solid #cbd5e1', flexShrink: 0 }}
+                                onMouseEnter={e => { e.currentTarget.style.color = '#3b82f6'; e.currentTarget.style.borderColor = '#3b82f6'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                            >
+                                <RefreshCw size={16} />
+                            </button>
                         </div>
                     </div>
 

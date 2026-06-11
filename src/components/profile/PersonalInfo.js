@@ -44,7 +44,7 @@ const SECTIONS = [
       { key: 'department', label: 'Department', type: 'text', required: true },
       { key: 'supervisor_l1', label: 'Supervisor L1 (Reporting Person)', type: 'text' },
       { key: 'supervisor_l2', label: 'Supervisor L2', type: 'text' },
-      { key: 'doj', label: 'Date of Joining', type: 'text', placeholder: 'DD-MM-YYYY', required: true },
+      { key: 'doj', label: 'Date of Joining', type: 'text', placeholder: 'DD/MM/YYYY', required: true },
       { key: 'ft_pt', label: 'FT/PT', type: 'select', options: ['Full Time', 'Part Time', 'Contract'] },
       { key: 'status', label: 'Status', type: 'select', options: ['Active', 'On Bench', 'Notice Period', 'Terminated'] },
       { key: 'place', label: 'Work Location', type: 'text' },
@@ -83,7 +83,7 @@ const SECTIONS = [
       { key: 'college', label: 'College', type: 'text', required: true },
       { key: 'university', label: 'University', type: 'text', required: true },
       { key: 'previous_organization', label: 'Previous Organization', type: 'text' },
-      { key: 'source', label: 'Source', type: 'text' },
+      { key: 'source', label: 'Source (how you found us)', type: 'text' },
       { key: 'languages_known', label: 'Languages Known', type: 'text' },
     ]
   },
@@ -97,6 +97,7 @@ const SECTIONS = [
       { key: 'lwd', label: 'Last Working Day (LWD)', type: 'text', placeholder: 'DD/MM/YYYY' },
       { key: 'attrition_bucket', label: 'Attrition Bucket', type: 'select', options: ['N/A', 'Resignation', 'Performance', 'Behavioral', 'Medical'] },
       { key: 'reason', label: 'Reason of Separation', type: 'text' },
+      { key: 'previous_experience', label: 'Previous Experience', type: 'text' },
       { key: 'experience_letter', label: 'Experience Letter', type: 'file' },
       { key: 'previous_company_payslip', label: 'Previous Company 3 Month Payslip', type: 'file' },
     ]
@@ -111,9 +112,9 @@ const SECTIONS = [
       { key: 'bank_account_no', label: 'Bank Account No.', type: 'text', required: true },
       { key: 'ifsc_code', label: 'IFSC Code', type: 'text', required: true },
       { key: 'bank_branch', label: 'Bank Branch', type: 'text', required: true },
-      { key: 'gross_salary_a', label: 'Gross Salary (A)', type: 'text' },
-      { key: 'salary', label: 'Net Salary', type: 'text' },
-      { key: 'pt', label: 'Professional Tax (PT)', type: 'text' },
+      { key: 'gross_salary_a', label: 'Gross Salary (A)', type: 'text', placeholder: 'Enter in INR' },
+      { key: 'salary', label: 'Net Salary', type: 'text', placeholder: 'Enter in INR' },
+      { key: 'pt', label: 'Professional Tax (PT)', type: 'text', placeholder: 'Enter in %' },
       { key: 'passbook_photo', label: 'Bank Passbook', type: 'file', required: true },
     ]
   },
@@ -207,6 +208,30 @@ export default function PersonalInfo({ onBack }) {
       return () => clearTimeout(timer);
     }
   }, [toast]);
+
+  useEffect(() => {
+    if (form.ifsc_code && form.ifsc_code.length === 11) {
+      const fetchBankDetails = async () => {
+        try {
+          const res = await fetch(API_ENDPOINTS.BANK_IFSC(form.ifsc_code));
+          if (res.ok) {
+            const data = await res.json();
+            if (data && (data.BRANCH || data.branch)) {
+              setForm(prev => ({ 
+                ...prev, 
+                bank_branch: data.BRANCH || data.branch || prev.bank_branch,
+                bank_name: data.BANK || data.bank || prev.bank_name
+              }));
+              setToast({ type: 'success', msg: 'Bank details fetched successfully' });
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch bank details:", err);
+        }
+      };
+      fetchBankDetails();
+    }
+  }, [form.ifsc_code]);
 
   useEffect(() => {
     const loadDocs = async () => {
@@ -337,7 +362,7 @@ export default function PersonalInfo({ onBack }) {
                 const dd = String(parseInt(day, 10)).padStart(2, '0');
                 const mm = String(parseInt(month, 10)).padStart(2, '0');
                 const yyyy = String(parseInt(year, 10));
-                normalizedVal = (targetKey === 'dob' || targetKey === 'date_of_birth' || targetKey === 'lwd' || targetKey === 'separation') ? `${dd}/${mm}/${yyyy}` : `${dd}-${mm}-${yyyy}`;
+                normalizedVal = `${dd}/${mm}/${yyyy}`;
               }
             }
 
@@ -485,7 +510,7 @@ export default function PersonalInfo({ onBack }) {
   const handleChange = (key, value, target) => {
     let sanitizedValue = value;
 
-    if (['dob', 'date_of_birth', 'separation', 'lwd'].includes(key)) {
+    if (['dob', 'date_of_birth', 'separation', 'lwd', 'doj'].includes(key)) {
       const prevValue = form[key] || '';
       const isDeleting = prevValue.length > value.length;
 
@@ -636,133 +661,9 @@ export default function PersonalInfo({ onBack }) {
       }
     }
 
-    if (key === 'doj') {
-      const prevValue = form.doj || '';
-      const isDeleting = prevValue.length > value.length;
 
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-        caretRef.current = {
-          target,
-          selectionStart: target.selectionStart,
-          oldValLen: target.value.length
-        };
-      }
 
-      // Collapse multiple trailing dashes (e.g. "10--" -> "10-")
-      let cleanedValue = value;
-      if (value.endsWith('--')) {
-        cleanedValue = value.replace(/-+$/, '-');
-      }
-
-      // Split the input value by dashes
-      const parts = cleanedValue.split('-');
-      // Keep only digits in each part
-      let cleanParts = parts.map(p => p.replace(/\D/g, ''));
-
-      // If there are more than 3 parts, truncate
-      if (cleanParts.length > 3) {
-        cleanParts = cleanParts.slice(0, 3);
-      }
-
-      let dayStr = '';
-      let monthStr = '';
-      let yearStr = '';
-
-      if (cleanParts.length === 1) {
-        const p0 = cleanParts[0] || '';
-        if (p0.length > 2) {
-          yearStr = p0;
-        } else {
-          dayStr = p0;
-        }
-      } else if (cleanParts.length === 2) {
-        const p0 = cleanParts[0] || '';
-        const p1 = cleanParts[1] || '';
-        if (p0.length > 2) {
-          yearStr = p0;
-          monthStr = p1;
-        } else if (p1.length > 2) {
-          dayStr = p0;
-          yearStr = p1;
-        } else {
-          dayStr = p0;
-          monthStr = p1;
-        }
-      } else if (cleanParts.length === 3) {
-        dayStr = cleanParts[0] || '';
-        monthStr = cleanParts[1] || '';
-        yearStr = cleanParts[2] || '';
-      }
-
-      // Restrict day (dd)
-      if (dayStr) {
-        if (dayStr.length > 2) dayStr = dayStr.slice(0, 2);
-        if (dayStr.length === 1 && parseInt(dayStr, 10) > 3) {
-          dayStr = '0' + dayStr;
-        }
-        const ddVal = parseInt(dayStr, 10);
-        if (!isNaN(ddVal)) {
-          if (ddVal > 31) dayStr = '31';
-          else if (ddVal === 0 && dayStr.length === 2) dayStr = '01';
-        }
-      }
-
-      // Restrict month (mm)
-      if (monthStr) {
-        if (monthStr.length > 2) monthStr = monthStr.slice(0, 2);
-        if (monthStr.length === 1 && parseInt(monthStr, 10) > 1) {
-          monthStr = '0' + monthStr;
-        }
-        const mmVal = parseInt(monthStr, 10);
-        if (!isNaN(mmVal)) {
-          if (mmVal > 12) monthStr = '12';
-          else if (mmVal === 0 && monthStr.length === 2) monthStr = '01';
-        }
-      }
-
-      // Restrict year (yyyy)
-      if (yearStr) {
-        if (yearStr.length > 4) yearStr = yearStr.slice(0, 4);
-        const yyyyVal = parseInt(yearStr, 10);
-        if (!isNaN(yyyyVal) && yearStr.length === 4) {
-          if (yyyyVal > 2099) yearStr = '2099';
-        }
-      }
-
-      // Reconstruct formatted string
-      let formatted = '';
-      if (!dayStr && !monthStr && !yearStr) {
-        formatted = '';
-      } else if (parts.length === 1) {
-        if (cleanParts[0] && cleanParts[0].length > 2) {
-          formatted = `--${yearStr}`;
-        } else {
-          formatted = dayStr;
-          if (dayStr.length === 2 && !isDeleting) {
-            formatted += '-';
-          }
-        }
-      } else if (parts.length === 2) {
-        const p1 = cleanParts[1] || '';
-        const p0 = cleanParts[0] || '';
-        if (p0.length > 2) {
-          formatted = `${yearStr}-${monthStr}`;
-        } else if (p1.length > 2) {
-          formatted = `${dayStr}--${yearStr}`;
-        } else {
-          formatted = `${dayStr}-${monthStr}`;
-          if (monthStr.length === 2 && !isDeleting) {
-            formatted += '-';
-          }
-        }
-      } else {
-        formatted = `${dayStr}-${monthStr}-${yearStr}`;
-      }
-
-      sanitizedValue = formatted;
-    }
-
-    if (key === 'personal_email' || key === 'official_email') {
+    if (key === 'personal_email' || key === 'official_email' || key === 'personal_email_id' || key === 'official_email_id') {
       const atIndex = value.indexOf('@');
       if (atIndex !== -1) {
         const domainPart = value.substring(atIndex + 1);
@@ -827,6 +728,20 @@ export default function PersonalInfo({ onBack }) {
     } else if (key === 'voter_id') {
       sanitizedValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
       if (sanitizedValue.length > 10) sanitizedValue = sanitizedValue.substring(0, 10);
+    } else if (key === 'previous_experience') {
+      sanitizedValue = value.replace(/[^0-9.]/g, '');
+      const parts = sanitizedValue.split('.');
+      if (parts.length > 2) {
+        sanitizedValue = parts[0] + '.' + parts.slice(1).join('');
+      }
+      const newParts = sanitizedValue.split('.');
+      if (newParts[0].length > 2) {
+        newParts[0] = newParts[0].substring(0, 2);
+      }
+      if (newParts.length > 1 && newParts[1].length > 1) {
+        newParts[1] = newParts[1].substring(0, 1);
+      }
+      sanitizedValue = newParts.join('.');
     } else if (percentageFields.includes(key)) {
       sanitizedValue = value.replace(/[^0-9.]/g, '');
       const parts = sanitizedValue.split('.');
@@ -965,12 +880,14 @@ export default function PersonalInfo({ onBack }) {
       }
     }
 
-    if (activeSectionFields.includes('personal_email') && form.personal_email && !emailRegex.test(form.personal_email)) {
-      setToast({ type: 'error', msg: `Invalid Personal Email format${getSection('personal_email')}` });
+    const pEmail = form.personal_email_id !== undefined && form.personal_email_id !== '' ? form.personal_email_id : form.personal_email;
+    if ((activeSectionFields.includes('personal_email') || activeSectionFields.includes('personal_email_id')) && pEmail && !emailRegex.test(pEmail)) {
+      setToast({ type: 'error', msg: `Please enter a valid Personal Email (e.g., name@gmail.com)` });
       return;
     }
-    if (activeSectionFields.includes('official_email') && form.official_email && !emailRegex.test(form.official_email)) {
-      setToast({ type: 'error', msg: `Invalid Official Email format${getSection('official_email')}` });
+    const oEmail = form.official_email_id !== undefined && form.official_email_id !== '' ? form.official_email_id : form.official_email;
+    if ((activeSectionFields.includes('official_email') || activeSectionFields.includes('official_email_id')) && oEmail && !emailRegex.test(oEmail)) {
+      setToast({ type: 'error', msg: `Please enter a valid Official Email (e.g., name@company.com)` });
       return;
     }
     if (activeSectionFields.includes('contact_no') && form.contact_no) {
@@ -1064,8 +981,11 @@ export default function PersonalInfo({ onBack }) {
 
       // Fix key mismatches between SECTIONS field keys and backend column names
       // official_email_id (SECTIONS key) vs official_email (form state key)
-      if (!payload.official_email && form.official_email) payload.official_email = form.official_email;
-      if (!payload.official_email_id && form.official_email) payload.official_email_id = form.official_email;
+      if (!payload.official_email && (form.official_email || form.official_email_id)) payload.official_email = form.official_email || form.official_email_id;
+      if (!payload.official_email_id && (form.official_email || form.official_email_id)) payload.official_email_id = form.official_email || form.official_email_id;
+
+      if (!payload.personal_email && (form.personal_email || form.personal_email_id)) payload.personal_email = form.personal_email || form.personal_email_id;
+      if (!payload.personal_email_id && (form.personal_email || form.personal_email_id)) payload.personal_email_id = form.personal_email || form.personal_email_id;
 
       // Send ft_pt with all common backend column name variants
       if (payload.ft_pt) {
@@ -1340,15 +1260,15 @@ export default function PersonalInfo({ onBack }) {
         </div>
 
         <div style={{ display: isMobile ? 'flex' : 'grid', flexDirection: isMobile ? 'column' : 'row', gridTemplateColumns: isMobile ? 'none' : '280px 1fr', gap: isMobile ? '20px' : '24px', alignItems: 'start', width: '100%', boxSizing: 'border-box' }}>
-            <div style={{
-              width: '100%',
-              margin: '0',
-              boxSizing: 'border-box',
-              flexShrink: 0,
-              position: !isMobile ? 'sticky' : 'static',
-              top: !isMobile ? '120px' : 'auto',
-              zIndex: 10
-            }}>
+          <div style={{
+            width: '100%',
+            margin: '0',
+            boxSizing: 'border-box',
+            flexShrink: 0,
+            position: !isMobile ? 'sticky' : 'static',
+            top: !isMobile ? '120px' : 'auto',
+            zIndex: 10
+          }}>
             {isMobile ? (
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1460,7 +1380,7 @@ export default function PersonalInfo({ onBack }) {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '20px' : '24px' }}>
               {currentSection.fields.map(field => {
-                const isDisabled = !isEditing || (LOCKED_FIELDS.includes(field.key) && !isAdmin);
+                const isDisabled = !isEditing || (LOCKED_FIELDS.includes(field.key) && !isAdmin) || currentSection.id === 'compliance';
                 return (
                   <div key={field.key} style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
                     <label style={{ fontSize: '13px', fontWeight: '900', color: '#64748b', textTransform: 'uppercase' }}>
@@ -1552,6 +1472,65 @@ export default function PersonalInfo({ onBack }) {
                         <option value="" disabled style={{ color: '#94a3b8', fontWeight: '900' }}>Choose {field.label}</option>
                         {field.options.map(o => <option key={o} value={o} style={{ color: '#0B1E3F' }}>{o}</option>)}
                       </select>
+                    ) : field.key === 'languages_known' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+                        <input
+                          type="text"
+                          value={form[field.key] || ''}
+                          placeholder={field.placeholder || 'e.g. English Hindi'}
+                          readOnly={isDisabled}
+                          onChange={e => handleChange(field.key, e.target.value, e.target)}
+                          style={{
+                            width: '100%',
+                            padding: '16px 20px',
+                            borderRadius: '16px',
+                            fontWeight: '900',
+                            color: '#0B1E3F',
+                            WebkitTextFillColor: '#0B1E3F',
+                            border: isMobile ? '2px solid #cbd5e1' : '3px solid #cbd5e1',
+                            backgroundColor: isDisabled ? '#f1f5f9' : 'white',
+                            boxSizing: 'border-box',
+                            fontFamily: 'inherit',
+                            fontSize: '16px'
+                          }}
+                        />
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                          {['English', 'Hindi', 'Kannada', 'Telugu', 'Malayalam', 'Arabic', 'Urdu', 'Marathi'].map(lang => {
+                            const currentLangs = (form[field.key] || '').split(' ').filter(Boolean);
+                            const isSelected = currentLangs.includes(lang);
+                            return (
+                              <button
+                                key={lang}
+                                type="button"
+                                disabled={isDisabled}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  let newLangs = [...currentLangs];
+                                  if (isSelected) {
+                                    newLangs = newLangs.filter(l => l !== lang);
+                                  } else {
+                                    newLangs.push(lang);
+                                  }
+                                  handleChange(field.key, newLangs.join(' '));
+                                }}
+                                style={{
+                                  padding: '6px 14px',
+                                  borderRadius: '20px',
+                                  border: `2px solid ${isSelected ? '#315A9E' : '#cbd5e1'}`,
+                                  backgroundColor: isSelected ? '#315A9E' : (isDisabled ? '#f1f5f9' : 'white'),
+                                  color: isSelected ? 'white' : '#64748b',
+                                  fontWeight: '800',
+                                  cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                  transition: 'all 0.2s',
+                                  fontSize: '13px'
+                                }}
+                              >
+                                {lang}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     ) : (
                       <>
                         <input
@@ -1750,7 +1729,7 @@ export default function PersonalInfo({ onBack }) {
           <div style={{ background: 'white', borderRadius: '24px', padding: '36px 32px', maxWidth: '420px', width: '100%', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)', border: '1.5px solid #fee2e2' }}>
             <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4h6v2" />
               </svg>
             </div>
             <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', margin: '0 0 8px 0' }}>Delete Document?</h3>

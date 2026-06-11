@@ -769,9 +769,7 @@ export default function AttendanceManagement() {
         if (logsForEmp.length > 0) {
           const pIn = parseTimeStr(inTime);
           const pOut = parseTimeStr(outTime);
-          const isHalfDayTime = (pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60));
-
-          let rawStatus = isHalfDayTime ? 'HALF_DAY' : String(logsForEmp[0].status || logsForEmp[0].Status || 'PRESENT').trim().toUpperCase();
+          let rawStatus = String(logsForEmp[0].status || logsForEmp[0].Status || 'PRESENT').trim().toUpperCase();
           if (inTime !== '----' && inTime !== '--:--' && rawStatus === 'ABSENT') rawStatus = 'PRESENT';
 
           if (rawStatus === 'PRESENT' || rawStatus === 'P' || rawStatus === 'IN OFFICE' || rawStatus === 'IN-OFFICE') {
@@ -846,7 +844,7 @@ export default function AttendanceManagement() {
 
     doc.setFontSize(10);
     doc.setTextColor(255, 255, 255);
-    doc.text(`Total Records: ${displayedEmployees.length} | Departments: ${user?.department || 'Organization-wide'}`, 14, 38);
+    doc.text(`Total Records: ${displayedEmployees.length} | Departments: ${user?.department || 'IT'}`, 14, 38);
 
     const rows = getExportRows(false);
 
@@ -979,8 +977,7 @@ export default function AttendanceManagement() {
           // Half Day check
           const st = String(firstLog?.status || '').toUpperCase().trim();
           const isHalfDayStatus = st === 'HALF_DAY' || st === 'HD' || st === 'HALF DAY' || st === 'HALF-DAY';
-          const isHalfDayTime = (pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60));
-          if (isHalfDayStatus || isHalfDayTime) {
+          if (isHalfDayStatus) {
             halfDayEmpIds.add(empIdStr);
             halfDayLogs.push(log);
           }
@@ -1029,7 +1026,7 @@ export default function AttendanceManagement() {
     <div className="hr-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
 
-      <main style={{ flex: 1, padding: winWidth < 768 ? '100px 16px 200px' : '120px 26px 110px', width: '100%', boxSizing: 'border-box', margin: '0' }}>
+      <main style={{ flex: 1, padding: winWidth < 768 ? '100px 16px 300px' : '120px 26px 160px', width: '100%', boxSizing: 'border-box', margin: '0' }}>
         <div style={{ width: '100%' }}>
           <button
             onClick={() => navigate(-1)}
@@ -1051,43 +1048,47 @@ export default function AttendanceManagement() {
 
 
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: winWidth < 640 ? 'column' : 'row' }}>
-                <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '4px 14px', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', height: '44px', width: winWidth < 640 ? '100%' : 'auto', justifyContent: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input
-                      type="date"
-                      value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
-                      style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '11px', fontWeight: '800', color: '#1e293b', width: '95px' }}
-                    />
-                  </div>
-
-                  <div style={{ width: '1.5px', height: '16px', background: '#e2e8f0' }}></div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <input
-                      type="date"
-                      value={toDate}
-                      onChange={(e) => setToDate(e.target.value)}
-                      style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '11px', fontWeight: '800', color: '#1e293b', width: '95px', textAlign: 'right' }}
-                    />
-                  </div>
-                </div>
-
-                <div ref={dropdownRef} style={{ position: 'relative', width: winWidth < 640 ? '100%' : 'auto' }}>
-                  <button
-                    onClick={() => setShowExportDropdown(!showExportDropdown)}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', background: '#0f172a', color: 'white', border: 'none', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.1)', width: '100%' }}
-                  >
-                    <Download size={18} /> Export
-                  </button>
-
-                  {showExportDropdown && (
-                    <div style={{ position: 'absolute', top: '55px', right: 0, width: '200px', background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 15px 30px -10px rgba(0,0,0,0.15)', zIndex: 100, overflow: 'hidden', padding: '8px' }}>
-                      <button onClick={handleExportPDF} style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', background: 'transparent', border: 'none', color: '#1e293b', fontWeight: '800', fontSize: '13px', cursor: 'pointer', textAlign: 'left', borderRadius: '10px', transition: '0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
-                        <FileText size={18} color="#ef4444" /> Export as PDF
-                      </button>
+                  <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '4px 14px', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', height: '44px', width: winWidth < 640 ? '100%' : 'auto', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="date"
+                        value={fromDate}
+                        onChange={(e) => setFromDate(e.target.value)}
+                        style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '11px', fontWeight: '800', color: '#1e293b', width: '95px' }}
+                      />
                     </div>
-                  )}
+
+                    <div style={{ width: '1.5px', height: '16px', background: '#e2e8f0' }}></div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="date"
+                        value={toDate}
+                        onChange={(e) => setToDate(e.target.value)}
+                        style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '11px', fontWeight: '800', color: '#1e293b', width: '95px', textAlign: 'right' }}
+                      />
+                    </div>
+                  </div>
+
+                <div style={{ display: 'flex', gap: '8px', width: winWidth < 640 ? '100%' : 'auto' }}>
+                  <select
+                    value={activeFilter}
+                    onChange={(e) => setActiveFilter(e.target.value)}
+                    style={{ padding: '0 14px', borderRadius: '12px', border: '1.5px solid #e2e8f0', background: 'white', fontWeight: '800', color: '#1e293b', outline: 'none', cursor: 'pointer', fontSize: '13px', height: '44px', width: winWidth < 640 ? '100%' : 'auto' }}
+                  >
+                    <option value="ALL">All Status</option>
+                    <option value="PRESENT">Present</option>
+                    <option value="ABSENT">Absent</option>
+                    <option value="HALF DAYS">Half Day</option>
+                    <option value="Late Login">Late Login</option>
+                    <option value="Early logout">Early Logout</option>
+                  </select>
+                  <button
+                    onClick={handleExportPDF}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0 24px', borderRadius: '12px', background: '#0f172a', color: 'white', border: 'none', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.1)', height: '44px', width: winWidth < 640 ? '100%' : 'auto', transition: 'all 0.3s' }}
+                  >
+                    <Download size={18} /> Export PDF
+                  </button>
                 </div>
               </div>
             </div>
@@ -1391,444 +1392,444 @@ export default function AttendanceManagement() {
               <input type="text" placeholder="Filter employee, role or department..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ width: '100%', padding: '14px 16px 14px 44px', borderRadius: '16px', border: '1.5px solid #e2e8f0', background: 'white', outline: 'none', fontSize: '13px', fontWeight: '600', boxSizing: 'border-box' }} />
             </div>
           </div>
+          {(() => {
+            const getDatesInRangeTable = (startDate, endDate) => {
+              const dates = [];
+              let currentDate = new Date(startDate);
+              const end = new Date(endDate);
+              while (currentDate <= end) {
+                const dd = String(currentDate.getDate()).padStart(2, '0');
+                const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+                const yyyy = currentDate.getFullYear();
+                dates.push(`${yyyy}-${mm}-${dd}`);
+                currentDate.setDate(currentDate.getDate() + 1);
+              }
+              return dates.sort((a, b) => new Date(b) - new Date(a));
+            };
+            const dateRangeList = getDatesInRangeTable(fromDate, toDate);
+            const flattenedRows = [];
+            dateRangeList.forEach(targetDate => {
+              displayedEmployees.forEach(emp => {
+                flattenedRows.push({ emp, targetDate });
+              });
+            });
 
-          <section style={{ background: winWidth < 768 ? 'transparent' : 'white', borderRadius: '24px', border: winWidth < 768 ? 'none' : '1.5px solid #f1f5f9', boxShadow: winWidth < 768 ? 'none' : '0 4px 20px -5px rgba(0,0,0,0.02)', overflowX: winWidth < 768 ? 'hidden' : 'auto' }}>
-            {winWidth < 768 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {displayedEmployees.length > 0 ? (
-                  displayedEmployees.map((emp, idx) => {
-                    const today = new Date();
-                    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                    const logsForEmp = (attendanceLogs || [])
-                      .filter(l => {
-                        if (!l) return false;
-                        const logId = String(l?.user_id || l?.Empcode || l?.EmpID || l?.userId || l?.UserId || '').trim();
-                        const empId = String(emp?.id || '').trim();
-                        const logDate = parseLogDate(l);
-                        return empId && logId && (logId === empId) && (logDate >= fromDate && logDate <= toDate);
-                      })
-                      .sort((a, b) => new Date(a?.created_at || a?.punch_time || 0) - new Date(b?.created_at || b?.punch_time || 0));
+            return (
+              <section style={{ background: winWidth < 768 ? 'transparent' : 'white', borderRadius: '24px', border: winWidth < 768 ? 'none' : '1.5px solid #f1f5f9', boxShadow: winWidth < 768 ? 'none' : '0 4px 20px -5px rgba(0,0,0,0.02)', overflowX: winWidth < 768 ? 'hidden' : 'auto' }}>
+                {winWidth < 768 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {flattenedRows.length > 0 ? (
+                      flattenedRows.map((rowItem, idx) => {
+                        const emp = rowItem.emp;
+                        const targetDate = rowItem.targetDate;
+                        const today = new Date();
+                        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                        const logsForEmp = (attendanceLogs || [])
+                          .filter(l => {
+                            if (!l) return false;
+                            const logId = String(l?.user_id || l?.Empcode || l?.EmpID || l?.userId || l?.UserId || '').trim();
+                            const empId = String(emp?.id || '').trim();
+                            const logDate = parseLogDate(l);
+                            return empId && logId && (logId === empId) && (logDate === targetDate);
+                          })
+                          .sort((a, b) => new Date(a?.created_at || a?.punch_time || 0) - new Date(b?.created_at || b?.punch_time || 0));
 
-                    // 1. Group logs by date to prevent cross-day data leaking
-                    const groupedByDate = (logsForEmp || []).reduce((acc, log) => {
-                      const d = parseLogDate(log);
-                      if (d) {
-                        if (!acc[d]) acc[d] = [];
-                        acc[d].push(log);
-                      }
-                      return acc;
-                    }, {});
+                        const sortedDayLogs = logsForEmp;
 
-                    // 2. Get the latest date available in the range for this employee
-                    const dates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
-                    const latestDate = dates[0];
-                    const latestDayLogs = groupedByDate[latestDate] || [];
-
-                    // 3. Sort logs within THAT day only
-                    const sortedDayLogs = latestDayLogs.sort((a, b) => new Date(a.created_at || a.punch_time || 0) - new Date(b.created_at || b.punch_time || 0));
-
-                    const checkHasPunchOut = (record) => {
-                      if (!record) return false;
-                      const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric;
-                      return outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00';
-                    };
-                    const dayPunchInLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_IN' || (!log.remark?.includes('OUT') && !checkHasPunchOut(log))) || sortedDayLogs[0];
-                    const dayPunchOutLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_OUT' || (checkHasPunchOut(log) && log.remark !== 'MANUAL_EDIT_IN'));
-                    const hasDayPunchOut = !!dayPunchOutLog;
-                    const extractTime = (log) => {
-                      if (!log) return '----';
-                      const t = log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime || log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric;
-                      if (t && t !== '----' && t !== '--:--' && t !== '00:00' && t !== '00:00:00') return t;
-                      if (log.created_at) {
-                        const d = new Date(log.created_at);
-                        if (!isNaN(d.getTime())) return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-                      }
-                      return '----';
-                    };
-
-                    const punchIn = extractTime(dayPunchInLog);
-                    const punchOut = (latestDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog ? extractTime(dayPunchOutLog) : '----');
-                    const pDate = latestDate;
-                    const workHrs = (latestDate === todayStr && !hasDayPunchOut) ? '00:00' : (dayPunchOutLog?.work_hrs || sortedDayLogs[0]?.work_hrs || '00:00');
-
-                    const log = sortedDayLogs[0] ? {
-                      ...sortedDayLogs[0],
-                      punch_date: latestDate,
-                      in_time: punchIn,
-                      out_time: punchOut,
-                      in_location: dayPunchInLog?.punchin_location || dayPunchInLog?.in_location || '----',
-                      out_location: (latestDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog?.punchout_location || dayPunchOutLog?.out_location || '----'),
-                      work_hrs: workHrs
-                    } : null;
-
-                    return (
-                      <div key={idx} style={{ background: 'white', borderRadius: '24px', padding: '20px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                          <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '950' }}>
-                            {String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}
-                          </div>
-                          <div
-                            onClick={() => navigate(`/attendance/detail/${emp.id}`)}
-                            style={{ flex: 1, cursor: 'pointer' }}
-                          >
-                            <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{emp.name || emp.user_name || 'Unknown'}</div>
-                            <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>#{emp.id} • {emp.role || 'Employee'}</div>
-                          </div>
-                          <button
-                            onClick={() => navigate(`/attendance/detail/${emp.id}`)}
-                            style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#3b82f6' }}
-                          >
-                            <Info size={18} />
-                          </button>
-                        </div>
-
-                        <div style={{ height: '1px', background: '#f1f5f9', margin: '0 -20px 16px' }}></div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                          <div>
-                            <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Date</div>
-                            <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{pDate ? new Date(pDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '----'}</div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Hours</div>
-                            <div style={{ fontSize: '14px', fontWeight: '950', color: '#1e293b' }}>
-                              {workHrs?.replace(/\s:\s/g, ':') || '00:00'} <span style={{ fontSize: '10px', color: '#94a3b8' }}>HRS</span>
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Punch In</div>
-                            <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a' }}>{punchIn}</div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Punch Out</div>
-                            <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a' }}>{punchOut}</div>
-                          </div>
-                        </div>
-
-                        <div style={{ marginBottom: '20px' }}>
-                          <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Remark</div>
-                          <div style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                            {log?.remarks || log?.rm_remarks || log?.pm_remarks || '-'}
-                          </div>
-                        </div>
-
-                        <div style={{ height: '1px', background: '#f1f5f9', margin: '0 -20px 16px' }}></div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '11px', fontWeight: '700', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            <MapPin size={12} /> {log?.in_location || log?.location || '----'}
-                          </div>
-                          {(() => {
-                            const todayPunchIn = log?.in_time;
-                            const todayPunchOut = log?.out_time;
-                            const pIn = parseTimeStr(todayPunchIn);
-                            const pOut = parseTimeStr(todayPunchOut);
-                            const isHalfDayTime = (pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60));
-                            const rawStatus = isHalfDayTime ? 'HALF_DAY' : (log?.status || log?.Status || '').trim();
-                            if (rawStatus) {
-                              let displayStatus = rawStatus;
-                              if (rawStatus.toUpperCase() === 'PRESENT' || rawStatus.toUpperCase() === 'IN OFFICE' || rawStatus.toUpperCase() === 'IN-OFFICE') displayStatus = 'In Office';
-                              else if (rawStatus.toUpperCase() === 'ABSENT') displayStatus = 'Absent';
-                              else if (rawStatus.toUpperCase() === 'HALF_DAY' || rawStatus.toUpperCase() === 'HD') displayStatus = 'Half Day';
-                              else if (rawStatus.toUpperCase() === 'LATE' || rawStatus.toUpperCase() === 'L') displayStatus = 'Late';
-
-                              const s = rawStatus.toUpperCase();
-                              let bg = '#fef2f2';
-                              let color = '#ef4444';
-                              let border = '#fee2e2';
-
-                              if (s.includes('PRESENT') || s === 'P' || s.includes('IN OFFICE') || s.includes('IN-OFFICE')) {
-                                bg = '#f1f5f9';
-                                color = '#000000';
-                                border = '#cbd5e1';
-                              } else if (s.includes('LATE') || s === 'L') {
-                                bg = '#fffbeb';
-                                color = '#d97706';
-                                border = '#f59e0b';
-                              } else if (s.includes('WO') || s.includes('OFF')) {
-                                bg = '#f1f5f9';
-                                color = '#64748b';
-                                border = '#cbd5e1';
-                              } else if (s.includes('NH') || s.includes('HOLIDAY')) {
-                                bg = '#eff6ff';
-                                color = '#3b82f6';
-                                border = '#dbeafe';
-                              } else if (s.includes('HALF') || s === 'HD') {
-                                bg = '#fff7ed';
-                                color = '#f97316';
-                                border = '#fed7aa';
-                              }
-
-                              return (
-                                <div style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  padding: '6px 14px',
-                                  borderRadius: '100px',
-                                  background: bg,
-                                  border: `1.5px solid ${border}`,
-                                  color: color,
-                                  fontWeight: '950'
-                                }}>
-                                  {displayStatus}
-                                </div>
-                              );
-                            }
-
-                            // Fallback if no backend status is set
-                            const hasValidPunchIn = todayPunchIn && todayPunchIn !== '----' && todayPunchIn !== '--:--' && todayPunchIn !== '00:00';
-                            let fallbackStatus = hasValidPunchIn ? 'In Office' : 'Absent';
-                            if (!hasValidPunchIn) {
-                               fallbackStatus = 'Absent';
-                            }
-
-                            const isPresent = fallbackStatus === 'In Office' || fallbackStatus.toUpperCase().includes('PRESENT');
-
-                            return (
-                              <div style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '6px 14px',
-                                borderRadius: '100px',
-                                background: isPresent ? '#f1f5f9' : '#fef2f2',
-                                border: `1.5px solid ${isPresent ? '#cbd5e1' : '#fee2e2'}`,
-                                color: isPresent ? '#000000' : '#ef4444',
-                                fontWeight: '950'
-                              }}>
-                                {fallbackStatus}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '24px', border: '1.5px solid #f1f5f9' }}>
-                    <p style={{ color: '#64748b', fontWeight: '900' }}>No matching records found.</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #f1f5f9' }}><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Employee</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>ID</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Date</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Punch In</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Punch Out</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Work Hrs</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Status</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>IN Location</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>OUT Location</th></tr>
-                </thead>
-                <tbody>
-                  {displayedEmployees.length > 0 ? (
-                    displayedEmployees.map((emp, idx) => {
-                      const today = new Date();
-                      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                      const logsForEmp = (attendanceLogs || [])
-                        .filter(l => {
-                          if (!l) return false;
-                          const logId = String(l?.user_id || l?.Empcode || l?.EmpID || l?.userId || l?.UserId || '').trim();
-                          const empId = String(emp?.id || '').trim();
-                          const logDate = parseLogDate(l);
-                          return empId && logId && (logId === empId) && (logDate >= fromDate && logDate <= toDate);
-                        })
-                        .sort((a, b) => new Date(a?.created_at || a?.punch_time || 0) - new Date(b?.created_at || b?.punch_time || 0));
-
-                      // 1. Group logs by date to prevent cross-day data leaking
-                      const groupedByDate = (logsForEmp || []).reduce((acc, log) => {
-                        const d = parseLogDate(log);
-                        if (d) {
-                          if (!acc[d]) acc[d] = [];
-                          acc[d].push(log);
-                        }
-                        return acc;
-                      }, {});
-
-                      // 2. Get the latest date available in the range for this employee
-                      const dates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
-                      const latestDate = dates[0];
-                      const latestDayLogs = groupedByDate[latestDate] || [];
-
-                      // 3. Sort logs within THAT day only
-                      const sortedDayLogs = latestDayLogs.sort((a, b) => new Date(a.created_at || a.punch_time || 0) - new Date(b.created_at || b.punch_time || 0));
-
-                      const checkHasPunchOut = (record) => {
-                        if (!record) return false;
-                        const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric;
-                        return outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00';
-                      };
-                      const dayPunchInLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_IN' || (!log.remark?.includes('OUT') && !checkHasPunchOut(log))) || sortedDayLogs[0];
-                      const dayPunchOutLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_OUT' || (checkHasPunchOut(log) && log.remark !== 'MANUAL_EDIT_IN'));
-                      const hasDayPunchOut = !!dayPunchOutLog;
-                      const extractTime = (log) => {
-                        if (!log) return '----';
-                        const t = log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime || log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric;
-                        if (t && t !== '----' && t !== '--:--' && t !== '00:00' && t !== '00:00:00') return t;
-                        if (log.created_at) {
-                          const d = new Date(log.created_at);
-                          if (!isNaN(d.getTime())) return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-                        }
-                        return '----';
-                      };
-
-                      const punchIn = extractTime(dayPunchInLog);
-                      const punchOut = (latestDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog ? extractTime(dayPunchOutLog) : '----');
-
-                      const log = sortedDayLogs[0] ? {
-                        ...sortedDayLogs[0],
-                        punch_date: latestDate,
-                        in_time: punchIn,
-                        out_time: punchOut,
-                        in_location: dayPunchInLog?.punchin_location || dayPunchInLog?.in_location || '----',
-                        out_location: (latestDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog?.punchout_location || dayPunchOutLog?.out_location || '----'),
-                        work_hrs: (latestDate === todayStr && !hasDayPunchOut) ? '00:00' : (dayPunchOutLog?.work_hrs || sortedDayLogs[0]?.work_hrs || '00:00')
-                      } : null;
-
-                      const getCleanAttendance = (record) => {
-                        if (!record) return { displayInTime: '----', displayOutTime: '----', displayWorkTime: '00:00' };
-                        const recordDate = record?.punch_date || record?.date || record?.created_at || '';
-                        const isMissing = (t) => !t || t === '--:--' || t === '00:00' || t === 'null' || t === '----';
-                        const rawIn = record?.in_time || record?.INTime;
-                        const rawOut = record?.out_time || record?.OUTTime || record?.PunchOut;
-                        return {
-                          displayInTime: isMissing(rawIn) ? '----' : rawIn,
-                          displayOutTime: isMissing(rawOut) ? '----' : rawOut,
-                          displayWorkTime: getWorkHrs(rawIn, rawOut, recordDate)
+                        const checkHasPunchOut = (record) => {
+                          if (!record) return false;
+                          const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric;
+                          return outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00';
                         };
-                      };
-                      const cleanLog = getCleanAttendance(log);
+                        const dayPunchInLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_IN' || (!log.remark?.includes('OUT') && !checkHasPunchOut(log))) || sortedDayLogs[0];
+                        const dayPunchOutLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_OUT' || (checkHasPunchOut(log) && log.remark !== 'MANUAL_EDIT_IN'));
+                        const hasDayPunchOut = !!dayPunchOutLog;
+                        const extractTime = (log, isOut = false) => {
+                          if (!log) return '----';
+                          const t = isOut
+                            ? (log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric || log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime)
+                            : (log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime || log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric);
+                          if (t && t !== '----' && t !== '--:--' && t !== '00:00' && t !== '00:00:00') return t;
+                          if (log.created_at) {
+                            const d = new Date(log.created_at);
+                            if (!isNaN(d.getTime())) return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                          }
+                          return '----';
+                        };
 
+                        const punchIn = extractTime(dayPunchInLog, false);
+                        const punchOut = logsForEmp.length > 0 ? ((targetDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog ? extractTime(dayPunchOutLog, true) : '----')) : '----';
+                        const pDate = targetDate;
+                        const workHrs = logsForEmp.length > 0 ? ((targetDate === todayStr && !hasDayPunchOut) ? '00:00' : (dayPunchOutLog?.work_hrs || sortedDayLogs[0]?.work_hrs || '00:00')) : '00:00';
 
-                      return (
-                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'white' : '#f8fafc' }}>
-                          <td
-                            onClick={() => navigate(`/attendance/detail/${emp.id}`)}
-                            style={{ padding: '20px', fontWeight: '800', color: '#1e293b', cursor: 'pointer' }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#eef2ff', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '950' }}>
-                                {String(emp?.name || emp?.user_name || 'U').charAt(0).toUpperCase()}
+                        const log = sortedDayLogs[0] ? {
+                          ...sortedDayLogs[0],
+                          punch_date: targetDate,
+                          in_time: punchIn,
+                          out_time: punchOut,
+                          in_location: dayPunchInLog?.punchin_location || dayPunchInLog?.in_location || '----',
+                          out_location: (targetDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog?.punchout_location || dayPunchOutLog?.out_location || '----'),
+                          work_hrs: workHrs
+                        } : null;
+
+                        return (
+                          <div key={idx} style={{ background: 'white', borderRadius: '24px', padding: '20px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#eef2ff', color: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: '950' }}>
+                                {String(emp.name || emp.user_name || 'U').charAt(0).toUpperCase()}
                               </div>
-                              <span style={{ borderBottom: '1px solid transparent' }} onMouseOver={e => e.currentTarget.style.borderBottom = '1px solid #1e293b'} onMouseOut={e => e.currentTarget.style.borderBottom = '1px solid transparent'}>
-                                {emp?.name || emp?.user_name || 'Unknown'}
-                              </span>
+                              <div
+                                onClick={() => navigate(`/attendance/detail/${emp.id}`)}
+                                style={{ flex: 1, cursor: 'pointer' }}
+                              >
+                                <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>{emp.name || emp.user_name || 'Unknown'}</div>
+                                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '700' }}>#{emp.id} • {emp.role || 'Employee'}</div>
+                              </div>
+                              <button
+                                onClick={() => navigate(`/attendance/detail/${emp.id}`)}
+                                style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#3b82f6' }}
+                              >
+                                <Info size={18} />
+                              </button>
                             </div>
-                          </td>
-                          <td style={{ padding: '20px', fontWeight: '700', color: '#64748b' }}>#{emp?.id}</td>
-                          <td style={{ padding: '20px', fontWeight: '700', color: '#475569' }}>
-                            {(() => {
-                              const dateStr = log ? (log.punch_date || log.date || '').split('T')[0] : (fromDate === toDate ? fromDate : '----');
-                              if (dateStr === '----' || !dateStr) return dateStr;
-                              const d = new Date(dateStr);
-                              if (isNaN(d.getTime())) return dateStr;
-                              const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
-                              const parts = dateStr.split('-');
-                              const formattedDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : dateStr;
-                              return `${formattedDate} (${dayName})`;
-                            })()}
-                          </td>
-                          <td style={{ padding: '20px', fontWeight: '900', color: '#1e293b' }}>
-                            {cleanLog.displayInTime}
-                          </td>
-                          <td style={{ padding: '20px', fontWeight: '900', color: '#1e293b' }}>
-                            {cleanLog.displayOutTime}
-                          </td>
-                          <td style={{ padding: '20px', fontWeight: '800', color: '#6366f1' }}>
-                            {cleanLog.displayWorkTime}
-                          </td>
-                          <td style={{ padding: '20px' }}>
-                            {(() => {
-                              const todayPunchIn = log?.in_time || log?.INTime || log?.PunchIn || log?.punch_time;
-                              const todayPunchOut = log?.out_time || log?.OUTTime || log?.PunchOut || log?.punch_time_out || log?.out_time_biometric;
-                              const pIn = parseTimeStr(todayPunchIn);
-                              const pOut = parseTimeStr(todayPunchOut);
-                              const isHalfDayTime = (pIn !== -1 && pIn > (13 * 60 + 30)) || (pOut !== -1 && pOut >= (14 * 60 + 30) && pOut < (17 * 60));
-                              const rawStatus = isHalfDayTime ? 'HALF_DAY' : (log?.status || log?.Status || '').trim();
-                              if (rawStatus) {
-                                let displayStatus = rawStatus;
-                                if (rawStatus.toUpperCase() === 'PRESENT' || rawStatus.toUpperCase() === 'IN OFFICE' || rawStatus.toUpperCase() === 'IN-OFFICE') displayStatus = 'In Office';
-                                else if (rawStatus.toUpperCase() === 'ABSENT') displayStatus = 'Absent';
-                                else if (rawStatus.toUpperCase() === 'HALF_DAY' || rawStatus.toUpperCase() === 'HD') displayStatus = 'Half Day';
-                                else if (rawStatus.toUpperCase() === 'LATE' || rawStatus.toUpperCase() === 'L') displayStatus = 'Late';
 
-                                const s = rawStatus.toUpperCase();
-                                let bg = '#fef2f2';
-                                let color = '#ef4444';
-                                let border = '#fee2e2';
+                            <div style={{ height: '1px', background: '#f1f5f9', margin: '0 -20px 16px' }}></div>
 
-                                if (s.includes('PRESENT') || s === 'P' || s.includes('IN OFFICE') || s.includes('IN-OFFICE')) {
-                                  bg = '#f1f5f9';
-                                  color = '#000000';
-                                  border = '#cbd5e1';
-                                } else if (s.includes('LATE') || s === 'L') {
-                                  bg = '#fffbeb';
-                                  color = '#d97706';
-                                  border = '#f59e0b';
-                                } else if (s.includes('WO') || s.includes('OFF')) {
-                                  bg = '#f1f5f9';
-                                  color = '#64748b';
-                                  border = '#cbd5e1';
-                                } else if (s.includes('NH') || s.includes('HOLIDAY')) {
-                                  bg = '#eff6ff';
-                                  color = '#3b82f6';
-                                  border = '#dbeafe';
-                                } else if (s.includes('HALF') || s === 'HD') {
-                                  bg = '#fff7ed';
-                                  color = '#f97316';
-                                  border = '#fed7aa';
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                              <div>
+                                <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Date</div>
+                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b' }}>{pDate ? new Date(pDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '----'}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Hours</div>
+                                <div style={{ fontSize: '14px', fontWeight: '950', color: '#1e293b' }}>
+                                  {workHrs?.replace(/\s:\s/g, ':') || '00:00'} <span style={{ fontSize: '10px', color: '#94a3b8' }}>HRS</span>
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Punch In</div>
+                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a' }}>{punchIn}</div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Punch Out</div>
+                                <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a' }}>{punchOut}</div>
+                              </div>
+                            </div>
+
+                            <div style={{ marginBottom: '20px' }}>
+                              <div style={{ fontSize: '10px', fontWeight: '950', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Remark</div>
+                              <div style={{ fontSize: '13px', fontWeight: '600', color: '#64748b', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                                {log?.remarks || log?.rm_remarks || log?.pm_remarks || '-'}
+                              </div>
+                            </div>
+
+                            <div style={{ height: '1px', background: '#f1f5f9', margin: '0 -20px 16px' }}></div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '11px', fontWeight: '700', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <MapPin size={12} /> {log?.in_location || log?.location || '----'}
+                              </div>
+                              {(() => {
+                                const todayPunchIn = log?.in_time;
+                                const todayPunchOut = log?.out_time;
+                                const pIn = parseTimeStr(todayPunchIn);
+                                const pOut = parseTimeStr(todayPunchOut);
+                                const rawStatus = (log?.status || log?.Status || '').trim();
+                                if (rawStatus) {
+                                  let displayStatus = rawStatus;
+                                  if (rawStatus.toUpperCase() === 'PRESENT' || rawStatus.toUpperCase() === 'IN OFFICE' || rawStatus.toUpperCase() === 'IN-OFFICE') displayStatus = 'In Office';
+                                  else if (rawStatus.toUpperCase() === 'ABSENT') displayStatus = 'Absent';
+                                  else if (rawStatus.toUpperCase() === 'HALF_DAY' || rawStatus.toUpperCase() === 'HD') displayStatus = 'Half Day';
+                                  else if (rawStatus.toUpperCase() === 'LATE' || rawStatus.toUpperCase() === 'L') displayStatus = 'Late';
+
+                                  const s = rawStatus.toUpperCase();
+                                  let bg = '#fef2f2';
+                                  let color = '#ef4444';
+                                  let border = '#fee2e2';
+
+                                  if (s.includes('PRESENT') || s === 'P' || s.includes('IN OFFICE') || s.includes('IN-OFFICE')) {
+                                    bg = '#f1f5f9';
+                                    color = '#000000';
+                                    border = '#cbd5e1';
+                                  } else if (s.includes('LATE') || s === 'L') {
+                                    bg = '#fffbeb';
+                                    color = '#d97706';
+                                    border = '#f59e0b';
+                                  } else if (s.includes('WO') || s.includes('OFF')) {
+                                    bg = '#f1f5f9';
+                                    color = '#64748b';
+                                    border = '#cbd5e1';
+                                  } else if (s.includes('NH') || s.includes('HOLIDAY')) {
+                                    bg = '#eff6ff';
+                                    color = '#3b82f6';
+                                    border = '#dbeafe';
+                                  } else if (s.includes('HALF') || s === 'HD') {
+                                    bg = '#fff7ed';
+                                    color = '#f97316';
+                                    border = '#fed7aa';
+                                  }
+
+                                  return (
+                                    <div style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
+                                      padding: '6px 14px',
+                                      borderRadius: '100px',
+                                      background: bg,
+                                      border: `1.5px solid ${border}`,
+                                      color: color,
+                                      fontWeight: '950'
+                                    }}>
+                                      {displayStatus}
+                                    </div>
+                                  );
                                 }
+
+                                // Fallback if no backend status is set
+                                const hasValidPunchIn = todayPunchIn && todayPunchIn !== '----' && todayPunchIn !== '--:--' && todayPunchIn !== '00:00';
+                                let fallbackStatus = hasValidPunchIn ? 'In Office' : 'Absent';
+                                if (!hasValidPunchIn) {
+                                  fallbackStatus = 'Absent';
+                                }
+
+                                const isPresent = fallbackStatus === 'In Office' || fallbackStatus.toUpperCase().includes('PRESENT');
 
                                 return (
                                   <div style={{
                                     display: 'inline-flex',
-                                    padding: '6px 12px',
-                                    borderRadius: '8px',
-                                    background: bg,
-                                    border: `1.5px solid ${border}`,
-                                    color: color,
-                                    fontSize: '11px',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    padding: '6px 14px',
+                                    borderRadius: '100px',
+                                    background: isPresent ? '#f1f5f9' : '#fef2f2',
+                                    border: `1.5px solid ${isPresent ? '#cbd5e1' : '#fee2e2'}`,
+                                    color: isPresent ? '#000000' : '#ef4444',
                                     fontWeight: '950'
                                   }}>
-                                    {displayStatus}
+                                    {fallbackStatus}
                                   </div>
                                 );
-                              }
+                              })()}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '24px', border: '1.5px solid #f1f5f9' }}>
+                        <p style={{ color: '#64748b', fontWeight: '900' }}>No matching records found.</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '900px' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #f1f5f9' }}><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Employee</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>ID</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Date</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Punch In</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Punch Out</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Work Hrs</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>Status</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>IN Location</th><th style={{ padding: '24px 20px', fontSize: '11px', fontWeight: '950', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>OUT Location</th></tr>
+                    </thead>
+                    <tbody>
+                      {flattenedRows.length > 0 ? (
+                        flattenedRows.map((rowItem, idx) => {
+                          const emp = rowItem.emp;
+                          const targetDate = rowItem.targetDate;
+                          const today = new Date();
+                          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                          const logsForEmp = (attendanceLogs || [])
+                            .filter(l => {
+                              if (!l) return false;
+                              const logId = String(l?.user_id || l?.Empcode || l?.EmpID || l?.userId || l?.UserId || '').trim();
+                              const empId = String(emp?.id || '').trim();
+                              const logDate = parseLogDate(l);
+                              return empId && logId && (logId === empId) && (logDate === targetDate);
+                            })
+                            .sort((a, b) => new Date(a?.created_at || a?.punch_time || 0) - new Date(b?.created_at || b?.punch_time || 0));
 
-                              // Fallback if no backend status is set
-                              const hasPunchIn = log && cleanLog.displayInTime !== '----';
-                              return (
-                                <div style={{
-                                  display: 'inline-flex',
-                                  padding: '6px 12px',
-                                  borderRadius: '8px',
-                                  background: hasPunchIn ? '#f1f5f9' : '#fef2f2',
-                                  border: `1.5px solid ${hasPunchIn ? '#cbd5e1' : '#fee2e2'}`,
-                                  color: hasPunchIn ? '#000000' : '#ef4444',
-                                  fontSize: '11px',
-                                  fontWeight: '950'
-                                }}>
-                                  {hasPunchIn ? 'In Office' : 'Absent'}
+                          const sortedDayLogs = logsForEmp;
+
+                          const checkHasPunchOut = (record) => {
+                            if (!record) return false;
+                            const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric;
+                            return outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00';
+                          };
+                          const dayPunchInLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_IN' || (!log.remark?.includes('OUT') && !checkHasPunchOut(log))) || sortedDayLogs[0];
+                          const dayPunchOutLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_OUT' || (checkHasPunchOut(log) && log.remark !== 'MANUAL_EDIT_IN'));
+                          const hasDayPunchOut = !!dayPunchOutLog;
+                          const extractTime = (log, isOut = false) => {
+                            if (!log) return '----';
+                            const t = isOut
+                              ? (log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric || log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime)
+                              : (log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime || log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric);
+                            if (t && t !== '----' && t !== '--:--' && t !== '00:00' && t !== '00:00:00') return t;
+                            if (log.created_at) {
+                              const d = new Date(log.created_at);
+                              if (!isNaN(d.getTime())) return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                            }
+                            return '----';
+                          };
+
+                          const punchIn = extractTime(dayPunchInLog, false);
+                          const punchOut = logsForEmp.length > 0 ? ((targetDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog ? extractTime(dayPunchOutLog, true) : '----')) : '----';
+                          const pDate = targetDate;
+                          const workHrs = logsForEmp.length > 0 ? ((targetDate === todayStr && !hasDayPunchOut) ? '00:00' : (dayPunchOutLog?.work_hrs || sortedDayLogs[0]?.work_hrs || '00:00')) : '00:00';
+
+                          const log = sortedDayLogs[0] ? {
+                            ...sortedDayLogs[0],
+                            punch_date: targetDate,
+                            in_time: punchIn,
+                            out_time: punchOut,
+                            in_location: dayPunchInLog?.punchin_location || dayPunchInLog?.in_location || '----',
+                            out_location: (targetDate === todayStr && !hasDayPunchOut) ? '----' : (dayPunchOutLog?.punchout_location || dayPunchOutLog?.out_location || '----'),
+                            work_hrs: workHrs
+                          } : null;
+
+                          const getCleanAttendance = (record) => {
+                            if (!record) return { displayInTime: '----', displayOutTime: '----', displayWorkTime: '00:00' };
+                            const recordDate = record?.punch_date || record?.date || record?.created_at || '';
+                            const isMissing = (t) => !t || t === '--:--' || t === '00:00' || t === 'null' || t === '----';
+                            const rawIn = record?.in_time || record?.INTime;
+                            const rawOut = record?.out_time || record?.OUTTime || record?.PunchOut;
+                            return {
+                              displayInTime: isMissing(rawIn) ? '----' : rawIn,
+                              displayOutTime: isMissing(rawOut) ? '----' : rawOut,
+                              displayWorkTime: getWorkHrs(rawIn, rawOut, recordDate)
+                            };
+                          };
+                          const cleanLog = getCleanAttendance(log);
+
+
+                          return (
+                            <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? 'white' : '#f8fafc' }}>
+                              <td
+                                onClick={() => navigate(`/attendance/detail/${emp.id}`)}
+                                style={{ padding: '20px', fontWeight: '800', color: '#1e293b', cursor: 'pointer' }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#eef2ff', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '950' }}>
+                                    {String(emp?.name || emp?.user_name || 'U').charAt(0).toUpperCase()}
+                                  </div>
+                                  <span style={{ borderBottom: '1px solid transparent' }} onMouseOver={e => e.currentTarget.style.borderBottom = '1px solid #1e293b'} onMouseOut={e => e.currentTarget.style.borderBottom = '1px solid transparent'}>
+                                    {emp?.name || emp?.user_name || 'Unknown'}
+                                  </span>
                                 </div>
-                              );
-                            })()}
-                          </td>
-                          <td style={{ padding: '20px', fontSize: '12px', color: '#64748b', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={log?.in_location || '----'}>
-                            {log?.in_location || '----'}
-                          </td>
-                          <td style={{ padding: '20px', fontSize: '12px', color: '#64748b', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={log?.out_location || '----'}>
-                            {log?.out_location || '----'}
+                              </td>
+                              <td style={{ padding: '20px', fontWeight: '700', color: '#64748b' }}>#{emp?.id}</td>
+                              <td style={{ padding: '20px', fontWeight: '700', color: '#475569' }}>
+                                {(() => {
+                                  const dateStr = log ? (log.punch_date || log.date || '').split('T')[0] : (fromDate === toDate ? fromDate : '----');
+                                  if (dateStr === '----' || !dateStr) return dateStr;
+                                  const d = new Date(dateStr);
+                                  if (isNaN(d.getTime())) return dateStr;
+                                  const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+                                  const parts = dateStr.split('-');
+                                  const formattedDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : dateStr;
+                                  return `${formattedDate} (${dayName})`;
+                                })()}
+                              </td>
+                              <td style={{ padding: '20px', fontWeight: '900', color: '#1e293b' }}>
+                                {cleanLog.displayInTime}
+                              </td>
+                              <td style={{ padding: '20px', fontWeight: '900', color: '#1e293b' }}>
+                                {cleanLog.displayOutTime}
+                              </td>
+                              <td style={{ padding: '20px', fontWeight: '800', color: '#6366f1' }}>
+                                {cleanLog.displayWorkTime}
+                              </td>
+                              <td style={{ padding: '20px' }}>
+                                {(() => {
+                                  const todayPunchIn = log?.in_time || log?.INTime || log?.PunchIn || log?.punch_time;
+                                  const todayPunchOut = log?.out_time || log?.OUTTime || log?.PunchOut || log?.punch_time_out || log?.out_time_biometric;
+                                  const pIn = parseTimeStr(todayPunchIn);
+                                  const pOut = parseTimeStr(todayPunchOut);
+                                  const rawStatus = (log?.status || log?.Status || '').trim();
+                                  if (rawStatus) {
+                                    let displayStatus = rawStatus;
+                                    if (rawStatus.toUpperCase() === 'PRESENT' || rawStatus.toUpperCase() === 'IN OFFICE' || rawStatus.toUpperCase() === 'IN-OFFICE') displayStatus = 'In Office';
+                                    else if (rawStatus.toUpperCase() === 'ABSENT') displayStatus = 'Absent';
+                                    else if (rawStatus.toUpperCase() === 'HALF_DAY' || rawStatus.toUpperCase() === 'HD') displayStatus = 'Half Day';
+                                    else if (rawStatus.toUpperCase() === 'LATE' || rawStatus.toUpperCase() === 'L') displayStatus = 'Late';
+
+                                    const s = rawStatus.toUpperCase();
+                                    let bg = '#fef2f2';
+                                    let color = '#ef4444';
+                                    let border = '#fee2e2';
+
+                                    if (s.includes('PRESENT') || s === 'P' || s.includes('IN OFFICE') || s.includes('IN-OFFICE')) {
+                                      bg = '#f1f5f9';
+                                      color = '#000000';
+                                      border = '#cbd5e1';
+                                    } else if (s.includes('LATE') || s === 'L') {
+                                      bg = '#fffbeb';
+                                      color = '#d97706';
+                                      border = '#f59e0b';
+                                    } else if (s.includes('WO') || s.includes('OFF')) {
+                                      bg = '#f1f5f9';
+                                      color = '#64748b';
+                                      border = '#cbd5e1';
+                                    } else if (s.includes('NH') || s.includes('HOLIDAY')) {
+                                      bg = '#eff6ff';
+                                      color = '#3b82f6';
+                                      border = '#dbeafe';
+                                    } else if (s.includes('HALF') || s === 'HD') {
+                                      bg = '#fff7ed';
+                                      color = '#f97316';
+                                      border = '#fed7aa';
+                                    }
+
+                                    return (
+                                      <div style={{
+                                        display: 'inline-flex',
+                                        padding: '6px 12px',
+                                        borderRadius: '8px',
+                                        background: bg,
+                                        border: `1.5px solid ${border}`,
+                                        color: color,
+                                        fontSize: '11px',
+                                        fontWeight: '950'
+                                      }}>
+                                        {displayStatus}
+                                      </div>
+                                    );
+                                  }
+
+                                  // Fallback if no backend status is set
+                                  const hasPunchIn = log && cleanLog.displayInTime !== '----';
+                                  return (
+                                    <div style={{
+                                      display: 'inline-flex',
+                                      padding: '6px 12px',
+                                      borderRadius: '8px',
+                                      background: hasPunchIn ? '#f1f5f9' : '#fef2f2',
+                                      border: `1.5px solid ${hasPunchIn ? '#cbd5e1' : '#fee2e2'}`,
+                                      color: hasPunchIn ? '#000000' : '#ef4444',
+                                      fontSize: '11px',
+                                      fontWeight: '950'
+                                    }}>
+                                      {hasPunchIn ? 'In Office' : 'Absent'}
+                                    </div>
+                                  );
+                                })()}
+                              </td>
+                              <td style={{ padding: '20px', fontSize: '12px', color: '#64748b', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={log?.in_location || '----'}>
+                                {log?.in_location || '----'}
+                              </td>
+                              <td style={{ padding: '20px', fontSize: '12px', color: '#64748b', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={log?.out_location || '----'}>
+                                {log?.out_location || '----'}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="9" style={{ padding: '60px', textAlign: 'center', color: '#64748b', fontWeight: '800' }}>
+                            Loading.....
                           </td>
                         </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan="9" style={{ padding: '60px', textAlign: 'center', color: '#64748b', fontWeight: '800' }}>
-                        Loading.....
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            )}
-          </section>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </section>
+            );
+          })()}
         </div>
 
 

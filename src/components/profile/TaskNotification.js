@@ -100,7 +100,7 @@ const TaskNotification = ({ onOpenTask }) => {
 
   const isMobile = winWidth < 768;
 
-  const markAsRead = (id) => {
+  const markAsRead = async (id) => {
     setReadIds(prev => {
       const next = new Set(prev);
       next.add(id);
@@ -108,6 +108,16 @@ const TaskNotification = ({ onOpenTask }) => {
       localStorage.setItem(`read_hr_notifs_${uid}`, JSON.stringify([...next].slice(-100)));
       return next;
     });
+    try {
+      if (user?.token) {
+        await fetch(API_ENDPOINTS.NOTIFICATION_MARK_READ(id), {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${user.token}` }
+        });
+      }
+    } catch (err) {
+      console.error('Failed to mark read', err);
+    }
   };
 
   // Auto-dismiss visited notifications
@@ -331,7 +341,7 @@ const TaskNotification = ({ onOpenTask }) => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     const allIds = notifications.map(n => n.id);
                     setDismissedIds(prev => new Set([...prev, ...allIds]));
                     setReadIds(prev => {
@@ -342,6 +352,17 @@ const TaskNotification = ({ onOpenTask }) => {
                       return next;
                     });
                     setHasUnread(false);
+                    try {
+                      if (user?.token) {
+                        const uid = user?.employee_id || user?.id || user?.EmpID;
+                        await fetch(API_ENDPOINTS.NOTIFICATIONS_READ_ALL(uid), {
+                          method: 'PUT',
+                          headers: { 'Authorization': `Bearer ${user.token}` }
+                        });
+                      }
+                    } catch (err) {
+                      console.error('Failed to mark all read', err);
+                    }
                   }}
                   style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '10px', padding: '6px 12px', color: 'white', cursor: 'pointer', fontSize: '10px', fontWeight: '1000' }}
                 >

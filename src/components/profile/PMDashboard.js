@@ -1186,7 +1186,6 @@ export default function PMDashboard() {
                         return `${day}-${month}-${year}`;
                       })() : (holiday.date || '')}
                     </div>
-                    <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '800' }}>{holiday.d ? holiday.d.getFullYear() : '2026'}</div>
                   </div>
                 </div>
               )) : (

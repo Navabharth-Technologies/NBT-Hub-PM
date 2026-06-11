@@ -180,8 +180,13 @@ function App() {
         <ThreadProvider>
           <AppRoutes />
           <style>{`
-            html, body {
-              overflow: auto;
+            html {
+              overflow-y: auto;
+              overflow-x: hidden;
+            }
+            body {
+              overflow-y: visible;
+              overflow-x: hidden;
               width: 100%;
               position: static;
               margin: 0;

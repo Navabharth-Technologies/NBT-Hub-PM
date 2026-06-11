@@ -197,7 +197,7 @@ export default function AssetsManagement() {
           fetchCerts(API_ENDPOINTS.SERVICE_CERTIFICATES_ALT)
         ]);
 
-        const combinedCerts = [...certs1, ...certs2];
+        const combinedCerts = [...certs1, ...certs2].filter(c => c.purpose === 'Professional Asset Declaration');
         console.log('Combined Certificate Data:', combinedCerts);
 
         combinedCerts.forEach(c => {
@@ -759,29 +759,45 @@ export default function AssetsManagement() {
     });
   }, [employees, assets, searchTerm, selectedDept]);
 
+  const availableStockList = React.useMemo(() => {
+    const assignedLaptops = new Set(Object.values(assets).map(a => (a.laptop_details || '').trim()).filter(Boolean));
+    return stockList.filter(item => {
+      const details = (item.raw?.laptop_details || '').trim();
+      if (details && assignedLaptops.has(details)) return false;
+      return true;
+    });
+  }, [stockList, assets]);
+
   // Helper: check if a DB column value counts as 'Yes'
   const isYes = (val) => val === 'Yes' || val === 1 || val === '1' || val === true;
 
-  // Compute component counts directly from stockList using exact DB column names and all common alternate keys
+  // Compute component counts directly from availableStockList using exact DB column names and all common alternate keys
   const componentCounts = {
-    laptops: stockList.filter(i => !!i.raw?.laptop_details).length,
-    mouse: stockList.filter(i => isYes(i.raw?.mouse) || isYes(i.raw?.mouse_unit) || isYes(i.raw?.mouse_status)).length,
-    keyboard: stockList.filter(i => isYes(i.raw?.keyboard) || isYes(i.raw?.keyboard_unit) || isYes(i.raw?.keyboard_status)).length,
-    laptop_stand: stockList.filter(i => isYes(i.raw?.laptop_stand) || isYes(i.raw?.stand) || isYes(i.raw?.stand_unit)).length,
-    ruf_pad: stockList.filter(i => isYes(i.raw?.ruf_pad) || isYes(i.raw?.rufpad) || isYes(i.raw?.ruf_pad_unit) || isYes(i.raw?.ref_pad)).length,
-    pendrive: stockList.filter(i => isYes(i.raw?.pendrive) || isYes(i.raw?.pendrive_unit)).length,
-    mobile: stockList.filter(i => isYes(i.raw?.mobile) || isYes(i.raw?.mobile_unit) || isYes(i.raw?.company_mobile) || isYes(i.raw?.mobile_handset)).length,
-    camera: stockList.filter(i => isYes(i.raw?.camera) || isYes(i.raw?.camera_unit) || isYes(i.raw?.webcam) || isYes(i.raw?.external_camera)).length,
-    earphone_headphone: stockList.filter(i => isYes(i.raw?.earphone_headphone) || isYes(i.raw?.earphone) || isYes(i.raw?.headphone) || isYes(i.raw?.earphones) || isYes(i.raw?.headphones) || isYes(i.raw?.earphone_unit) || isYes(i.raw?.headphone_unit)).length,
-    tablet: stockList.filter(i => isYes(i.raw?.tablet) || isYes(i.raw?.tablet_unit)).length,
+    laptops: availableStockList.filter(i => !!i.raw?.laptop_details).length,
+    mouse: availableStockList.filter(i => isYes(i.raw?.mouse) || isYes(i.raw?.mouse_unit) || isYes(i.raw?.mouse_status)).length,
+    keyboard: availableStockList.filter(i => isYes(i.raw?.keyboard) || isYes(i.raw?.keyboard_unit) || isYes(i.raw?.keyboard_status)).length,
+    laptop_stand: availableStockList.filter(i => isYes(i.raw?.laptop_stand) || isYes(i.raw?.stand) || isYes(i.raw?.stand_unit)).length,
+    ruf_pad: availableStockList.filter(i => isYes(i.raw?.ruf_pad) || isYes(i.raw?.rufpad) || isYes(i.raw?.ruf_pad_unit) || isYes(i.raw?.ref_pad)).length,
+    pendrive: availableStockList.filter(i => isYes(i.raw?.pendrive) || isYes(i.raw?.pendrive_unit)).length,
+    mobile: availableStockList.filter(i => isYes(i.raw?.mobile) || isYes(i.raw?.mobile_unit) || isYes(i.raw?.company_mobile) || isYes(i.raw?.mobile_handset)).length,
+    camera: availableStockList.filter(i => isYes(i.raw?.camera) || isYes(i.raw?.camera_unit) || isYes(i.raw?.webcam) || isYes(i.raw?.external_camera)).length,
+    earphone_headphone: availableStockList.filter(i => isYes(i.raw?.earphone_headphone) || isYes(i.raw?.earphone) || isYes(i.raw?.headphone) || isYes(i.raw?.earphones) || isYes(i.raw?.headphones) || isYes(i.raw?.earphone_unit) || isYes(i.raw?.headphone_unit)).length,
+    tablet: availableStockList.filter(i => isYes(i.raw?.tablet) || isYes(i.raw?.tablet_unit)).length,
   };
 
   const categories = [
-    { key: 'laptops', name: 'Laptops', count: stockList.filter(i => !!i.raw?.laptop_details).length, icon: <Laptop size={24} />, desc: 'Workstations and developer notebooks', bg: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)', color: '#4338ca', isClickable: true },
+    { key: 'laptops', name: 'Laptops', count: availableStockList.filter(i => !!i.raw?.laptop_details).length, icon: <Laptop size={24} />, desc: 'Workstations and developer notebooks', bg: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)', color: '#4338ca', isClickable: true },
   ];
 
   return (
     <div className="assets-management-container" style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', fontFamily: "'Outfit', sans-serif" }}>
+      <style>{`
+        .assets-management-container input::placeholder,
+        .assets-management-container textarea::placeholder {
+          color: #94a3b8 !important;
+          opacity: 1 !important;
+        }
+      `}</style>
       <AppHeader />
 
       <main className="dashboard-content" style={{
@@ -810,9 +826,9 @@ export default function AssetsManagement() {
                 setForm({
                   employee_name: '', employee_id: '',
                   designation: '', joining_date: '', last_working_date: '', laptop_details: '',
-                  laptop_count: '1',
-                  mouse: '1', keyboard: '1', laptop_stand: '1', ruf_pad: '1', pendrive: '1',
-                  mobile: '1', camera: '1', earphone: '1', tablet: '1'
+                  laptop_count: '0',
+                  mouse: '0', keyboard: '0', laptop_stand: '0', ruf_pad: '0', pendrive: '0',
+                  mobile: '0', camera: '0', earphone: '0', tablet: '0'
                 });
                 setIsAddAll(true);
                 setEditModal({ show: true, employee: { is_new: true, name: '' } });
@@ -1032,7 +1048,7 @@ export default function AssetsManagement() {
 
                 {/* Stock list grid */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: '550px', overflowY: 'auto', paddingRight: '4px' }}>
-                  {stockList.filter(item => {
+                  {availableStockList.filter(item => {
                     const matchesSearch = item.name.toLowerCase().startsWith(stockSearch.toLowerCase()) ||
                       item.id.toLowerCase().startsWith(stockSearch.toLowerCase());
 
@@ -1500,22 +1516,35 @@ export default function AssetsManagement() {
                         </div>
                         <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                           <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#000000', marginBottom: '8px', paddingLeft: '4px' }}>EMPLOYEE ID</label>
+                            <input
+                              type="text"
+                              placeholder="Enter ID"
+                              value={form.employee_id}
+                              onChange={(e) => {
+                                const newId = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+                                const existingEmp = employees.find(emp => String(emp.id || emp.EmpID) === newId);
+                                if (existingEmp) {
+                                  setForm({
+                                    ...form,
+                                    employee_id: newId,
+                                    employee_name: existingEmp.name || existingEmp.employee_name || form.employee_name,
+                                    designation: existingEmp.role || existingEmp.designation || form.designation
+                                  });
+                                } else {
+                                  setForm({ ...form, employee_id: newId });
+                                }
+                              }}
+                              style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #1e3a8a', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }}
+                            />
+                          </div>
+                          <div>
                             <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#000000', marginBottom: '8px', paddingLeft: '4px' }}>EMPLOYEE NAME</label>
                             <input
                               type="text"
                               placeholder="Enter Name"
                               value={form.employee_name}
                               onChange={(e) => setForm({ ...form, employee_name: e.target.value.replace(/[^a-zA-Z\s]/g, '') })}
-                              style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.0px solid #1d2846ff', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#000000', marginBottom: '8px', paddingLeft: '4px' }}>EMPLOYEE ID</label>
-                            <input
-                              type="text"
-                              placeholder="Enter ID"
-                              value={form.employee_id}
-                              onChange={(e) => setForm({ ...form, employee_id: e.target.value.replace(/[^a-zA-Z0-9]/g, '') })}
                               style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #1e3a8a', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }}
                             />
                           </div>
@@ -1563,7 +1592,6 @@ export default function AssetsManagement() {
                     </div>
 
                     {[
-                      { key: 'laptop_count', label: 'LAPTOP COUNT', icon: <Laptop size={14} /> },
                       { key: 'mouse', label: 'MOUSE', icon: <MousePointer size={14} /> },
                       { key: 'keyboard', label: 'KEYBOARD', icon: <Keyboard size={14} /> },
                       { key: 'laptop_stand', label: 'LAPTOP STAND', icon: <Laptop size={14} /> },
@@ -1607,15 +1635,31 @@ export default function AssetsManagement() {
               {editModal.isCertificate ? (
                 /* Action Buttons for Certificate (Matches Screenshot with Manager Logic) */
                 <>
-                  {(['PENDING', 'PENDING AUDIT'].includes(editModal.certificateData?.status?.toUpperCase())) ? (
-                    <>
+                  <>
+                    <button
+                      onClick={() => handleCertificateAction('Rejected')}
+                      disabled={saving}
+                      style={{ flex: 1, padding: '18px', borderRadius: '20px', border: '2px solid #ef4444', background: 'white', color: '#ef4444', fontSize: '15px', fontWeight: '900', cursor: 'pointer', transition: '0.2s' }}
+                    >
+                      Reject Submission
+                    </button>
+                    {(editModal.certificateData?.status?.toUpperCase() === 'APPROVED') ? (
                       <button
-                        onClick={() => handleCertificateAction('Rejected')}
-                        disabled={saving}
-                        style={{ flex: 1, padding: '18px', borderRadius: '20px', border: '2px solid #ef4444', background: 'white', color: '#ef4444', fontSize: '15px', fontWeight: '900', cursor: 'pointer', transition: '0.2s' }}
+                        disabled={true}
+                        style={{
+                          flex: 2, padding: '18px', borderRadius: '22px', border: 'none',
+                          background: '#cbd5e1',
+                          color: 'white', fontSize: '16px', fontWeight: '900',
+                          cursor: 'not-allowed',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                          boxShadow: 'none',
+                          transition: '0.2s',
+                          opacity: 0.8
+                        }}
                       >
-                        Reject Submission
+                        <Sparkles size={20} /> Declaration Processed
                       </button>
+                    ) : (
                       <button
                         onClick={() => handleCertificateAction('Approved')}
                         disabled={saving}
@@ -1623,24 +1667,8 @@ export default function AssetsManagement() {
                       >
                         {saving ? 'Processing...' : <><ShieldCheck size={22} /> Approve Declaration</>}
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      disabled={true}
-                      style={{
-                        flex: 1, padding: '18px', borderRadius: '22px', border: 'none',
-                        background: '#cbd5e1',
-                        color: 'white', fontSize: '16px', fontWeight: '900',
-                        cursor: 'not-allowed',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
-                        boxShadow: 'none',
-                        transition: '0.2s',
-                        opacity: 0.8
-                      }}
-                    >
-                      <Sparkles size={20} /> Declaration Processed
-                    </button>
-                  )}
+                    )}
+                  </>
                 </>
               ) : (
                 /* Standard Footer */

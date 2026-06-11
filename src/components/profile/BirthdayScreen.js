@@ -24,7 +24,7 @@ export default function BirthdayScreen() {
         if (response.ok) {
           const data = await response.json();
           const list = Array.isArray(data) ? data : (data.data || []);
-          
+
           const today = new Date();
           const currentMonth = today.getMonth();
           const currentDay = today.getDate();
@@ -51,7 +51,7 @@ export default function BirthdayScreen() {
           const processed = list.map(emp => {
             const rawDob = emp.dob || emp.birthday || emp.date || emp.date_of_birth || emp.birthday_date;
             const dob = parseDate(rawDob);
-            
+
             let formattedDate = 'N/A';
             if (!isNaN(dob.getTime())) {
               formattedDate = dob.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: dob.getFullYear() > 1900 ? 'numeric' : undefined });
@@ -99,7 +99,7 @@ export default function BirthdayScreen() {
   }, [user]);
 
   useEffect(() => {
-    const filtered = birthdays.filter(b => 
+    const filtered = birthdays.filter(b =>
       (b.name || b.employee_name || '').toLowerCase().startsWith(searchTerm.toLowerCase())
     );
     setFilteredBirthdays(filtered);
@@ -113,14 +113,14 @@ export default function BirthdayScreen() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f0f9fa', paddingBottom: '100px' }}>
       <AppHeader />
-      
+
       <main style={{ padding: '120px 26px 40px', width: '100%', margin: '0', boxSizing: 'border-box', position: 'relative' }}>
-        <button 
-          onClick={() => navigate(-1)} 
-          style={{ 
-            position: 'absolute', left: '26px', top: '120px', 
-            background: 'white', border: 'none', width: '45px', height: '45px', 
-            borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            position: 'absolute', left: '26px', top: '120px',
+            background: 'white', border: 'none', width: '45px', height: '45px',
+            borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', boxShadow: '0 10px 20px rgba(0,0,0,0.05)', color: '#1e293b',
             transition: '0.2s transform'
           }}
@@ -137,44 +137,44 @@ export default function BirthdayScreen() {
             PASSED & UPCOMING CELEBRATIONS
           </p>
         </div>
- 
+
         <div style={{ width: '100%', margin: '0 auto' }}>
           <div style={{ position: 'relative', marginBottom: '35px' }}>
             <Search style={{ position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} size={20} />
-            <input 
-              type="text" 
-              placeholder="Search employee birthday..." 
+            <input
+              type="text"
+              placeholder="Search by name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ 
-                width: '100%', padding: '18px 18px 18px 55px', borderRadius: '20px', 
-                border: 'none', background: 'white', fontSize: '15px', 
+              style={{
+                width: '100%', padding: '18px 18px 18px 55px', borderRadius: '20px',
+                border: 'none', background: 'white', fontSize: '15px',
                 fontWeight: '600', outline: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)',
                 boxSizing: 'border-box'
-              }} 
+              }}
             />
           </div>
- 
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {loading ? (
               <div style={{ textAlign: 'center', padding: '60px', color: '#64748b', fontSize: '16px', fontWeight: '700' }}>Synchronizing Birthdays...</div>
             ) : filteredBirthdays.length > 0 ? (
               filteredBirthdays.map((item, idx) => (
-                <div key={idx} style={{ 
-                  background: 'white', borderRadius: '30px', padding: '20px 35px', 
-                  display: 'flex', alignItems: 'center', gap: '25px', 
+                <div key={idx} style={{
+                  background: 'white', borderRadius: '30px', padding: '20px 35px',
+                  display: 'flex', alignItems: 'center', gap: '25px',
                   boxShadow: '0 15px 35px -5px rgba(0,0,0,0.05)', border: '1px solid rgba(241, 245, 249, 0.8)',
                   transition: '0.3s transform'
                 }}>
-                  <div style={{ 
-                    width: '60px', height: '60px', borderRadius: '50%', 
-                    background: '#0f172a', color: 'white', display: 'flex', 
+                  <div style={{
+                    width: '60px', height: '60px', borderRadius: '50%',
+                    background: '#0f172a', color: 'white', display: 'flex',
                     alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '20px',
                     flexShrink: 0, boxShadow: '0 8px 15px rgba(15, 23, 42, 0.2)'
                   }}>
                     {getInitials(item.name || item.employee_name)}
                   </div>
-                  
+
                   <div style={{ flex: 1 }}>
                     <h3 style={{ fontSize: '18px', fontWeight: '900', color: '#1e293b', margin: '0 0 6px 0' }}>
                       {item.name || item.employee_name}
@@ -184,9 +184,9 @@ export default function BirthdayScreen() {
                       <span>{item.formattedDate}</span>
                     </div>
                   </div>
- 
-                  <div style={{ 
-                    padding: '8px 24px', borderRadius: '50px', 
+
+                  <div style={{
+                    padding: '8px 24px', borderRadius: '50px',
                     background: item.status === 'Passed' ? '#f1f5f9' : item.status === 'Today' ? '#fdf2f8' : '#eff6ff',
                     color: item.status === 'Passed' ? '#94a3b8' : item.status === 'Today' ? '#db2777' : '#2563eb',
                     fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px',
@@ -205,7 +205,7 @@ export default function BirthdayScreen() {
           </div>
         </div>
       </main>
- 
+
       <AppFooter />
     </div>
   );
