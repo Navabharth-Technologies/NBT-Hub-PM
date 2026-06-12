@@ -573,12 +573,13 @@ export default function AwardsScreen() {
                     const emp = employees.find(e => String(e.id) === String(empId) || String(e.employee_id) === String(empId) || String(e.userId) === String(empId));
 
                     let itemHistory = [];
-                    if (Array.isArray(item.history)) itemHistory = item.history;
-                    else if (Array.isArray(item.logs)) itemHistory = item.logs;
-                    else if (Array.isArray(item.records)) itemHistory = item.records;
-                    else if (Array.isArray(item.details)) itemHistory = item.details;
-                    else if (Array.isArray(item.reward_history) || Array.isArray(item.quiz_history)) {
-                        itemHistory = [...(item.reward_history || []), ...(item.quiz_history || [])];
+                    if (Array.isArray(item.history)) itemHistory = [...item.history];
+                    else if (Array.isArray(item.reward_history)) itemHistory = [...item.reward_history];
+                    else if (Array.isArray(item.logs)) itemHistory = [...item.logs];
+                    else if (Array.isArray(item.records)) itemHistory = [...item.records];
+                    
+                    if (Array.isArray(item.quiz_history)) {
+                        itemHistory = [...itemHistory, ...item.quiz_history];
                     }
 
                     return {
@@ -1073,46 +1074,26 @@ export default function AwardsScreen() {
                                             const selectedUserObj = leaderboard.find(l => String(l.id) === String(selectedHistoryUser));
 
                                             let allUserHistory = [];
+                                            const apiHistory = filteredRewards.filter(r => isSameEmployee(r.employee_id, selectedHistoryUser) && !String(r.id).startsWith('quiz-') && !String(r.reward_name).toLowerCase().includes('quiz'));
+                                            
+                                            let localQuizzes = [];
                                             if (selectedUserObj && selectedUserObj.history && selectedUserObj.history.length > 0) {
-                                                allUserHistory = [...selectedUserObj.history];
-                                            } else {
-                                                allUserHistory = filteredRewards.filter(r => isSameEmployee(r.employee_id, selectedHistoryUser));
-                                                // Remove all existing individual quiz logs to show "one complete log only"
-                                                allUserHistory = allUserHistory.filter(r => !(String(r.id).startsWith('quiz-') || String(r.reward_name).toLowerCase().includes('quiz')));
-
-                                                const totalQuizPointsFromAPI = selectedUserObj ? selectedUserObj.total_quiz_points : 0;
-
-                                                if (totalQuizPointsFromAPI > 0) {
-                                                    // Fetch newly attended quiz date for this individual
-                                                    const todayStr = new Date().toISOString();
-                                                    const isEndDateFuture = new Date(endDate || todayStr) > new Date();
-                                                    const defaultFallback = isEndDateFuture ? todayStr : (endDate || todayStr);
-
-                                                    let latestQuizDate = quizDateForSelectedUser || defaultFallback;
-
-                                                    if (!quizDateForSelectedUser) {
-                                                        const userQuizzes = quizScores.filter(q => isSameEmployee(q.employee_id || q.user_id || q.userId || q.id, selectedHistoryUser));
-
-                                                        let maxDateObj = null;
-                                                        userQuizzes.forEach(q => {
-                                                            const qdStr = q.created_at || q.completion_date || q.date;
-                                                            const qd = parseToDate(qdStr);
-                                                            if (qd && (!maxDateObj || qd > maxDateObj)) {
-                                                                maxDateObj = qd;
-                                                                latestQuizDate = qdStr;
-                                                            }
-                                                        });
-                                                    }
-
-                                                    allUserHistory.push({
-                                                        id: `quiz-synthetic-${selectedHistoryUser}`,
-                                                        reward_name: 'Quiz Excellence',
-                                                        points: totalQuizPointsFromAPI,
-                                                        created_at: latestQuizDate,
-                                                        note: 'Quiz points (Period Total)'
-                                                    });
-                                                }
+                                                localQuizzes = selectedUserObj.history.filter(r => String(r.id).startsWith('quiz-') || String(r.reward_name).toLowerCase().includes('quiz'));
                                             }
+                                            
+                                            if (localQuizzes.length === 0) {
+                                                const rawQuizzes = quizScores.filter(q => isSameEmployee(q.employee_id || q.user_id || q.userId || q.id, selectedHistoryUser));
+                                                localQuizzes = rawQuizzes.map((q, idx) => ({
+                                                    id: `quiz-raw-${idx}`,
+                                                    employee_id: q.employee_id || q.user_id || q.userId || q.id,
+                                                    reward_name: q.quiz_title || q.quiz_name || 'Quiz Excellence',
+                                                    points: parsePoints(q.total_score || q.points || q.quiz_score || q.score || 0),
+                                                    created_at: q.created_at || q.completion_date || q.date || q.quiz_date || q.timestamp || new Date().toISOString(),
+                                                    note: 'Earned from Quiz Hub'
+                                                })).filter(q => q.points > 0);
+                                            }
+                                            
+                                            allUserHistory = [...apiHistory, ...localQuizzes];
 
                                             allUserHistory.sort((a, b) => {
                                                 const dA = parseToDate(a.created_at || a.date);

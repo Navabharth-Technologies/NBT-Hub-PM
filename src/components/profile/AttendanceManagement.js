@@ -785,6 +785,20 @@ export default function AttendanceManagement() {
           }
         }
 
+        if (activeFilter !== 'ALL') {
+          if (activeFilter === 'PRESENT' && displayStatus === 'Absent') return;
+          if (activeFilter === 'ABSENT' && displayStatus !== 'Absent') return;
+          if (activeFilter === 'HALF DAYS' && displayStatus !== 'Half Day') return;
+          if (activeFilter === 'Late Login') {
+            const pIn = parseTimeStr(inTime);
+            if (!(pIn !== -1 && pIn > (9 * 60 + 30))) return;
+          }
+          if (activeFilter === 'Early logout') {
+            const pOut = parseTimeStr(outTime);
+            if (!(pOut !== -1 && pOut < (17 * 60))) return;
+          }
+        }
+
         const inLoc = dayPunchInLog ? (dayPunchInLog.punchin_location || dayPunchInLog.in_location || '----') : '----';
         const outLoc = dayPunchOutLog ? (dayPunchOutLog.punchout_location || dayPunchOutLog.out_location || '----') : '----';
         const workHrs = logsForEmp.length > 0 ? getWorkHrs(inTime, outTime, targetDate) : '00:00';
@@ -1009,16 +1023,6 @@ export default function AttendanceManagement() {
       const s = searchTerm.toLowerCase();
       if (!(emp.name || emp.user_name || '').toLowerCase().startsWith(s)) return false;
     }
-
-    if (activeFilter === 'ALL') return true;
-
-    const empIdStr = String(emp.id || '').trim();
-    if (activeFilter === 'PRESENT') return metrics.presentEmpIds.has(empIdStr);
-    if (activeFilter === 'ABSENT') return !metrics.presentEmpIds.has(empIdStr);
-    if (activeFilter === 'HALF DAYS') return metrics.halfDayEmpIds.has(empIdStr);
-    if (activeFilter === 'Late Login') return metrics.lateLoginEmpIds.has(empIdStr);
-    if (activeFilter === 'Early logout') return metrics.earlyLogoutEmpIds.has(empIdStr);
-
     return true;
   });
 
@@ -1410,6 +1414,63 @@ export default function AttendanceManagement() {
             const flattenedRows = [];
             dateRangeList.forEach(targetDate => {
               displayedEmployees.forEach(emp => {
+                const logsForEmp = (attendanceLogs || [])
+                  .filter(l => {
+                    if (!l) return false;
+                    const logId = String(l?.user_id || l?.Empcode || l?.EmpID || l?.userId || l?.UserId || '').trim();
+                    const empId = String(emp?.id || '').trim();
+                    const logDate = parseLogDate(l);
+                    return empId && logId && (logId === empId) && (logDate === targetDate);
+                  })
+                  .sort((a, b) => new Date(a?.created_at || a?.punch_time || 0) - new Date(b?.created_at || b?.punch_time || 0));
+
+                const checkHasPunchOut = (record) => {
+                  if (!record) return false;
+                  const outVal = record.out_time || record.OUTTime || record.PunchOut || record.punch_time_out || record.out_time_biometric;
+                  return outVal && outVal !== '----' && outVal !== '--:--' && outVal !== '00:00' && outVal !== '00:00:00';
+                };
+
+                const dayPunchInLog = [...logsForEmp].reverse().find(log => log.remark === 'MANUAL_EDIT_IN' || (!log.remark?.includes('OUT') && !checkHasPunchOut(log))) || logsForEmp[0];
+                const dayPunchOutLog = [...logsForEmp].reverse().find(log => log.remark === 'MANUAL_EDIT_OUT' || (checkHasPunchOut(log) && log.remark !== 'MANUAL_EDIT_IN'));
+
+                const extractTime = (log, isOut = false) => {
+                  if (!log) return '----';
+                  const t = isOut
+                    ? (log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric || log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime)
+                    : (log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime || log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric);
+                  if (t && t !== '----' && t !== '--:--' && t !== '00:00' && t !== '00:00:00') return t;
+                  return '----';
+                };
+
+                const todayStr = getTodayStr();
+                const punchIn = extractTime(dayPunchInLog, false);
+                const punchOut = logsForEmp.length > 0 ? ((targetDate === todayStr && !dayPunchOutLog) ? '----' : (dayPunchOutLog ? extractTime(dayPunchOutLog, true) : '----')) : '----';
+
+                let displayStatus = 'Absent';
+                if (logsForEmp.length > 0) {
+                  let rawStatus = String(logsForEmp[0].status || logsForEmp[0].Status || 'PRESENT').trim().toUpperCase();
+                  if (punchIn !== '----' && punchIn !== '--:--' && rawStatus === 'ABSENT') rawStatus = 'PRESENT';
+                  if (rawStatus === 'PRESENT' || rawStatus === 'P' || rawStatus === 'IN OFFICE' || rawStatus === 'IN-OFFICE') displayStatus = 'In Office';
+                  else if (rawStatus === 'ABSENT' || rawStatus === 'A') displayStatus = 'Absent';
+                  else if (rawStatus === 'HALF_DAY' || rawStatus === 'HD' || rawStatus === 'HALF DAY') displayStatus = 'Half Day';
+                  else if (rawStatus === 'LATE' || rawStatus === 'L') displayStatus = 'Late';
+                  else displayStatus = logsForEmp[0].status || 'In Office';
+                }
+
+                if (activeFilter !== 'ALL') {
+                  if (activeFilter === 'PRESENT' && displayStatus === 'Absent') return;
+                  if (activeFilter === 'ABSENT' && displayStatus !== 'Absent') return;
+                  if (activeFilter === 'HALF DAYS' && displayStatus !== 'Half Day') return;
+                  if (activeFilter === 'Late Login') {
+                    const pIn = parseTimeStr(punchIn);
+                    if (!(pIn !== -1 && pIn > (9 * 60 + 30))) return;
+                  }
+                  if (activeFilter === 'Early logout') {
+                    const pOut = parseTimeStr(punchOut);
+                    if (!(pOut !== -1 && pOut < (17 * 60))) return;
+                  }
+                }
+
                 flattenedRows.push({ emp, targetDate });
               });
             });

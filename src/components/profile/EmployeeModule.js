@@ -107,7 +107,7 @@ export default function EmployeeModule() {
         2: { cellWidth: 'auto' },               // Role
         3: { cellWidth: 'auto' },               // Team
         4: { cellWidth: 'auto' },               // Email
-        5: { cellWidth: 16, halign: 'center' }  // Status
+        5: { cellWidth: 25, halign: 'center' }  // Status
       },
       headStyles: { fillColor: [49, 99, 170], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [248, 250, 252] },

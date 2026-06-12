@@ -95,6 +95,8 @@ export default function PMDashboard() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+
+
   // New Team Form State
   const [newTeam, setNewTeam] = useState({
     teamName: '',
@@ -146,6 +148,20 @@ export default function PMDashboard() {
   const [teamUpdates, setTeamUpdates] = useState([]);
   const [projectSprints, setProjectSprints] = useState([]);
   const [upcomingBirthdays, setUpcomingBirthdays] = useState([]);
+
+  useEffect(() => {
+    if (showLeadModal || showEmployeeModal || showCreateTeam || showAssignDropdown) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
+    };
+  }, [showLeadModal, showEmployeeModal, showCreateTeam, showAssignDropdown]);
 
 
   // Fetch Holidays, Tasks & Teams on Load
