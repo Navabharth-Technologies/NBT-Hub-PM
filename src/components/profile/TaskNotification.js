@@ -294,6 +294,7 @@ const TaskNotification = ({ onOpenTask }) => {
     else if (desc.includes('performance') || title.includes('performance')) path = '/performance';
     else if (desc.includes('course') || title.includes('course'))           path = '/courses';
     else if (desc.includes('award')  || title.includes('award') || desc.includes('recognition')) path = '/awards';
+    else if (desc.includes('quiz') || title.includes('quiz'))               path = '/quiz';
     else if (onOpenTask) { onOpenTask(); path = ''; }
     else path = '/alerts';
 
