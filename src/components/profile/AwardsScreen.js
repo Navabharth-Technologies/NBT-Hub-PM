@@ -1088,7 +1088,7 @@ export default function AwardsScreen() {
                                                     employee_id: q.employee_id || q.user_id || q.userId || q.id,
                                                     reward_name: q.quiz_title || q.quiz_name || 'Quiz Excellence',
                                                     points: parsePoints(q.total_score || q.points || q.quiz_score || q.score || 0),
-                                                    created_at: q.created_at || q.completion_date || q.date || q.quiz_date || q.timestamp || new Date().toISOString(),
+                                                    created_at: q.created_at || q.completion_date || q.date || q.quiz_date || q.timestamp || quizDateForSelectedUser || new Date().toISOString(),
                                                     note: 'Earned from Quiz Hub'
                                                 })).filter(q => q.points > 0);
                                             }
