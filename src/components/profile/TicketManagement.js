@@ -261,19 +261,10 @@ export default function TicketManagement() {
               <p style={{ color: '#64748b', margin: 0, fontSize: winWidth < 768 ? '14px' : '15px', fontWeight: '600', lineHeight: '1.5' }}></p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
-            <button
-              className="btn-primary"
-              onClick={handleExportPDF}
-              style={{ flex: 1, background: 'white', color: '#3863a8', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
-            >
-              <Download size={16} /> Export
-            </button>
-          </div>
         </header>
 
         {/* Filters */}
-        <div className="flex-responsive-stack" style={{ marginBottom: '32px', gap: '16px' }}>
+        <div className="flex-responsive-stack" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', gap: '16px', flexDirection: winWidth < 768 ? 'column' : 'row' }}>
           <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
             <select
               value={statusFilter}
@@ -296,6 +287,15 @@ export default function TicketManagement() {
               <option>Medium</option>
               <option>Low</option>
             </select>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
+            <button
+              className="btn-primary"
+              onClick={handleExportPDF}
+              style={{ flex: 1, background: 'white', color: '#3863a8', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 20px', borderRadius: '15px', fontWeight: '800' }}
+            >
+              <Download size={16} /> Export
+            </button>
           </div>
         </div>
 
