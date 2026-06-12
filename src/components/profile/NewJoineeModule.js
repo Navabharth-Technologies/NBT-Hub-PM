@@ -772,7 +772,7 @@ export default function NewJoineeModule() {
                   <div style={{ display: 'flex', gap: '10px', fontSize: '13px', alignItems: 'center' }}>
                     <span style={{ color: '#475569', minWidth: '110px', fontWeight: '700' }}>Joining Date</span>
                     <span style={{ fontWeight: '700', color: '#1e293b' }}>
-                      {joinee.joining_date || joinee.joiningDate ? new Date(joinee.joining_date || joinee.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                      {joinee.joining_date || joinee.joiningDate ? new Date(joinee.joining_date || joinee.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}
                     </span>
                   </div>
                   {(joinee.reporting_manager || joinee.reporting_manager_id || joinee.manager) && (
