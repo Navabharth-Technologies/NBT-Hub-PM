@@ -1669,7 +1669,9 @@ export default function AttendanceManagement() {
                       })
                     ) : (
                       <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '24px', border: '1.5px solid #f1f5f9' }}>
-                        <p style={{ color: '#64748b', fontWeight: '900' }}>No matching records found.</p>
+                        <p style={{ color: '#64748b', fontWeight: '900' }}>
+                          {attendanceLoading ? 'Loading.....' : (activeFilter === 'ALL' ? 'No matching records found.' : `There is no ${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1).toLowerCase().replace('_', ' ')}s`)}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1872,7 +1874,7 @@ export default function AttendanceManagement() {
                       ) : (
                         <tr>
                           <td colSpan="9" style={{ padding: '60px', textAlign: 'center', color: '#64748b', fontWeight: '800' }}>
-                            Loading.....
+                            {attendanceLoading ? 'Loading.....' : (activeFilter === 'ALL' ? 'No matching records found.' : `There is no ${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1).toLowerCase().replace('_', ' ')}s`)}
                           </td>
                         </tr>
                       )}
