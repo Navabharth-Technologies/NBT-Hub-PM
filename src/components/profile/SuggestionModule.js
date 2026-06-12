@@ -260,6 +260,7 @@ export default function SuggestionModule() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '6px 14px', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', height: '44px', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b' }}>From</span>
               <input
                 type="date"
                 value={fromDate}
@@ -271,6 +272,7 @@ export default function SuggestionModule() {
             <div style={{ width: '1.5px', height: '16px', background: '#e2e8f0' }}></div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b' }}>To</span>
               <input
                 type="date"
                 value={toDate}
