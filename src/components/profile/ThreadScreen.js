@@ -76,6 +76,25 @@ export default function ThreadScreen() {
         if (threads.length > 0 && clearNotifications) clearNotifications();
     }, [threads]);
 
+    // AUTO-FETCH COMMENT COUNTS ON LOAD
+    useEffect(() => {
+        const fetchAllCommentCounts = async () => {
+            if (threads && threads.length > 0) {
+                for (const post of threads) {
+                    if (postComments[post.id] === undefined) {
+                        try {
+                            const comments = await fetchComments(post.id);
+                            setPostComments(prev => ({ ...prev, [post.id]: Array.isArray(comments) ? comments : [] }));
+                        } catch (err) {
+                            console.error("Error auto-fetching comments for count:", err);
+                        }
+                    }
+                }
+            }
+        };
+        fetchAllCommentCounts();
+    }, [threads, fetchComments]);
+
     useEffect(() => {
         if (!activeCommentPost) return;
         const interval = setInterval(async () => {
