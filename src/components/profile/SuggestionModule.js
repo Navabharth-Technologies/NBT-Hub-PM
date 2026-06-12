@@ -257,47 +257,28 @@ export default function SuggestionModule() {
         </header>
 
         {/* Date Filter Bar */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap',
-          background: '#ffffff', borderRadius: '16px', padding: '14px 20px',
-          border: '1.5px solid #e2e8f0', marginBottom: '20px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#315A9E' }}>
-            <span style={{ fontSize: '18px' }}>📅</span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '6px 14px', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', height: '44px', boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '800', color: '#1e293b', width: '95px', textAlign: 'right', cursor: 'pointer' }}
+              />
+            </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>From</label>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              style={{
-                padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1',
-                fontSize: '13px', fontWeight: '700', color: '#1e293b', cursor: 'pointer',
-                outline: 'none', background: '#f8fafc', transition: 'border-color 0.2s'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#315A9E'}
-              onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-            />
-          </div>
+            <div style={{ width: '1.5px', height: '16px', background: '#e2e8f0' }}></div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>To</label>
-            <input
-              type="date"
-              value={toDate}
-              min={fromDate || ''}
-              onChange={(e) => setToDate(e.target.value)}
-              style={{
-                padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1',
-                fontSize: '13px', fontWeight: '700', color: '#1e293b', cursor: 'pointer',
-                outline: 'none', background: '#f8fafc', transition: 'border-color 0.2s'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#315A9E'}
-              onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="date"
+                value={toDate}
+                min={fromDate || ''}
+                onChange={(e) => setToDate(e.target.value)}
+                style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '800', color: '#1e293b', width: '95px', textAlign: 'right', cursor: 'pointer' }}
+              />
+            </div>
           </div>
 
           {(fromDate || toDate) && (
@@ -307,7 +288,7 @@ export default function SuggestionModule() {
                 display: 'flex', alignItems: 'center', gap: '5px',
                 background: '#fef2f2', color: '#ef4444', border: '1.5px solid #fecaca',
                 borderRadius: '10px', padding: '7px 12px', fontSize: '12px', fontWeight: '800',
-                cursor: 'pointer', transition: 'all 0.2s'
+                cursor: 'pointer', transition: 'all 0.2s', height: '36px'
               }}
               onMouseOver={(e) => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = '#fff'; }}
               onMouseOut={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#ef4444'; }}
