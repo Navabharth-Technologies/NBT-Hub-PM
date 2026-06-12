@@ -1049,7 +1049,7 @@ export default function AttendanceManagement() {
                         type="date"
                         value={fromDate}
                         onChange={(e) => setFromDate(e.target.value)}
-                        style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '11px', fontWeight: '800', color: '#1e293b', width: '95px' }}
+                        style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '11px', fontWeight: '800', color: '#1e293b', width: '90px', textAlign: 'right' }}
                       />
                     </div>
 
@@ -1060,7 +1060,7 @@ export default function AttendanceManagement() {
                         type="date"
                         value={toDate}
                         onChange={(e) => setToDate(e.target.value)}
-                        style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '11px', fontWeight: '800', color: '#1e293b', width: '95px', textAlign: 'right' }}
+                        style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '11px', fontWeight: '800', color: '#1e293b', width: '90px', textAlign: 'right' }}
                       />
                     </div>
                   </div>

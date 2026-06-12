@@ -427,9 +427,9 @@ export default function EmployeeAttendanceDetail() {
 
           <div style={{ display: 'flex', flexDirection: winWidth < 480 ? 'column' : 'row', gap: '16px', alignItems: 'stretch' }}>
             <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '6px 12px', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '800', color: '#1e293b', width: '100%' }} />
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '800', color: '#1e293b', width: '100%', textAlign: 'right' }} />
               <div style={{ width: '1.5px', height: '14px', background: '#e2e8f0' }}></div>
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '800', color: '#1e293b', width: '100%' }} />
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: '12px', fontWeight: '800', color: '#1e293b', width: '100%', textAlign: 'right' }} />
             </div>
             <select 
               value={statusFilter} 

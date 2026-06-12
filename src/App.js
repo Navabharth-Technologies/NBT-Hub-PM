@@ -197,6 +197,9 @@ function App() {
             * {
               box-sizing: border-box;
             }
+            input[type="date"]::-webkit-calendar-picker-indicator {
+              cursor: pointer;
+            }
           `}</style>
         </ThreadProvider>
       </AuthProvider>
