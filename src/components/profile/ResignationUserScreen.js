@@ -150,7 +150,7 @@ export default function ResignationUserScreen() {
                         </div>
 
                         <div style={{ padding: '0 40px', marginBottom: '24px' }}>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>Primary Reason <span style={{ color: '#ef4444' }}>*</span></label>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>Reason to Resign <span style={{ color: '#ef4444' }}>*</span></label>
                             <div style={{ position: 'relative' }}>
                                 <select
                                     value={formData.primary_reason}
