@@ -160,17 +160,8 @@ export default function AttendanceManagement() {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   };
-  const [fromDate, setFromDate] = useState(() => {
-    const saved = localStorage.getItem('nbtAttendanceFromDate');
-    const today = getTodayStr();
-    // If saved value is the old hardcoded default, reset to today
-    return (saved && saved !== '2026-01-01') ? saved : today;
-  });
-  const [toDate, setToDate] = useState(() => {
-    const saved = localStorage.getItem('nbtAttendanceToDate');
-    const today = getTodayStr();
-    return (saved && saved < today) ? today : (saved || today);
-  });
+  const [fromDate, setFromDate] = useState(() => getTodayStr());
+  const [toDate, setToDate] = useState(() => getTodayStr());
 
   useEffect(() => {
     localStorage.setItem('nbtAttendanceFromDate', fromDate);
