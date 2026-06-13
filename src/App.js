@@ -40,7 +40,7 @@ import MyLeaves from './components/profile/MyLeaves';
 
 
 
-import LoginScreen from './components/profile/LoginScreen';
+
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -48,11 +48,8 @@ function AppRoutes() {
   if (loading) return null; // Wait for localStorage to be read
 
   if (!user) {
-    return (
-      <Routes>
-        <Route path="*" element={<LoginScreen />} />
-      </Routes>
-    );
+    window.location.href = '/';
+    return null;
   }
 
   return (

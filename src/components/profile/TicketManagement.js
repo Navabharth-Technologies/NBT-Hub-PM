@@ -5,7 +5,7 @@ import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config';
 import './PMDashboard.css';
-import { AlertCircle, CheckCircle, Clock, Search, Filter, Download, X, Send, MessageCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Download, X, Send, MessageCircle, ArrowLeft } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
