@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Pencil, Trash2, ArrowLeft } from 'lucide-react';
+import { Sparkles, Pencil, Trash2, ArrowLeft, X } from 'lucide-react';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
@@ -817,11 +817,25 @@ export default function NewJoineeModule() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               style={{
-                background: 'white', padding: isMobile ? '20px 16px' : '24px 40px', borderRadius: '32px',
+                background: 'white', padding: isMobile ? '20px 16px 30px' : '24px 40px', borderRadius: '32px',
                 width: '90%', maxWidth: '520px', boxShadow: '0 30px 60px -12px rgba(0, 0, 0, 0.3)',
-                position: 'relative'
+                position: 'relative',
+                maxHeight: isMobile ? '90vh' : 'none', overflowY: isMobile ? 'auto' : 'visible'
               }}
             >
+              {isMobile && (
+                <button
+                  onClick={() => { setShowAddModal(false); setEditingId(null); }}
+                  style={{
+                    position: 'absolute', top: '16px', right: '16px',
+                    background: '#f1f5f9', border: 'none', borderRadius: '50%',
+                    width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', color: '#64748b'
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
                 <div style={{
                   width: '48px', height: '48px', borderRadius: '18px',

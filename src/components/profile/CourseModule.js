@@ -300,9 +300,7 @@ export default function CourseModule() {
                   <h3 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '8px', color: '#1e293b' }}>{c.title}</h3>
                   <p className="course-card-description">{c.description || 'No description provided.'}</p>
 
-                  <div style={{ marginBottom: '12px', fontSize: '13px', color: '#64748b', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <Calendar size={12} /> Deadline: {formatDate(c.deadline) || 'No deadline'}
-                  </div>
+
 
                   <div className="course-action-buttons">
                     {c.pdf_url && (
@@ -347,21 +345,15 @@ export default function CourseModule() {
                     <label>Description</label>
                     <textarea name="description" value={formData.description} onChange={handleInputChange} placeholder="Brief summary of the course..." rows="3" />
                   </div>
-                  <div className="modal-grid">
-                    <div className="form-group">
-                      <label>Category</label>
-                      <select name="category" value={formData.category} onChange={handleInputChange}>
-                        <option>Technical</option>
-                        <option>Policy</option>
-                        <option>Soft Skills</option>
-                        <option>Leadership</option>
-                        <option>Compliance</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Deadline</label>
-                      <input type="date" name="deadline" value={formData.deadline} onChange={handleInputChange} required />
-                    </div>
+                  <div className="form-group">
+                    <label>Category</label>
+                    <select name="category" value={formData.category} onChange={handleInputChange}>
+                      <option>Technical</option>
+                      <option>Policy</option>
+                      <option>Soft Skills</option>
+                      <option>Leadership</option>
+                      <option>Compliance</option>
+                    </select>
                   </div>
 
                   <div className="modal-grid" style={{ marginTop: '10px' }}>

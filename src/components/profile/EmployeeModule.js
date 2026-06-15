@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronDown } from 'lucide-react';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
@@ -17,6 +17,7 @@ export default function EmployeeModule() {
   const [loading, setLoading] = useState(true);
   const [selectedDept, setSelectedDept] = useState('All Roles');
   const [winWidth, setWinWidth] = useState(window.innerWidth);
+  const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -152,7 +153,7 @@ export default function EmployeeModule() {
             <span style={{ position: 'absolute', left: '16px', top: winWidth < 480 ? '10px' : '14px', fontSize: winWidth < 480 ? '14px' : '18px' }}>🔍</span>
             <input
               type="text"
-              placeholder="Search name, role, or team..."
+              placeholder="Search name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -165,22 +166,62 @@ export default function EmployeeModule() {
               }}
             />
           </div>
-          <select
-            value={selectedDept}
-            onChange={(e) => setSelectedDept(e.target.value)}
-            style={{
-              width: winWidth < 600 ? '100%' : 'auto',
-              padding: winWidth < 480 ? '10px' : '12px',
-              borderRadius: '16px', border: '1px solid #1e293b',
-              background: 'white', fontWeight: 'bold', color: '#1e293b',
-              boxSizing: 'border-box', minWidth: '200px',
-              fontSize: winWidth < 480 ? '13px' : '14px'
-            }}
-          >
-            {uniqueRoles.map((role, idx) => (
-              <option key={idx} value={role}>{role}</option>
-            ))}
-          </select>
+          {winWidth < 768 ? (
+            <div style={{ position: 'relative', width: '100%' }}>
+              <div
+                onClick={() => setMobileDropdownOpen(!mobileDropdownOpen)}
+                style={{
+                  width: '100%', padding: '12px 16px', borderRadius: '16px', border: '1px solid #1e293b',
+                  backgroundColor: 'white', color: '#1e293b', fontSize: '14px', fontWeight: 'bold',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <span>{selectedDept}</span>
+                <ChevronDown size={14} color="#1e293b" style={{ transform: mobileDropdownOpen ? 'rotate(180deg)' : 'none', transition: '0.2s', flexShrink: 0 }} />
+              </div>
+              {mobileDropdownOpen && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px',
+                  backgroundColor: 'white', border: '1px solid #1e293b', borderRadius: '16px',
+                  maxHeight: '250px', overflowY: 'auto', zIndex: 10000, boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
+                }}>
+                  {uniqueRoles.map((role, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        setSelectedDept(role);
+                        setMobileDropdownOpen(false);
+                      }}
+                      style={{
+                        padding: '12px 16px', borderBottom: '1px solid #f1f5f9', fontSize: '14px', fontWeight: 'bold',
+                        color: '#1e293b', cursor: 'pointer', backgroundColor: selectedDept === role ? '#f8fafc' : 'white'
+                      }}
+                    >
+                      {role}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <select
+              value={selectedDept}
+              onChange={(e) => setSelectedDept(e.target.value)}
+              style={{
+                width: winWidth < 600 ? '100%' : 'auto',
+                padding: winWidth < 480 ? '10px' : '12px',
+                borderRadius: '16px', border: '1px solid #1e293b',
+                background: 'white', fontWeight: 'bold', color: '#1e293b',
+                boxSizing: 'border-box', minWidth: '200px',
+                fontSize: winWidth < 480 ? '13px' : '14px'
+              }}
+            >
+              {uniqueRoles.map((role, idx) => (
+                <option key={idx} value={role}>{role}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Employee Grid */}

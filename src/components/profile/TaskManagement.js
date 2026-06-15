@@ -48,7 +48,7 @@ export default function TaskManagement() {
       if (!user?.token) return;
       try {
         setLoading(true);
-        
+
         // Multi-Source Task Fetch + User Lookup Table
         const [rawAssigned, rawManager, rawUsers] = await Promise.all([
           fetch(API_ENDPOINTS.ASSIGNED_TASKS_GET, { headers: { 'Authorization': `Bearer ${user.token}` } }).then(r => r.ok ? r.json() : []),
@@ -58,29 +58,29 @@ export default function TaskManagement() {
 
         setUsers(Array.isArray(rawUsers) ? rawUsers : []);
         const combinedTasks = [...(Array.isArray(rawAssigned) ? rawAssigned : []), ...(Array.isArray(rawManager) ? rawManager : [])];
-        
+
         // 1. DEDUPLICATE BY DB ID: Strictly trust the primary 'id' column
         const uniqueTasksMap = new Map();
         combinedTasks.forEach((item, idx) => {
           const tid = item.id || `t-${idx}`; // Locked to DB primary key 'id'
           if (!uniqueTasksMap.has(tid)) {
-             uniqueTasksMap.set(tid, item);
+            uniqueTasksMap.set(tid, item);
           } else {
-             // Keep the most informative record by smart merging
-             const existing = uniqueTasksMap.get(tid);
-             const merged = { ...existing };
-             for (const key in item) {
-                // If the new item has a valid value and existing is missing it or is just 'Pending', override it
-                if (item[key] !== null && item[key] !== undefined && item[key] !== '') {
-                   // Always take the most explicit status over 'Pending'
-                   if (merged[key] === 'Pending' || !merged[key]) {
-                      merged[key] = item[key];
-                   } else if (key !== 'verify_status' && key !== 'verify' && key !== 'status') {
-                      merged[key] = item[key]; // Overwrite other non-empty fields
-                   }
+            // Keep the most informative record by smart merging
+            const existing = uniqueTasksMap.get(tid);
+            const merged = { ...existing };
+            for (const key in item) {
+              // If the new item has a valid value and existing is missing it or is just 'Pending', override it
+              if (item[key] !== null && item[key] !== undefined && item[key] !== '') {
+                // Always take the most explicit status over 'Pending'
+                if (merged[key] === 'Pending' || !merged[key]) {
+                  merged[key] = item[key];
+                } else if (key !== 'verify_status' && key !== 'verify' && key !== 'status') {
+                  merged[key] = item[key]; // Overwrite other non-empty fields
                 }
-             }
-             uniqueTasksMap.set(tid, merged);
+              }
+            }
+            uniqueTasksMap.set(tid, merged);
           }
         });
 
@@ -90,7 +90,7 @@ export default function TaskManagement() {
           const uid = String(u.id || u.empId || '').trim();
           if (uid) userLookup[uid] = u.name;
         });
-        
+
         // 3. MAP & RESOLVE NAMES
         const finalData = Array.from(uniqueTasksMap.values()).map((task, idx) => {
           const normalizeStatus = (val) => {
@@ -108,12 +108,12 @@ export default function TaskManagement() {
           };
 
           const getBestVerify = (t) => {
-             const priorities = [t.verify, t.verify_status, t.verify_code, t.tag];
-             for (const val of priorities) {
-                const normalized = normalizeVerify(val);
-                if (normalized !== 'Pending') return normalized;
-             }
-             return 'Pending';
+            const priorities = [t.verify, t.verify_status, t.verify_code, t.tag];
+            for (const val of priorities) {
+              const normalized = normalizeVerify(val);
+              if (normalized !== 'Pending') return normalized;
+            }
+            return 'Pending';
           };
 
           const cleanField = (val) => {
@@ -131,12 +131,12 @@ export default function TaskManagement() {
           const resolvedName = userLookup[targetUserId] || task.assignee_name || task.member_name || 'Unassigned';
 
           const rawReview = cleanField(task.task_review || task.review || '');
-          const hasRealReview = rawReview.length > 3 && 
-                               rawReview.toLowerCase() !== 'null' && 
-                               rawReview.toLowerCase() !== 'undefined' && 
-                               rawReview.toLowerCase() !== 'pending' &&
-                               rawReview.toLowerCase() !== 'none' &&
-                               rawReview.toLowerCase() !== 'done';
+          const hasRealReview = rawReview.length > 3 &&
+            rawReview.toLowerCase() !== 'null' &&
+            rawReview.toLowerCase() !== 'undefined' &&
+            rawReview.toLowerCase() !== 'pending' &&
+            rawReview.toLowerCase() !== 'none' &&
+            rawReview.toLowerCase() !== 'done';
 
           return {
             ...task,
@@ -176,11 +176,11 @@ export default function TaskManagement() {
     const taskIdString = String(task.task_id || task.id || '').toLowerCase();
     const taskNameString = String(task.display_title || '').toLowerCase();
     const assigneeNameString = String(task.assignee_name || '').toLowerCase();
-    
-    const matchesSearch = taskIdString.startsWith(query) || 
-                          taskNameString.startsWith(query) || 
-                          assigneeNameString.startsWith(query);
-    
+
+    const matchesSearch = taskIdString.startsWith(query) ||
+      taskNameString.startsWith(query) ||
+      assigneeNameString.startsWith(query);
+
     return matchesSearch && matchesStatus;
   });
 
@@ -193,18 +193,18 @@ export default function TaskManagement() {
 
       // Extract raw base64 if it has a prefix
       const base64Content = String(data).includes('base64,') ? data.split('base64,')[1] : data;
-      
+
       const byteCharacters = atob(base64Content.replace(/\s/g, ''));
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
         byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
       const byteArray = new Uint8Array(byteNumbers);
-      
+
       const mimeType = fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream';
       const blob = new Blob([byteArray], { type: mimeType });
       const url = URL.createObjectURL(blob);
-      
+
       const a = document.createElement('a');
       a.href = url;
       a.download = fileName;
@@ -235,7 +235,7 @@ export default function TaskManagement() {
     }
     try {
       const targetId = String(taskId);
-      
+
       // 1. Force immediate UI re-render
       setTasks(prevTasks => prevTasks.map(task => {
         const currentId = String(task.task_id || task.id);
@@ -249,7 +249,7 @@ export default function TaskManagement() {
 
       // 2. STICKY SYNC: Targeting 'master_tasks' via working Review path
       const statusCode = newStatus === 'Approve' ? 1 : newStatus === 'Reject' ? 2 : 0;
-      const payload = { 
+      const payload = {
         id: taskId,
         task_id: taskId,
         verify: newStatus,             // Target column: verify
@@ -286,7 +286,7 @@ export default function TaskManagement() {
       }
 
       console.log(`DEBUG: Master Verify Store [${newStatus}] ✅`);
-      
+
     } catch (err) {
       console.error('Master Save Error (Verify):', err);
     }
@@ -300,7 +300,7 @@ export default function TaskManagement() {
     }
     try {
       const targetId = String(taskId);
-      
+
       // 1. UI Feedback
       setTasks(prevTasks => prevTasks.map(task => {
         const currentId = String(task.task_id || task.id);
@@ -311,9 +311,9 @@ export default function TaskManagement() {
       }));
 
       // 2. SYNC: Same robust path
-      const statusCode = newStatus === 'Completed' ? 'COMPLETED' : 
-                         newStatus === 'In Progress' ? 'IN PROGRESS' : 'PENDING';
-      const payload = { 
+      const statusCode = newStatus === 'Completed' ? 'COMPLETED' :
+        newStatus === 'In Progress' ? 'IN PROGRESS' : 'PENDING';
+      const payload = {
         id: taskId,
         task_id: taskId,
         status: statusCode,
@@ -328,7 +328,7 @@ export default function TaskManagement() {
       });
 
       console.log(`DEBUG: Task Status Sync [${newStatus}] ✅`);
-      
+
     } catch (err) {
       console.error('Master Save Error (Status):', err);
     }
@@ -353,7 +353,7 @@ export default function TaskManagement() {
       doc.setFontSize(22);
       doc.setTextColor(30, 41, 59); // Indigo-900
       doc.text('TITAN MANAGEMENT HUB', 14, 20);
-      
+
       doc.setFontSize(10);
       doc.setTextColor(100, 116, 139); // Slate-500
       doc.text('OFFICIAL TASK PERFORMANCE REPORT', 14, 28);
@@ -415,7 +415,7 @@ export default function TaskManagement() {
     const doc = new jsPDF();
     doc.setFontSize(20);
     doc.text(`${empName} - Task Performance Report`, 14, 22);
-    
+
     doc.setFontSize(11);
     doc.text(`Total Tasks: ${stats.total} | Completed: ${stats.completed} | In Progress: ${stats.inProgress} | Pending: ${stats.pending} | Avg Progress: ${stats.avgProgress}%`, 14, 32);
 
@@ -478,12 +478,12 @@ export default function TaskManagement() {
   return (
     <div className="pm-dashboard-container" style={{ minHeight: '100vh', backgroundColor: '#eaeff2', display: 'flex', flexDirection: 'column' }}>
       <AppHeader />
-      
+
       <main style={{ flex: 1, padding: winWidth < 768 ? '100px 16px 40px' : '125px 26px 40px', width: '100%', boxSizing: 'border-box', margin: '0', maxWidth: '100%', marginTop: 0 }}>
         <header style={{ marginBottom: winWidth < 768 ? '24px' : '40px', display: 'flex', flexDirection: winWidth < 768 ? 'column' : 'row', justifyContent: 'space-between', alignItems: winWidth < 768 ? 'flex-start' : 'flex-end', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <button 
-              onClick={() => navigate(-1)} 
+            <button
+              onClick={() => navigate(-1)}
               style={{ background: 'white', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <ArrowLeft size={18} color="#64748b" />
@@ -496,29 +496,29 @@ export default function TaskManagement() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto' }}>
-             <button 
-               className="btn-primary" 
-               onClick={handleExportPDF}
-               style={{ background: 'white', color: '#3863a8', border: '1.5px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', width: winWidth < 768 ? '100%' : 'auto' }}
-             >
-               Export Report
-             </button>
+            <button
+              className="btn-primary"
+              onClick={handleExportPDF}
+              style={{ background: 'white', color: '#3863a8', border: '1.5px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', width: winWidth < 768 ? '100%' : 'auto' }}
+            >
+              Export Report
+            </button>
           </div>
         </header>
 
         {/* Filters */}
         <div style={{ display: 'flex', flexDirection: winWidth < 768 ? 'column' : 'row', gap: '16px', marginBottom: '32px' }}>
           <div style={{ flex: 1, position: 'relative' }}>
-             <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '18px', opacity: 0.5 }}>🔍</span>
-             <input 
-               type="text" 
-               placeholder="Search by Task ID, Name, or Assignee..."
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-               style={{ width: '100%', padding: '14px 16px 14px 48px', borderRadius: '15px', border: '2.5px solid #eef2f6', background: 'white', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }}
-             />
+            <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '18px', opacity: 0.5 }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Search by Name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: '100%', padding: '14px 16px 14px 48px', borderRadius: '15px', border: '2.5px solid #eef2f6', background: 'white', outline: 'none', fontSize: '14px', boxSizing: 'border-box' }}
+            />
           </div>
-          <select 
+          <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             style={{ padding: '14px 20px', borderRadius: '15px', border: '2.5px solid #eef2f6', background: 'white', fontWeight: '700', color: '#1e293b', outline: 'none', cursor: 'pointer', minWidth: '160px' }}
@@ -530,12 +530,12 @@ export default function TaskManagement() {
           </select>
         </div>
 
-        <section style={{ 
-          background: winWidth < 768 ? 'transparent' : 'white', 
-          borderRadius: '24px', 
-          border: winWidth < 768 ? 'none' : '1.5px solid #f1f5f9', 
-          boxShadow: winWidth < 768 ? 'none' : '0 10px 25px rgba(0,0,0,0.02)', 
-          overflow: 'hidden' 
+        <section style={{
+          background: winWidth < 768 ? 'transparent' : 'white',
+          borderRadius: '24px',
+          border: winWidth < 768 ? 'none' : '1.5px solid #f1f5f9',
+          boxShadow: winWidth < 768 ? 'none' : '0 10px 25px rgba(0,0,0,0.02)',
+          overflow: 'hidden'
         }}>
           {winWidth < 768 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -549,7 +549,7 @@ export default function TaskManagement() {
                         <span style={{ fontSize: '10px', fontWeight: '800', color: '#3863a8', backgroundColor: '#f0f4ff', padding: '4px 8px', borderRadius: '6px' }}>#{task.id}</span>
                         <span style={{ fontSize: '10px', fontWeight: '900', color: '#3b82f6', backgroundColor: '#eff6ff', padding: '4px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>{task.type || 'TASK'}</span>
                       </div>
-                      <span style={{ 
+                      <span style={{
                         fontSize: '9px', fontWeight: '900', padding: '4px 10px', borderRadius: '8px', textTransform: 'uppercase',
                         backgroundColor: getStatusColor(task.sprint_status || task.status).bg, color: getStatusColor(task.sprint_status || task.status).text, border: `1px solid ${getStatusColor(task.sprint_status || task.status).border}`
                       }}>
@@ -584,30 +584,30 @@ export default function TaskManagement() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1.5px solid #f8fafc', paddingTop: '15px' }}>
                       <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>
-                         📅 {formatTaskDate(task.deadline || task.updated_at)}
+                        📅 {formatTaskDate(task.deadline || task.updated_at)}
                       </div>
                       <div style={{ display: 'flex', gap: '10px' }}>
                         {task.has_review ? (
-                          <button 
+                          <button
                             onClick={() => { setReviewTask(task); setReviewText(task.task_review); }}
                             style={{ padding: '6px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', background: '#f8fafc', color: '#3863a8', fontWeight: '800', fontSize: '11px' }}
                           >
-                             Review 📝
+                            Review 📝
                           </button>
                         ) : (
-                          <button 
+                          <button
                             onClick={() => { setReviewTask(task); setReviewText(''); }}
                             style={{ padding: '6px 12px', borderRadius: '8px', border: '1.5px solid #3863a8', background: 'white', color: '#3863a8', fontWeight: '800', fontSize: '11px' }}
                           >
-                             Review
+                            Review
                           </button>
                         )}
-                        <select 
+                        <select
                           value={task.verify_status || 'Pending'}
                           onChange={(e) => handleVerifyChange(task.task_id || task.id, e.target.value)}
-                          style={{ 
-                            padding: '6px 12px', 
-                            borderRadius: '8px', 
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '8px',
                             border: `1.5px solid ${getVerifyStyles(task.verify_status).border}`,
                             background: getVerifyStyles(task.verify_status).bg,
                             color: getVerifyStyles(task.verify_status).text,
@@ -657,7 +657,7 @@ export default function TaskManagement() {
                         </td>
                         <td style={{ padding: '16px 12px' }}>
                           <span style={{ fontSize: '10px', fontWeight: '900', color: '#3b82f6', backgroundColor: '#eff6ff', padding: '4px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
-                             {task.type || 'TASK'}
+                            {task.type || 'TASK'}
                           </span>
                         </td>
                         <td style={{ padding: '16px 12px' }}>
@@ -669,7 +669,7 @@ export default function TaskManagement() {
                           )}
                         </td>
                         <td style={{ padding: '16px 12px' }}>
-                          <div 
+                          <div
                             style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
                             onClick={() => setSelectedAssignee(task.assignee_name)}
                             title={`Click to view all tasks for ${task.assignee_name}`}
@@ -681,7 +681,7 @@ export default function TaskManagement() {
                           </div>
                         </td>
                         <td style={{ padding: '16px 12px' }}>
-                          <span style={{ 
+                          <span style={{
                             fontSize: '10px', fontWeight: '900', padding: '4px 10px', borderRadius: '8px', textTransform: 'uppercase',
                             backgroundColor: getStatusColor(task.sprint_status || task.status).bg, color: getStatusColor(task.sprint_status || task.status).text, border: `1px solid ${getStatusColor(task.sprint_status || task.status).border}`
                           }}>
@@ -696,35 +696,35 @@ export default function TaskManagement() {
                             <span style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b' }}>{task.progress_percentage || 0}%</span>
                           </div>
                         </td>
-                         <td style={{ padding: '16px 12px', color: '#64748b', fontWeight: '600', fontSize: '12px' }}>
-                           {formatTaskDate(task.deadline || task.updated_at)}
-                         </td>
-                         <td style={{ padding: '16px 12px', width: '100px' }}>
-                           {task.has_review ? (
-                             <span 
-                               style={{ fontSize: '11px', color: '#3863a8', fontWeight: '700', backgroundColor: '#eef2ff', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', verticalAlign: 'middle' }}
-                               onClick={() => { setReviewTask(task); setReviewText(task.task_review); }}
-                               title={task.task_review}
-                             >
-                                {task.task_review} 📝
-                             </span>
-                           ) : (
-                             <button 
-                               onClick={() => { setReviewTask(task); setReviewText(''); }}
-                               style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#3863a8', fontWeight: '800', fontSize: '11px', cursor: 'pointer' }}
-                             >
-                                Review
-                             </button>
-                           )}
-                         </td>
-                         <td style={{ padding: '16px 12px', width: '100px' }}>
+                        <td style={{ padding: '16px 12px', color: '#64748b', fontWeight: '600', fontSize: '12px' }}>
+                          {formatTaskDate(task.deadline || task.updated_at)}
+                        </td>
+                        <td style={{ padding: '16px 12px', width: '100px' }}>
+                          {task.has_review ? (
+                            <span
+                              style={{ fontSize: '11px', color: '#3863a8', fontWeight: '700', backgroundColor: '#eef2ff', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', verticalAlign: 'middle' }}
+                              onClick={() => { setReviewTask(task); setReviewText(task.task_review); }}
+                              title={task.task_review}
+                            >
+                              {task.task_review} 📝
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => { setReviewTask(task); setReviewText(''); }}
+                              style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', color: '#3863a8', fontWeight: '800', fontSize: '11px', cursor: 'pointer' }}
+                            >
+                              Review
+                            </button>
+                          )}
+                        </td>
+                        <td style={{ padding: '16px 12px', width: '100px' }}>
                           <div style={{ position: 'relative', width: 'fit-content' }}>
-                            <select 
+                            <select
                               value={task.verify_status || 'Pending'}
                               onChange={(e) => handleVerifyChange(task.task_id || task.id, e.target.value)}
-                              style={{ 
-                                padding: '6px 24px 6px 8px', 
-                                borderRadius: '8px', 
+                              style={{
+                                padding: '6px 24px 6px 8px',
+                                borderRadius: '8px',
                                 border: `1px solid ${getVerifyStyles(task.verify_status).border}`,
                                 background: getVerifyStyles(task.verify_status).bg,
                                 color: getVerifyStyles(task.verify_status).text,
@@ -785,7 +785,7 @@ export default function TaskManagement() {
             <p style={{ color: '#64748b', fontSize: '15px', fontWeight: '600', lineHeight: '1.6', marginBottom: '30px' }}>
               {success}
             </p>
-            <button 
+            <button
               onClick={() => setSuccess(null)}
               style={{
                 width: '100%', padding: '14px', background: '#3863a8', color: 'white',
@@ -804,8 +804,8 @@ export default function TaskManagement() {
       {/* ERROR MODAL */}
       {error && (
         <div style={{ position: 'fixed', bottom: '40px', left: '50%', transform: 'translateX(-50%)', background: '#ef4444', color: 'white', padding: '16px 30px', borderRadius: '18px', zIndex: 10000, fontWeight: '900', boxShadow: '0 20px 40px rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', gap: '12px', border: '2px solid rgba(255,255,255,0.2)' }} className="animate-slide-up">
-           <XCircle size={20} />
-           {error}
+          <XCircle size={20} />
+          {error}
         </div>
       )}
       {/* REVIEW MODAL */}
@@ -819,28 +819,28 @@ export default function TaskManagement() {
                 <p style={{ fontSize: '13px', color: '#64748b', margin: '2px 0 0' }}>Providing feedback for <strong style={{ color: '#1e293b' }}>{reviewTask.display_title || reviewTask.task_name || 'Untitled Task'}</strong></p>
               </div>
             </div>
-            
-            <textarea 
+
+            <textarea
               value={reviewText}
               onChange={(e) => setReviewText(e.target.value)}
               placeholder="e.g. Code quality is excellent. Great job on the UI optimization!"
               style={{
-                width: '100%', height: '150px', padding: '18px', border: '1px solid #e2e8f0', borderRadius: '15px', resize: 'none', 
+                width: '100%', height: '150px', padding: '18px', border: '1px solid #e2e8f0', borderRadius: '15px', resize: 'none',
                 outline: 'none', fontSize: '15px', color: '#1e293b', backgroundColor: '#f8fafc', boxSizing: 'border-box',
                 fontFamily: 'inherit', fontWeight: '500', transition: 'all 0.2s'
               }}
               onFocus={(e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.backgroundColor = 'white'; e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)'; }}
               onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.backgroundColor = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
             />
-            
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '30px' }}>
-              <button 
-                onClick={() => { setReviewTask(null); setReviewText(''); }} 
+              <button
+                onClick={() => { setReviewTask(null); setReviewText(''); }}
                 style={{ padding: '12px 24px', background: 'white', border: '1px solid #e2e8f0', color: '#64748b', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', fontSize: '14px' }}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 disabled={!reviewText.trim()}
                 onClick={async () => {
                   if (!navigator.onLine) {
@@ -852,8 +852,8 @@ export default function TaskManagement() {
                   try {
                     const vStatus = reviewTask.verify_status || 'Pending';
                     const statusCode = vStatus === 'Approve' ? 1 : vStatus === 'Reject' ? 2 : 0;
-                    
-                    const payload = { 
+
+                    const payload = {
                       id: reviewTask.id,
                       task_id: reviewTask.id,
                       task_review: reviewText,
@@ -871,31 +871,31 @@ export default function TaskManagement() {
                       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.token}` },
                       body: JSON.stringify(payload)
                     });
-                    
+
                     if (response.ok) {
                       setTasks(tasks.map(t => t.id === reviewTask.id ? { ...t, has_review: true, task_review: reviewText, review: reviewText } : t));
                       setSuccess('Review submitted successfully! 🚀');
                       setReviewTask(null);
                       setReviewText('');
                     } else if (response.status === 405 || response.status === 404) {
-                       const postResponse = await fetch(API_ENDPOINTS.ASSIGN_TASK_REVIEW, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.token}` },
-                          body: JSON.stringify(payload)
-                       });
-                       if (postResponse.ok) {
-                          setTasks(tasks.map(t => t.id === reviewTask.id ? { ...t, has_review: true, task_review: reviewText, review: reviewText } : t));
-                          setSuccess('Review submitted successfully! 🚀');
-                          setReviewTask(null);
-                          setReviewText('');
-                       }
+                      const postResponse = await fetch(API_ENDPOINTS.ASSIGN_TASK_REVIEW, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user?.token}` },
+                        body: JSON.stringify(payload)
+                      });
+                      if (postResponse.ok) {
+                        setTasks(tasks.map(t => t.id === reviewTask.id ? { ...t, has_review: true, task_review: reviewText, review: reviewText } : t));
+                        setSuccess('Review submitted successfully! 🚀');
+                        setReviewTask(null);
+                        setReviewText('');
+                      }
                     }
                   } catch (err) {
                     console.error('Master Save Error (Review):', err);
                   }
-                }} 
-                style={{ 
-                  padding: '12px 24px', background: '#3863a8', border: 'none', color: 'white', borderRadius: '12px', fontWeight: '800', 
+                }}
+                style={{
+                  padding: '12px 24px', background: '#3863a8', border: 'none', color: 'white', borderRadius: '12px', fontWeight: '800',
                   cursor: reviewText.trim() ? 'pointer' : 'not-allowed', fontSize: '14px', opacity: reviewText.trim() ? 1 : 0.6,
                   boxShadow: '0 10px 15px -3px rgba(56, 99, 168, 0.2)'
                 }}
@@ -916,12 +916,12 @@ export default function TaskManagement() {
         const avgProgress = empTasks.length > 0 ? Math.round(empTasks.reduce((sum, t) => sum + (t.progress_percentage || 0), 0) / empTasks.length) : 0;
 
         return (
-          <div 
+          <div
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(10px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
             onClick={() => setSelectedAssignee(null)}
           >
-            <div 
-              className="animate-zoom-in" 
+            <div
+              className="animate-zoom-in"
               style={{ background: 'white', width: '100%', maxWidth: '850px', maxHeight: '90vh', borderRadius: '30px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 60px -12px rgba(0,0,0,0.3)' }}
               onClick={e => e.stopPropagation()}
             >
@@ -934,10 +934,10 @@ export default function TaskManagement() {
                   </button>
                   {showExportMenu && (
                     <div style={{ position: 'absolute', top: '35px', right: '0', background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', zIndex: 100, minWidth: '170px', border: '1px solid #e2e8f0' }}>
-                      <button onClick={() => handleExportModalPDF(empTasks, selectedAssignee, { total: empTasks.length, completed, inProgress, pending, avgProgress })} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px 16px', border: 'none', background: 'white', color: '#1e293b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: '700', borderBottom: '1px solid #f1f5f9' }} onMouseOver={e=>e.currentTarget.style.background='#f8fafc'} onMouseOut={e=>e.currentTarget.style.background='white'}>
+                      <button onClick={() => handleExportModalPDF(empTasks, selectedAssignee, { total: empTasks.length, completed, inProgress, pending, avgProgress })} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px 16px', border: 'none', background: 'white', color: '#1e293b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: '700', borderBottom: '1px solid #f1f5f9' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'white'}>
                         <span style={{ fontSize: '16px' }}>📄</span> Export as PDF
                       </button>
-                      <button onClick={() => handleExportModalExcel(empTasks, selectedAssignee)} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px 16px', border: 'none', background: 'white', color: '#1e293b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }} onMouseOver={e=>e.currentTarget.style.background='#f8fafc'} onMouseOut={e=>e.currentTarget.style.background='white'}>
+                      <button onClick={() => handleExportModalExcel(empTasks, selectedAssignee)} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px 16px', border: 'none', background: 'white', color: '#1e293b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'white'}>
                         <span style={{ fontSize: '16px' }}>📊</span> Export as Excel
                       </button>
                     </div>

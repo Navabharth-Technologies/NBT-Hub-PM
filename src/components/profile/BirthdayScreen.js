@@ -115,27 +115,29 @@ export default function BirthdayScreen() {
       <AppHeader />
 
       <main style={{ padding: '120px 26px 40px', width: '100%', margin: '0', boxSizing: 'border-box', position: 'relative' }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            position: 'absolute', left: '26px', top: '120px',
-            background: 'white', border: 'none', width: '45px', height: '45px',
-            borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', boxShadow: '0 10px 20px rgba(0,0,0,0.05)', color: '#1e293b',
-            transition: '0.2s transform'
-          }}
-          onMouseOver={(e) => e.currentTarget.style.transform = 'translateX(-3px)'}
-          onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(0)'}
-        >
-          <ArrowLeft size={22} strokeWidth={2.5} />
-        </button>
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <h1 style={{ fontSize: '38px', fontWeight: '900', color: '#1e293b', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-            NBT Birthdays 🎂
-          </h1>
-          <p style={{ fontSize: '13px', fontWeight: '800', color: '#3863a8', letterSpacing: '2px', textTransform: 'uppercase' }}>
-            PASSED & UPCOMING CELEBRATIONS
-          </p>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '40px', width: '100%' }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              position: 'absolute', left: '0',
+              background: 'white', border: 'none', width: '45px', height: '45px',
+              borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', boxShadow: '0 10px 20px rgba(0,0,0,0.05)', color: '#1e293b',
+              transition: '0.2s transform'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'translateX(-3px)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'translateX(0)'}
+          >
+            <ArrowLeft size={22} strokeWidth={2.5} />
+          </button>
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ margin: 0, fontSize: '38px', fontWeight: '900', color: '#1e293b', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+              NBT Birthdays 🎂
+            </h1>
+            <p style={{ fontSize: '13px', fontWeight: '800', color: '#3863a8', letterSpacing: '2px', textTransform: 'uppercase', margin: '0' }}>
+
+            </p>
+          </div>
         </div>
 
         <div style={{ width: '100%', margin: '0 auto' }}>

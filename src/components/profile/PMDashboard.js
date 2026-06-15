@@ -686,7 +686,7 @@ export default function PMDashboard() {
       <AppHeader />
       <main style={{
         flex: 1,
-        padding: winWidth < 768 ? '20px 16px 40px' : '40px 26px 40px',
+        padding: winWidth < 768 ? '20px 16px 120px' : '40px 26px 120px',
         maxWidth: '100%',
         margin: '0 auto',
         width: '100%',
@@ -756,7 +756,7 @@ export default function PMDashboard() {
                   padding: winWidth < 768 ? '16px' : '24px',
                   borderRadius: '24px',
                   background: 'white',
-                  border: '1.5px solid #f1f5f9',
+                  border: '1.5px solid #3863a8',
                   boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
                   display: 'flex',
                   flexDirection: 'column',
@@ -940,14 +940,29 @@ export default function PMDashboard() {
             marginRight: 'auto',
             boxSizing: 'border-box'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '10px' : '15px', marginBottom: winWidth < 768 ? '16px' : '25px' }}>
-              <div style={{ width: winWidth < 768 ? '38px' : '48px', height: winWidth < 768 ? '38px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3163aa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '16px' : '22px', boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.1)', flexShrink: 0 }}>📅</div>
-              <h2 style={{ fontSize: winWidth < 768 ? '16px' : winWidth < 1024 ? '18px' : '22px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Task Command</h2>
+            <div style={{
+              display: 'flex',
+              flexDirection: winWidth < 640 ? 'column' : 'row',
+              justifyContent: 'space-between',
+              alignItems: winWidth < 640 ? 'stretch' : 'center',
+              marginBottom: winWidth < 768 ? '16px' : '25px',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '10px' : '15px' }}>
+                <div style={{ width: winWidth < 768 ? '38px' : '48px', height: winWidth < 768 ? '38px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3163aa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '16px' : '22px', boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.1)', flexShrink: 0 }}>📅</div>
+                <h2 style={{ fontSize: winWidth < 768 ? '16px' : winWidth < 1024 ? '18px' : '22px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Task Command</h2>
+              </div>
+              <button
+                className="btn-view-all btn-blue"
+                onClick={(e) => { e.stopPropagation(); navigate('/tasks'); }}
+              >
+                View All <ArrowRight size={14} />
+              </button>
             </div>
 
             <div style={{ marginBottom: '20px', flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                <div style={{ fontSize: '11px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Active Unit Sprints</div>
+                <div style={{ fontSize: '11px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Assigned Tasks</div>
               </div>
               {recentTasks.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -971,25 +986,7 @@ export default function PMDashboard() {
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '14px', background: '#f8fafc', borderRadius: '24px', border: '3px dashed #cbd5e1' }}>Unit Sprints Neutralized</div>
               )}
             </div>
-            <button className="animate-fade-in" onClick={() => navigate('/tasks')} style={{
-              width: '100%',
-              padding: winWidth < 768 ? '14px 10px' : '14px',
-              background: '#0f172a',
-              borderRadius: '16px',
-              color: 'white',
-              fontWeight: '900',
-              fontSize: winWidth < 768 ? '13px' : '14px',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.15)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              boxSizing: 'border-box'
-            }}>Open Task Management <span>→</span></button>
+
           </section>
 
           {/* Column 3: Attendance Analytics */}
@@ -1138,7 +1135,7 @@ export default function PMDashboard() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {upcomingBirthdays.length > 0 ? upcomingBirthdays.slice(0, 3).map((bday, idx) => (
+              {upcomingBirthdays.length > 0 ? upcomingBirthdays.slice(0, 2).map((bday, idx) => (
                 <div key={idx} style={{
                   display: 'flex', alignItems: 'center', gap: '15px', padding: '14px',
                   borderRadius: '16px', background: '#ffffff', border: '3px solid #cbd5e1',
@@ -1181,7 +1178,7 @@ export default function PMDashboard() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {holidays.length > 0 ? holidays.slice(0, 3).map((holiday, idx) => (
+              {holidays.length > 0 ? holidays.slice(0, 2).map((holiday, idx) => (
                 <div key={idx} style={{
                   display: 'flex', alignItems: 'center', gap: '15px', padding: '14px',
                   borderRadius: '16px', background: '#f8fafc', border: '3px solid #cbd5e1',
@@ -1217,8 +1214,8 @@ export default function PMDashboard() {
 
       {/* CREATE TEAM MODAL */}
       {showCreateTeam && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000, padding: winWidth >= 768 ? '80px 20px 100px' : '20px' }}>
-          <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '480px', borderRadius: '40px', padding: '32px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000, padding: winWidth >= 768 ? '80px 20px 100px' : '15px' }}>
+          <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '480px', borderRadius: '40px', padding: winWidth < 600 ? '20px' : '32px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative', maxHeight: '95vh', overflowY: 'auto' }}>
             <button onClick={() => setShowCreateTeam(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: '#f8fafc', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#64748b' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '16px' }}>
               <div style={{ width: '48px', height: '48px', borderRadius: '16px', backgroundColor: '#eff6ff', color: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', margin: '0 auto 8px' }}>👥</div>
@@ -1232,13 +1229,13 @@ export default function PMDashboard() {
                 </div>
               </div>
             </div>
-            <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-              <button onClick={() => setShowCreateTeam(false)} style={{ flex: 1, padding: '12px', borderRadius: '50px', border: '1.5px solid #eef2f6', background: 'white', color: '#64748b', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
+            <div style={{ marginTop: '20px', display: 'flex', flexDirection: winWidth < 600 ? 'column-reverse' : 'row', gap: '10px' }}>
+              <button onClick={() => setShowCreateTeam(false)} style={{ flex: 1, padding: '12px', borderRadius: winWidth < 600 ? '14px' : '50px', border: '1.5px solid #eef2f6', background: 'white', color: '#64748b', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
               <button
                 onClick={handleCreateTeam}
                 disabled={isSubmitting}
                 style={{
-                  flex: 2, padding: '12px', borderRadius: '50px', border: 'none',
+                  flex: 2, padding: '12px', borderRadius: winWidth < 600 ? '14px' : '50px', border: 'none',
                   background: isSubmitting ? '#94a3b8' : '#3863a8',
                   color: 'white', fontWeight: '800', fontSize: '13px',
                   cursor: isSubmitting ? 'not-allowed' : 'pointer',
@@ -1254,8 +1251,8 @@ export default function PMDashboard() {
 
       {/* TO TEAM LEAD MODAL */}
       {showLeadModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000, padding: winWidth >= 768 ? '80px 20px 100px' : '20px' }}>
-          <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '520px', borderRadius: '40px', padding: '25px 40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000, padding: winWidth >= 768 ? '80px 20px 100px' : '15px' }}>
+          <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '520px', borderRadius: '40px', padding: winWidth < 600 ? '20px' : '25px 40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative', maxHeight: '95vh', overflowY: 'auto' }}>
             <button onClick={() => setShowLeadModal(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: '#f8fafc', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#64748b' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <div style={{ width: '60px', height: '60px', borderRadius: '20px', backgroundColor: '#fff7ed', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 10px' }}>👑</div>
@@ -1289,9 +1286,9 @@ export default function PMDashboard() {
                 <input type="date" value={leadTask.deadline} onChange={(e) => setLeadTask({ ...leadTask, deadline: e.target.value })} style={{ width: '100%', padding: '16px 25px', borderRadius: '20px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '15px', fontWeight: '600', outline: 'none', color: '#1e293b' }} />
               </div>
             </div>
-            <div style={{ marginTop: '35px', display: 'flex', gap: '15px' }}>
-              <button onClick={() => setShowLeadModal(false)} style={{ flex: 1, padding: '16px', borderRadius: '50px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => handleAssignTask(leadTask)} disabled={isSubmitting} style={{ flex: 2, padding: '16px', borderRadius: '50px', border: 'none', background: '#a7d6da', color: '#1e293b', fontWeight: '800', fontSize: '14px', cursor: isSubmitting ? 'not-allowed' : 'pointer', boxShadow: '0 10px 20px rgba(167,214,218,0.2)', opacity: isSubmitting ? 0.7 : 1 }}>{isSubmitting ? 'Syncing...' : 'Confirm Assignment'}</button>
+            <div style={{ marginTop: '35px', display: 'flex', flexDirection: winWidth < 600 ? 'column-reverse' : 'row', gap: '15px' }}>
+              <button onClick={() => setShowLeadModal(false)} style={{ flex: 1, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '50px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => handleAssignTask(leadTask)} disabled={isSubmitting} style={{ flex: 2, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '50px', border: 'none', background: '#a7d6da', color: '#1e293b', fontWeight: '800', fontSize: '14px', cursor: isSubmitting ? 'not-allowed' : 'pointer', boxShadow: '0 10px 20px rgba(167,214,218,0.2)', opacity: isSubmitting ? 0.7 : 1 }}>{isSubmitting ? 'Syncing...' : 'Confirm Assignment'}</button>
             </div>
           </div>
         </div>
@@ -1299,8 +1296,8 @@ export default function PMDashboard() {
 
       {/* TO EMPLOYEE MODAL */}
       {showEmployeeModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000, padding: winWidth >= 768 ? '80px 20px 100px' : '20px' }}>
-          <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '520px', borderRadius: '40px', padding: '25px 40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(30, 41, 59, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000, padding: winWidth >= 768 ? '80px 20px 100px' : '15px' }}>
+          <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '520px', borderRadius: '40px', padding: winWidth < 600 ? '20px' : '25px 40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative', maxHeight: '95vh', overflowY: 'auto' }}>
             <button onClick={() => setShowEmployeeModal(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: '#f8fafc', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#64748b' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <div style={{ width: '60px', height: '60px', borderRadius: '20px', backgroundColor: '#f5f3ff', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 10px' }}>👤</div>
@@ -1334,9 +1331,9 @@ export default function PMDashboard() {
                 <input type="date" value={employeeTask.deadline} onChange={(e) => setEmployeeTask({ ...employeeTask, deadline: e.target.value })} style={{ width: '100%', padding: '16px 25px', borderRadius: '20px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', fontSize: '15px', fontWeight: '600', outline: 'none', color: '#1e293b' }} />
               </div>
             </div>
-            <div style={{ marginTop: '35px', display: 'flex', gap: '15px' }}>
-              <button onClick={() => setShowEmployeeModal(false)} style={{ flex: 1, padding: '16px', borderRadius: '50px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => handleAssignTask(employeeTask)} disabled={isSubmitting} style={{ flex: 2, padding: '16px', borderRadius: '50px', border: 'none', background: '#a7d6da', color: '#1e293b', fontWeight: '800', fontSize: '14px', cursor: isSubmitting ? 'not-allowed' : 'pointer', boxShadow: '0 10px 20px rgba(167,214,218,0.2)', opacity: isSubmitting ? 0.7 : 1 }}>{isSubmitting ? 'Syncing...' : 'Confirm Assignment'}</button>
+            <div style={{ marginTop: '35px', display: 'flex', flexDirection: winWidth < 600 ? 'column-reverse' : 'row', gap: '15px' }}>
+              <button onClick={() => setShowEmployeeModal(false)} style={{ flex: 1, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '50px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontWeight: '800', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => handleAssignTask(employeeTask)} disabled={isSubmitting} style={{ flex: 2, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '50px', border: 'none', background: '#a7d6da', color: '#1e293b', fontWeight: '800', fontSize: '14px', cursor: isSubmitting ? 'not-allowed' : 'pointer', boxShadow: '0 10px 20px rgba(167,214,218,0.2)', opacity: isSubmitting ? 0.7 : 1 }}>{isSubmitting ? 'Syncing...' : 'Confirm Assignment'}</button>
             </div>
           </div>
         </div>

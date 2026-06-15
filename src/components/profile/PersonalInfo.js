@@ -28,9 +28,9 @@ const SECTIONS = [
       { key: 'blood_group', label: 'Blood Group', type: 'text', required: true },
       { key: 'marital_status', label: 'Marital Status', type: 'select', options: ['Single', 'Married'] },
       { key: 'father_husband_name', label: "Father/Husband's Name", type: 'text' },
-      { key: 'pan_number', label: 'PAN Number', type: 'text', placeholder: 'Enter valid Pan Number (ABCDE1234F)', required: true },
+      { key: 'pan_number', label: 'PAN Number', type: 'text', placeholder: 'E.g ABCDE1234R', required: true },
       { key: 'pancard_photo', label: 'PAN Card Proof', type: 'file', required: true },
-      { key: 'aadhar_number', label: 'Aadhar Number', type: 'text', placeholder: 'Enter valid Aadhar Number (1234 5678 9012)', required: true },
+      { key: 'aadhar_number', label: 'Aadhar Number', type: 'text', placeholder: 'E.g 123456789012', required: true },
       { key: 'adharcard_photo', label: 'Aadhar Card Proof', type: 'file', required: true },
     ]
   },
@@ -1467,36 +1467,16 @@ export default function PersonalInfo({ onBack }) {
                         value={form[field.key] || ''}
                         disabled={isDisabled}
                         onChange={e => handleChange(field.key, e.target.value)}
-                        style={{ width: '100%', padding: '16px 20px', borderRadius: '16px', fontWeight: '900', color: form[field.key] ? '#0B1E3F' : '#94a3b8', border: isMobile ? '2px solid #cbd5e1' : '3px solid #cbd5e1', backgroundColor: isDisabled ? '#f1f5f9' : 'white', boxSizing: 'border-box', fontFamily: 'inherit', fontSize: '16px' }}
+                        style={{ width: '100%', padding: '16px 20px', borderRadius: '16px', fontWeight: form[field.key] ? '900' : '400', color: form[field.key] ? '#0B1E3F' : '#94a3b8', border: isMobile ? '2px solid #cbd5e1' : '3px solid #cbd5e1', backgroundColor: isDisabled ? '#f1f5f9' : 'white', boxSizing: 'border-box', fontFamily: 'inherit', fontSize: '16px' }}
                       >
-                        <option value="" disabled style={{ color: '#94a3b8', fontWeight: '900' }}>Choose {field.label}</option>
+                        <option value="" disabled style={{ color: '#94a3b8', fontWeight: '400' }}>Choose {field.label}</option>
                         {field.options.map(o => <option key={o} value={o} style={{ color: '#0B1E3F' }}>{o}</option>)}
                       </select>
                     ) : field.key === 'languages_known' ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
-                        <input
-                          type="text"
-                          value={form[field.key] || ''}
-                          placeholder={field.placeholder || 'e.g. English Hindi'}
-                          readOnly={isDisabled}
-                          onChange={e => handleChange(field.key, e.target.value, e.target)}
-                          style={{
-                            width: '100%',
-                            padding: '16px 20px',
-                            borderRadius: '16px',
-                            fontWeight: '900',
-                            color: '#0B1E3F',
-                            WebkitTextFillColor: '#0B1E3F',
-                            border: isMobile ? '2px solid #cbd5e1' : '3px solid #cbd5e1',
-                            backgroundColor: isDisabled ? '#f1f5f9' : 'white',
-                            boxSizing: 'border-box',
-                            fontFamily: 'inherit',
-                            fontSize: '16px'
-                          }}
-                        />
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                           {['English', 'Hindi', 'Kannada', 'Telugu', 'Malayalam', 'Arabic', 'Urdu', 'Marathi'].map(lang => {
-                            const currentLangs = (form[field.key] || '').split(' ').filter(Boolean);
+                            const currentLangs = (form[field.key] || '').split(/[, ]+/).filter(Boolean);
                             const isSelected = currentLangs.includes(lang);
                             return (
                               <button
@@ -1511,7 +1491,7 @@ export default function PersonalInfo({ onBack }) {
                                   } else {
                                     newLangs.push(lang);
                                   }
-                                  handleChange(field.key, newLangs.join(' '));
+                                  handleChange(field.key, newLangs.join(', '));
                                 }}
                                 style={{
                                   padding: '6px 14px',
@@ -1682,7 +1662,7 @@ export default function PersonalInfo({ onBack }) {
         @keyframes spin { to { transform: rotate(360deg); } }
         input::placeholder, textarea::placeholder {
           font-family: 'Outfit', sans-serif !important;
-          font-weight: 900 !important;
+          font-weight: 400 !important;
           color: #94a3b8 !important;
         }
       `}</style>

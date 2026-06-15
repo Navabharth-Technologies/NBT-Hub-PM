@@ -820,7 +820,7 @@ export default function AssetsManagement() {
               <p style={{ fontSize: '13px', color: '#64748b', margin: '2px 0 0 0' }}></p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto', flexDirection: winWidth < 480 ? 'column' : 'row', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', width: winWidth < 768 ? '100%' : 'auto', flexDirection: winWidth < 768 ? 'column' : 'row', alignItems: winWidth < 768 ? 'stretch' : 'center' }}>
             <button
               onClick={() => {
                 setForm({
@@ -954,7 +954,7 @@ export default function AssetsManagement() {
                 </h3>
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gridTemplateColumns: winWidth < 500 ? '1fr' : 'repeat(2, 1fr)',
                   gap: '10px'
                 }}>
                   {[
@@ -1509,12 +1509,12 @@ export default function AssetsManagement() {
                   <div style={{ display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : '1fr 1fr', gap: '25px' }}>
                     {!isAddAll && (
                       <>
-                        <div style={{ gridColumn: 'span 2', marginBottom: '10px' }}>
+                        <div style={{ gridColumn: '1 / -1', marginBottom: '10px' }}>
                           <h3 style={{ fontSize: '11px', fontWeight: '900', color: '#3163aa', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '1.5px solid #eff6ff', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <ScrollText size={14} /> Deployment Base Details
                           </h3>
                         </div>
-                        <div style={{ gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                        <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : '1fr 1fr', gap: '15px' }}>
                           <div>
                             <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#000000', marginBottom: '8px', paddingLeft: '4px' }}>EMPLOYEE ID</label>
                             <input
@@ -1556,13 +1556,13 @@ export default function AssetsManagement() {
                       </>
                     )}
 
-                    <div style={{ gridColumn: 'span 2', margin: '15px 0 10px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #eff6ff', paddingBottom: '10px' }}>
+                    <div style={{ gridColumn: '1 / -1', margin: '15px 0 10px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #eff6ff', paddingBottom: '10px' }}>
                       <h3 style={{ fontSize: '11px', fontWeight: '900', color: '#3163aa', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
                         <Laptop size={14} /> Hardware Inventory
                       </h3>
                     </div>
 
-                    <div style={{ gridColumn: 'span 2' }}>
+                    <div style={{ gridColumn: '1 / -1' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: '800', color: '#000000', marginBottom: '8px', paddingLeft: '4px' }}>
                         <Laptop size={14} /> LAPTOP UNIT DETAILS
                       </label>
@@ -1631,7 +1631,7 @@ export default function AssetsManagement() {
               )}
             </div>
 
-            <div style={{ padding: '30px 40px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '20px', background: 'white' }}>
+            <div style={{ padding: winWidth < 600 ? '20px' : '30px 40px', borderTop: '1px solid #f1f5f9', display: 'flex', flexDirection: winWidth < 600 ? 'column-reverse' : 'row', gap: '15px', background: 'white' }}>
               {editModal.isCertificate ? (
                 /* Action Buttons for Certificate (Matches Screenshot with Manager Logic) */
                 <>
@@ -1639,7 +1639,7 @@ export default function AssetsManagement() {
                     <button
                       onClick={() => handleCertificateAction('Rejected')}
                       disabled={saving}
-                      style={{ flex: 1, padding: '18px', borderRadius: '20px', border: '2px solid #ef4444', background: 'white', color: '#ef4444', fontSize: '15px', fontWeight: '900', cursor: 'pointer', transition: '0.2s' }}
+                      style={{ flex: 1, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '20px', border: '2px solid #ef4444', background: 'white', color: '#ef4444', fontSize: '15px', fontWeight: '900', cursor: 'pointer', transition: '0.2s', width: '100%' }}
                     >
                       Reject Submission
                     </button>
@@ -1647,14 +1647,15 @@ export default function AssetsManagement() {
                       <button
                         disabled={true}
                         style={{
-                          flex: 2, padding: '18px', borderRadius: '22px', border: 'none',
+                          flex: 2, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '22px', border: 'none',
                           background: '#cbd5e1',
                           color: 'white', fontSize: '16px', fontWeight: '900',
                           cursor: 'not-allowed',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
                           boxShadow: 'none',
                           transition: '0.2s',
-                          opacity: 0.8
+                          opacity: 0.8,
+                          width: '100%'
                         }}
                       >
                         <Sparkles size={20} /> Declaration Processed
@@ -1663,7 +1664,7 @@ export default function AssetsManagement() {
                       <button
                         onClick={() => handleCertificateAction('Approved')}
                         disabled={saving}
-                        style={{ flex: 2, padding: '18px', borderRadius: '22px', border: 'none', background: '#10b981', color: 'white', fontSize: '15px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', boxShadow: '0 10px 25px rgba(16, 185, 129, 0.25)', transition: '0.2s' }}
+                        style={{ flex: 2, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '22px', border: 'none', background: '#10b981', color: 'white', fontSize: '15px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', boxShadow: '0 10px 25px rgba(16, 185, 129, 0.25)', transition: '0.2s', width: '100%' }}
                       >
                         {saving ? 'Processing...' : <><ShieldCheck size={22} /> Approve Declaration</>}
                       </button>
@@ -1675,7 +1676,7 @@ export default function AssetsManagement() {
                 editModal.isReadOnly ? (
                   <button
                     onClick={closeEditModal}
-                    style={{ flex: 1, padding: '16px', borderRadius: '50px', border: '1.5px solid #cbd5e1', background: 'white', color: '#64748b', fontSize: '14px', fontWeight: '800', cursor: 'pointer' }}
+                    style={{ flex: 1, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '50px', border: '1.5px solid #cbd5e1', background: 'white', color: '#64748b', fontSize: '14px', fontWeight: '800', cursor: 'pointer', width: '100%' }}
                   >
                     Close
                   </button>
@@ -1683,17 +1684,24 @@ export default function AssetsManagement() {
                   <>
                     <button
                       onClick={closeEditModal}
-                      style={{ flex: 1, padding: '16px', borderRadius: '50px', border: '1.5px solid #1e3a8a', background: 'white', color: '#64748b', fontSize: '14px', fontWeight: '800', cursor: 'pointer' }}
+                      style={{ flex: 1, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '50px', border: '1.5px solid #1e3a8a', background: 'white', color: '#64748b', fontSize: '14px', fontWeight: '800', cursor: 'pointer', width: '100%' }}
                     >
                       Discard Changes
                     </button>
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      style={{ flex: 2, padding: '16px', borderRadius: '50px', border: 'none', background: '#3163aa', color: 'white', fontSize: '14px', fontWeight: '800', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 10px 15px -3px rgba(49, 99, 170, 0.2)' }}
-                    >
-                      {saving ? 'Syncing...' : <><Save size={18} /> {assets[editModal.employee?.id || editModal.employee?.EmpID] ? 'Save Changes' : 'Submit details'}</>}
-                    </button>
+                    {(() => {
+                      const isFormValid = isAddAll 
+                        ? (form.laptop_details && String(form.laptop_details).trim() !== '') 
+                        : (form.employee_id && String(form.employee_id).trim() !== '' && form.employee_name && String(form.employee_name).trim() !== '' && form.designation && String(form.designation).trim() !== '' && form.laptop_details && String(form.laptop_details).trim() !== '');
+                      return (
+                        <button
+                          onClick={handleSave}
+                          disabled={saving || !isFormValid}
+                          style={{ flex: 2, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '50px', border: 'none', background: (saving || !isFormValid) ? '#cbd5e1' : '#3163aa', color: 'white', fontSize: '14px', fontWeight: '800', cursor: (saving || !isFormValid) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: (saving || !isFormValid) ? 'none' : '0 10px 15px -3px rgba(49, 99, 170, 0.2)', width: '100%', transition: '0.2s' }}
+                        >
+                          {saving ? 'Syncing...' : <><Save size={18} /> {assets[editModal.employee?.id || editModal.employee?.EmpID] ? 'Save Changes' : 'Submit details'}</>}
+                        </button>
+                      );
+                    })()}
                   </>
                 )
               )}

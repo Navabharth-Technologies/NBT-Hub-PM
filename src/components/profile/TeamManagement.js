@@ -52,6 +52,21 @@ export default function TeamManagement() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (showCreateModal || showEditModal || showDeleteModal) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
+    };
+  }, [showCreateModal, showEditModal, showDeleteModal]);
+
   const [usersList, setUsersList] = useState([]);
   const [newTeam, setNewTeam] = useState({
     teamName: '',

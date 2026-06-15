@@ -117,7 +117,7 @@ export default function AppHeader() {
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          fontSize: '35px',
+          fontSize: winWidth < 768 ? '24px' : '35px',
           fontWeight: '950',
           letterSpacing: '0px',
           textTransform: 'uppercase',
@@ -126,10 +126,9 @@ export default function AppHeader() {
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           position: 'relative'
-        }} className="hide-on-mobile">
+        }}>
           NBT HUB
         </div>
-        <div className="hide-on-desktop" style={{ fontWeight: '950', fontSize: '18px', color: '#1e293b', letterSpacing: '1px' }}>NBT HUB</div>
       </div>
 
       <div style={styles.navActions}>

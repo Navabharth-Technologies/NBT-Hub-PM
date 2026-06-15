@@ -11,6 +11,13 @@ import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import './PMDashboard.css';
 
+const formatToDDMMYYYY = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+};
+
 const getFullStatusText = (status, inTime, outTime, workHrs) => {
   let s = String(status || '').toUpperCase();
   const hasIn = inTime && inTime !== '----' && inTime !== '--:--';
@@ -278,12 +285,11 @@ export default function EmployeeAttendanceDetail() {
     const doc = new jsPDF('l', 'mm', 'a4');
     const filteredLogs = getFilteredLogs();
     const empName = employee?.name || 'Employee';
-    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const today = formatToDDMMYYYY(new Date());
 
     // Format the selected date range for display
     const formatDateDisplay = (dateStr) => {
-      if (!dateStr) return 'N/A';
-      return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      return formatToDDMMYYYY(dateStr);
     };
     const dateRangeText = `${formatDateDisplay(startDate)}  →  ${formatDateDisplay(endDate)}`;
 
@@ -297,11 +303,7 @@ export default function EmployeeAttendanceDetail() {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.text(`Generated: ${today}`, 14, 30);
-    
-    // Date range in header
-    doc.setFontSize(9);
-    doc.setTextColor(148, 163, 184); // slate-400
-    doc.text(`Period: ${dateRangeText}`, 14, 40);
+
 
     // --- Employee Info ---
     doc.setTextColor(15, 23, 42);
@@ -315,7 +317,7 @@ export default function EmployeeAttendanceDetail() {
 
     // --- Table ---
     const tableData = filteredLogs.map(log => [
-      log.punch_date ? new Date(log.punch_date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A',
+      log.punch_date ? formatToDDMMYYYY(log.punch_date) : 'N/A',
       log.in_time || '----',
       log.out_time || '----',
       resolveWorkHrs(log),
@@ -354,7 +356,7 @@ export default function EmployeeAttendanceDetail() {
     const rows = filteredLogs.map(log => [
       empName,
       "'" + id,
-      log.punch_date ? "'" + new Date(log.punch_date).toLocaleDateString() : 'N/A',
+      log.punch_date ? "'" + formatToDDMMYYYY(log.punch_date) : 'N/A',
       log.in_time || '----',
       log.out_time || '----',
       resolveWorkHrs(log),
@@ -475,7 +477,7 @@ export default function EmployeeAttendanceDetail() {
                   const workHrs = resolveWorkHrs(log);
                   const logDate = log.punch_date || log.created_at || log.date;
                   const d = new Date(logDate);
-                  const dateStr = isNaN(d.getTime()) ? 'Invalid Date' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  const dateStr = isNaN(d.getTime()) ? 'Invalid Date' : formatToDDMMYYYY(d);
                   
                   const isSunday = d.getDay() === 0;
                   const month = d.toLocaleDateString('en-US', { month: 'short' });
@@ -585,7 +587,7 @@ export default function EmployeeAttendanceDetail() {
                       );
                     }
                     
-                    const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                    const dateStr = formatToDDMMYYYY(dateObj);
                     
                     const statusInfo = getStatusStyle(log.status || (log.in_time !== '----' ? 'P' : 'ABSENT'));
 
@@ -610,8 +612,9 @@ export default function EmployeeAttendanceDetail() {
                               const dateStr = String(log.punch_date).split('T')[0];
                               const d = new Date(dateStr);
                               if (isNaN(d.getTime())) return dateStr;
+                              const displayDate = formatToDDMMYYYY(d);
                               const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
-                              return `${dateStr} (${dayName})`;
+                              return `${displayDate} (${dayName})`;
                             })()}
                           </div>
                         </td>
