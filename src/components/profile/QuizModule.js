@@ -282,7 +282,7 @@ const QuizModule = ({ onBack }) => {
       let currentRank = 1;
       const list = sorted.map((u, i) => {
         if (i > 0 && u.score !== sorted[i - 1].score) {
-          currentRank = i + 1;
+          currentRank = currentRank + 1;
         }
         return {
           name: u.name,
