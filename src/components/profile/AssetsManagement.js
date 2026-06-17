@@ -197,11 +197,22 @@ export default function AssetsManagement() {
           fetchCerts(API_ENDPOINTS.SERVICE_CERTIFICATES_ALT)
         ]);
 
-        const combinedCerts = [...certs1, ...certs2].filter(c => c.purpose === 'Professional Asset Declaration');
+        const combinedCerts = [...certs1, ...certs2].filter(c => 
+          c.purpose === 'Professional Asset Declaration' || 
+          c.purpose === 'Asset Declaration'
+        );
         console.log('Combined Certificate Data:', combinedCerts);
 
-        combinedCerts.forEach(c => {
-          const id = c.employee_id || c.EmpID || c.employeeId || c.user_id || c.id;
+        combinedCerts.forEach(rawC => {
+          // Normalize all keys of rawC to lowercase for case-insensitive robust mapping
+          const c = {};
+          Object.keys(rawC).forEach(k => {
+            if (rawC[k] !== null && rawC[k] !== undefined) {
+              c[k.toLowerCase()] = rawC[k];
+            }
+          });
+
+          const id = c.employee_id || c.empid || c.employeeid || c.user_id || c.id;
           if (!id) return;
 
           // Helper to convert 1/0 or boolean to Yes/No
@@ -209,6 +220,16 @@ export default function AssetsManagement() {
 
           const existingAsset = assetMap[id];
           const hasExistingAsset = !!existingAsset;
+
+          // Determine the merged certificate status, preserving approved/rejected status robustly
+          const prevStatus = existingAsset?.cert_status || '';
+          const currentStatus = c.pm_status || c.status || 'Pending';
+          let resolvedStatus = 'Pending';
+          if (prevStatus.toLowerCase() === 'approved' || currentStatus.toLowerCase() === 'approved') {
+            resolvedStatus = 'Approved';
+          } else if (prevStatus.toLowerCase() === 'rejected' || currentStatus.toLowerCase() === 'rejected') {
+            resolvedStatus = 'Rejected';
+          }
 
           // Merge into assetMap (avoid overwriting if already exists and is from a newer request)
           // Prefer existing dedicated asset data over cert data for hardware fields
@@ -220,7 +241,7 @@ export default function AssetsManagement() {
             // Certificate DB row ID - ensures approve/reject PUT hits the right record
             cert_id: c.id || existingAsset?.cert_id,
             // Read pm_status first (the PM decision column), fall back to status
-            cert_status: c.pm_status || c.status || existingAsset?.cert_status || 'Pending',
+            cert_status: resolvedStatus,
             laptop_details: hasExistingAsset
               ? (existingAsset.laptop_details || c.laptop_details || c.laptop_unit_details)
               : (c.laptop_details || c.laptop_unit_details),
@@ -1652,10 +1673,11 @@ export default function AssetsManagement() {
               {editModal.isCertificate ? (
                 /* Action Buttons for Certificate (Matches Screenshot with Manager Logic) */
                 (() => {
-                  // Read cert_status from the certificateData (stored during fetchData merge)
-                  const certStatusRaw = (editModal.certificateData?.cert_status || editModal.certificateData?.status || 'Pending').toLowerCase();
-                  const isAlreadyApproved = certStatusRaw === 'approved';
-                  const isAlreadyRejected = certStatusRaw === 'rejected';
+                  // Read cert_status and status from the certificateData (stored during fetchData merge)
+                  const certStatusRaw = (editModal.certificateData?.cert_status || 'Pending').toLowerCase();
+                  const overallStatus = (editModal.certificateData?.status || 'Pending').toLowerCase();
+                  const isAlreadyApproved = certStatusRaw === 'approved' || overallStatus === 'approved';
+                  const isAlreadyRejected = certStatusRaw === 'rejected' || overallStatus === 'rejected';
                   const isDecided = isAlreadyApproved || isAlreadyRejected;
                   return (
                     <>
