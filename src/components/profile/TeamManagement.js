@@ -249,22 +249,41 @@ export default function TeamManagement() {
   const handleDeleteTeam = async () => {
     if (!user?.token || !selectedTeamForDelete) return;
     setIsDeleting(true);
+
+    // Build the common force-delete payload — force:true tells the backend
+    // to skip the "has existing employees" guard (handles stale/inactive DB records)
+    const forcePayload = {
+      teamName: selectedTeamForDelete.name,
+      team_name: selectedTeamForDelete.name,
+      name: selectedTeamForDelete.name,
+      oldName: selectedTeamForDelete.name,
+      team_id: selectedTeamForDelete.id,
+      id: selectedTeamForDelete.id,
+      force: true,
+      force_delete: true,
+      skip_employee_check: true
+    };
+
     try {
       console.log('DEBUG: Starting team deletion for:', selectedTeamForDelete.name);
 
+      // Attempt 1 — DELETE /api/admin/teams/:name (with force query param)
       const encodedTeamName = encodeURIComponent(selectedTeamForDelete.name);
-      const url1 = `${BASE_URL}/api/admin/teams/${encodedTeamName}`;
+      const url1 = `${BASE_URL}/api/admin/teams/${encodedTeamName}?force=true&force_delete=true`;
       console.log('DEBUG: Attempt 1 - DELETE to:', url1);
       let response = await fetch(url1, {
         method: 'DELETE',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
-        }
+        },
+        body: JSON.stringify(forcePayload)
       });
       let responseText = await response.text();
       console.log('DEBUG: Attempt 1 Response Status:', response.status);
       console.log('DEBUG: Attempt 1 Response Text:', responseText);
 
+      // Attempt 2 — DELETE /api/admin/teams/delete with force payload
       if (!response.ok) {
         const url2 = `${BASE_URL}/api/admin/teams/delete`;
         console.log('DEBUG: Attempt 2 - DELETE to:', url2);
@@ -274,18 +293,14 @@ export default function TeamManagement() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${user.token}`
           },
-          body: JSON.stringify({
-            teamName: selectedTeamForDelete.name,
-            team_name: selectedTeamForDelete.name,
-            name: selectedTeamForDelete.name,
-            oldName: selectedTeamForDelete.name
-          })
+          body: JSON.stringify(forcePayload)
         });
         responseText = await response.text();
         console.log('DEBUG: Attempt 2 Response Status:', response.status);
         console.log('DEBUG: Attempt 2 Response Text:', responseText);
       }
 
+      // Attempt 3 — POST /api/admin/teams/delete with force payload
       if (!response.ok) {
         const url3 = `${BASE_URL}/api/admin/teams/delete`;
         console.log('DEBUG: Attempt 3 - POST to:', url3);
@@ -295,16 +310,28 @@ export default function TeamManagement() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${user.token}`
           },
-          body: JSON.stringify({
-            teamName: selectedTeamForDelete.name,
-            team_name: selectedTeamForDelete.name,
-            name: selectedTeamForDelete.name,
-            oldName: selectedTeamForDelete.name
-          })
+          body: JSON.stringify(forcePayload)
         });
         responseText = await response.text();
         console.log('DEBUG: Attempt 3 Response Status:', response.status);
         console.log('DEBUG: Attempt 3 Response Text:', responseText);
+      }
+
+      // Attempt 4 — dedicated force-delete endpoint
+      if (!response.ok) {
+        const url4 = `${BASE_URL}/api/admin/teams/force-delete`;
+        console.log('DEBUG: Attempt 4 - POST to:', url4);
+        response = await fetch(url4, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user.token}`
+          },
+          body: JSON.stringify(forcePayload)
+        });
+        responseText = await response.text();
+        console.log('DEBUG: Attempt 4 Response Status:', response.status);
+        console.log('DEBUG: Attempt 4 Response Text:', responseText);
       }
 
       if (response.ok) {
@@ -321,7 +348,11 @@ export default function TeamManagement() {
             errorMessage = responseText;
           }
         }
-        showAlert(errorMessage + ' Please try again.', 'error');
+        // If still failing due to "existing employees", give a clear explanation
+        if (errorMessage.toLowerCase().includes('existing employees') || errorMessage.toLowerCase().includes('employee')) {
+          errorMessage = `The team "${selectedTeamForDelete.name}" has employees still linked in the database (they may be inactive). Please contact the backend admin to run a cleanup, or manually unassign them first.`;
+        }
+        showAlert(errorMessage, 'error');
       }
     } catch (err) {
       console.error('Delete team error:', err);
