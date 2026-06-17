@@ -217,6 +217,10 @@ export default function AssetsManagement() {
             ...(existingAsset || c),
             employee_name: c.employee_name || c.name || existingAsset?.employee_name || 'Certificate Employee',
             employee_id: id,
+            // Certificate DB row ID - ensures approve/reject PUT hits the right record
+            cert_id: c.id || existingAsset?.cert_id,
+            // Read pm_status first (the PM decision column), fall back to status
+            cert_status: c.pm_status || c.status || existingAsset?.cert_status || 'Pending',
             laptop_details: hasExistingAsset
               ? (existingAsset.laptop_details || c.laptop_details || c.laptop_unit_details)
               : (c.laptop_details || c.laptop_unit_details),
@@ -438,22 +442,35 @@ export default function AssetsManagement() {
   };
 
   const handleCertificateAction = async (status) => {
-    if (!editModal.certificateData?.id) return;
+    // Use cert_id (the actual service_certificate_requests PK) for the PUT endpoint
+    const certRowId = editModal.certificateData?.cert_id || editModal.certificateData?.id;
+    if (!certRowId) return;
     setSaving(true);
     try {
-      const response = await fetch(API_ENDPOINTS.SERVICE_CERTIFICATE_UPDATE(editModal.certificateData.id), {
+      const response = await fetch(API_ENDPOINTS.SERVICE_CERTIFICATE_UPDATE(certRowId), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
         },
         body: JSON.stringify({
-          status: status,
+          pm_status: status,
           admin_remarks: `Processed by PManager on ${new Date().toLocaleDateString()}`
         })
       });
 
       if (response.ok) {
+        // Optimistically update the card badge in local state immediately
+        const empId = editModal.employee?.id || editModal.employee?.EmpID;
+        if (empId) {
+          setAssets(prev => ({
+            ...prev,
+            [empId]: {
+              ...(prev[empId] || {}),
+              cert_status: status
+            }
+          }));
+        }
         setCustomAlert({ show: true, message: `Certificate request ${status}! ✅`, type: 'success' });
         closeEditModal();
         fetchData();
@@ -1634,43 +1651,72 @@ export default function AssetsManagement() {
             <div style={{ padding: winWidth < 600 ? '20px' : '30px 40px', borderTop: '1px solid #f1f5f9', display: 'flex', flexDirection: winWidth < 600 ? 'column-reverse' : 'row', gap: '15px', background: 'white' }}>
               {editModal.isCertificate ? (
                 /* Action Buttons for Certificate (Matches Screenshot with Manager Logic) */
-                <>
-                  <>
-                    <button
-                      onClick={() => handleCertificateAction('Rejected')}
-                      disabled={saving}
-                      style={{ flex: 1, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '20px', border: '2px solid #ef4444', background: 'white', color: '#ef4444', fontSize: '15px', fontWeight: '900', cursor: 'pointer', transition: '0.2s', width: '100%' }}
-                    >
-                      Reject Submission
-                    </button>
-                    {(editModal.certificateData?.status?.toUpperCase() === 'APPROVED') ? (
+                (() => {
+                  // Read cert_status from the certificateData (stored during fetchData merge)
+                  const certStatusRaw = (editModal.certificateData?.cert_status || editModal.certificateData?.status || 'Pending').toLowerCase();
+                  const isAlreadyApproved = certStatusRaw === 'approved';
+                  const isAlreadyRejected = certStatusRaw === 'rejected';
+                  const isDecided = isAlreadyApproved || isAlreadyRejected;
+                  return (
+                    <>
+                      {/* Reject Button — disabled once any decision has been made */}
                       <button
-                        disabled={true}
+                        onClick={() => handleCertificateAction('Rejected')}
+                        disabled={saving || isDecided}
                         style={{
-                          flex: 2, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '22px', border: 'none',
-                          background: '#cbd5e1',
-                          color: 'white', fontSize: '16px', fontWeight: '900',
-                          cursor: 'not-allowed',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
-                          boxShadow: 'none',
-                          transition: '0.2s',
-                          opacity: 0.8,
-                          width: '100%'
+                          flex: 1, padding: '16px',
+                          borderRadius: winWidth < 600 ? '14px' : '20px',
+                          border: isDecided ? '2px solid #cbd5e1' : '2px solid #ef4444',
+                          background: 'white',
+                          color: isDecided ? '#94a3b8' : '#ef4444',
+                          fontSize: '15px', fontWeight: '900',
+                          cursor: isDecided ? 'not-allowed' : 'pointer',
+                          transition: '0.2s', width: '100%',
+                          opacity: isDecided ? 0.6 : 1
                         }}
                       >
-                        <Sparkles size={20} /> Declaration Processed
+                        {isAlreadyRejected ? '✗ Rejected' : 'Reject Submission'}
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => handleCertificateAction('Approved')}
-                        disabled={saving}
-                        style={{ flex: 2, padding: '16px', borderRadius: winWidth < 600 ? '14px' : '22px', border: 'none', background: '#10b981', color: 'white', fontSize: '15px', fontWeight: '900', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', boxShadow: '0 10px 25px rgba(16, 185, 129, 0.25)', transition: '0.2s', width: '100%' }}
-                      >
-                        {saving ? 'Processing...' : <><ShieldCheck size={22} /> Approve Declaration</>}
-                      </button>
-                    )}
-                  </>
-                </>
+
+                      {/* Approve Button — disabled once approved */}
+                      {isAlreadyApproved ? (
+                        <button
+                          disabled={true}
+                          style={{
+                            flex: 2, padding: '16px',
+                            borderRadius: winWidth < 600 ? '14px' : '22px',
+                            border: 'none', background: '#22c55e',
+                            color: 'white', fontSize: '16px', fontWeight: '900',
+                            cursor: 'not-allowed',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                            boxShadow: 'none', transition: '0.2s', opacity: 0.75, width: '100%'
+                          }}
+                        >
+                          <Sparkles size={20} /> Declaration Approved
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleCertificateAction('Approved')}
+                          disabled={saving || isAlreadyRejected}
+                          style={{
+                            flex: 2, padding: '16px',
+                            borderRadius: winWidth < 600 ? '14px' : '22px',
+                            border: 'none',
+                            background: (saving || isAlreadyRejected) ? '#cbd5e1' : '#10b981',
+                            color: 'white', fontSize: '15px', fontWeight: '900',
+                            cursor: (saving || isAlreadyRejected) ? 'not-allowed' : 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+                            boxShadow: (saving || isAlreadyRejected) ? 'none' : '0 10px 25px rgba(16, 185, 129, 0.25)',
+                            transition: '0.2s', width: '100%',
+                            opacity: isAlreadyRejected ? 0.6 : 1
+                          }}
+                        >
+                          {saving ? 'Processing...' : <><ShieldCheck size={22} /> Approve Declaration</>}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()
               ) : (
                 /* Standard Footer */
                 editModal.isReadOnly ? (
@@ -1777,10 +1823,12 @@ export default function AssetsManagement() {
                 Object.values(assets).filter(a => a.is_from_certificate).map((asset, i) => {
                   const empName = asset.employee_name || asset.name || 'Unknown';
                   const empId = asset.employee_id || asset.EmpID || asset.id;
-                  const status = asset.status || 'PENDING';
-                  const isAudit = status.toUpperCase().includes('AUDIT');
-                  const badgeColor = isAudit ? '#ef4444' : '#f59e0b';
-                  const badgeBg = isAudit ? '#fef2f2' : '#fffbeb';
+                  const certStatus = (asset.cert_status || 'Pending').toLowerCase();
+                  const isApproved = certStatus === 'approved';
+                  const isRejected = certStatus === 'rejected';
+                  const badgeColor = isApproved ? '#16a34a' : isRejected ? '#dc2626' : '#f59e0b';
+                  const badgeBg = isApproved ? '#f0fdf4' : isRejected ? '#fef2f2' : '#fffbeb';
+                  const badgeLabel = isApproved ? 'APPROVED' : isRejected ? 'REJECTED' : 'PENDING';
 
                   // Construct a dummy employee object for handleEdit
                   const empObj = {
@@ -1835,7 +1883,7 @@ export default function AssetsManagement() {
                           borderRadius: '6px',
                           letterSpacing: '0.5px'
                         }}>
-                          {status.toUpperCase()}
+                          {badgeLabel}
                         </span>
                         <div style={{ color: '#cbd5e1' }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
