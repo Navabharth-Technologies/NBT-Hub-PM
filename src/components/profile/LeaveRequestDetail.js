@@ -339,10 +339,11 @@ export default function LeaveRequestDetail() {
           ) : null;
           const ceoName = ceoUser ? (ceoUser.name || ceoUser.full_name) : 'Dinesh';
 
-          // Resolve HR name dynamically from employee ID 202515
+          // Resolve HR name dynamically from employee ID or Role
           const hrUser = Array.isArray(empData) ? empData.find(e => {
             const eid = String(e.employee_id || e.id || e.EmpID || '').trim();
-            return eid === '202515';
+            const r = String(e.role || e.designation || '').toUpperCase();
+            return eid === '202515' || r === 'HR' || r.includes('HUMAN RESOURCE');
           }) : null;
           const dynamicHRName = hrUser ? (hrUser.name || hrUser.full_name) : '';
 

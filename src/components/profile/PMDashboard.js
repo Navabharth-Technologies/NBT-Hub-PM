@@ -7,6 +7,7 @@ import { useThread } from '../../context/ThreadContext';
 import { API_ENDPOINTS } from '../../config';
 import TaskNotification from './TaskNotification';
 import { Calendar, ArrowRight, Clock, ChevronRight, User } from 'lucide-react';
+import { filterActiveEmployees } from '../../utils/employeeUtils';
 import './PMDashboard.css';
 
 
@@ -196,7 +197,8 @@ export default function PMDashboard() {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
         const rawUsers = userRes.ok ? await userRes.json() : [];
-        const currentUsers = Array.isArray(rawUsers) ? rawUsers.filter(u => String(u.employee_id || u.id || u.empId || '').trim() !== '20250') : [];
+        const filteredUsers = Array.isArray(rawUsers) ? rawUsers.filter(u => String(u.employee_id || u.id || u.empId || '').trim() !== '20250') : [];
+        const currentUsers = filterActiveEmployees(filteredUsers);
         if (userRes.ok) {
           setUsersList(currentUsers);
           setEmployeesCount(currentUsers.length);
@@ -472,7 +474,8 @@ export default function PMDashboard() {
               return new Date(s);
             };
 
-            const processed = bList.map(emp => {
+            const activeBList = filterActiveEmployees(bList);
+            const processed = activeBList.map(emp => {
               const dob = parseDate(emp.dob || emp.birthday || emp.date || emp.date_of_birth || emp.birthday_date);
               let displayDate = 'N/A';
               if (!isNaN(dob.getTime())) {

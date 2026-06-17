@@ -1062,28 +1062,8 @@ export default function AwardsScreen() {
                                         </div>
                                         {(() => {
                                             const selectedUserObj = leaderboard.find(l => String(l.id) === String(selectedHistoryUser));
-
-                                            let allUserHistory = [];
-                                            const apiHistory = filteredRewards.filter(r => isSameEmployee(r.employee_id, selectedHistoryUser) && !String(r.id).startsWith('quiz-') && !String(r.reward_name).toLowerCase().includes('quiz'));
                                             
-                                            let localQuizzes = [];
-                                            if (selectedUserObj && selectedUserObj.history && selectedUserObj.history.length > 0) {
-                                                localQuizzes = selectedUserObj.history.filter(r => String(r.id).startsWith('quiz-') || String(r.reward_name).toLowerCase().includes('quiz'));
-                                            }
-                                            
-                                            if (localQuizzes.length === 0) {
-                                                const rawQuizzes = quizScores.filter(q => isSameEmployee(q.employee_id || q.user_id || q.userId || q.id, selectedHistoryUser));
-                                                localQuizzes = rawQuizzes.map((q, idx) => ({
-                                                    id: `quiz-raw-${idx}`,
-                                                    employee_id: q.employee_id || q.user_id || q.userId || q.id,
-                                                    reward_name: q.quiz_title || q.quiz_name || 'Quiz Excellence',
-                                                    points: parsePoints(q.total_score || q.points || q.quiz_score || q.score || 0),
-                                                    created_at: q.created_at || q.completion_date || q.date || q.quiz_date || q.timestamp || quizDateForSelectedUser || new Date().toISOString(),
-                                                    note: 'Earned from Quiz Hub'
-                                                })).filter(q => q.points > 0);
-                                            }
-                                            
-                                            allUserHistory = [...apiHistory, ...localQuizzes];
+                                            let allUserHistory = filteredRewards.filter(r => isSameEmployee(r.employee_id, selectedHistoryUser));
 
                                             allUserHistory.sort((a, b) => {
                                                 const dA = parseToDate(a.created_at || a.date);

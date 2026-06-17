@@ -4,6 +4,7 @@ import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS } from '../../config';
+import { filterActiveEmployees } from '../../utils/employeeUtils';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -56,7 +57,9 @@ export default function TaskManagement() {
           fetch(API_ENDPOINTS.USERS, { headers: { 'Authorization': `Bearer ${user.token}` } }).then(r => r.ok ? r.json() : [])
         ]);
 
-        setUsers(Array.isArray(rawUsers) ? rawUsers : []);
+        const parsedUsers = Array.isArray(rawUsers) ? rawUsers : (rawUsers?.data || []);
+        const activeUsers = filterActiveEmployees(parsedUsers);
+        setUsers(activeUsers);
         const combinedTasks = [...(Array.isArray(rawAssigned) ? rawAssigned : []), ...(Array.isArray(rawManager) ? rawManager : [])];
 
         // 1. DEDUPLICATE BY DB ID: Strictly trust the primary 'id' column
@@ -86,7 +89,8 @@ export default function TaskManagement() {
 
         // 2. OPTIMIZED RESOLUTION: Pre-index users for O(1) lightning-fast lookup
         const userLookup = {};
-        (Array.isArray(rawUsers) ? rawUsers : []).forEach(u => {
+        const activeUserNames = new Set(activeUsers.map(u => String(u.name || '').toLowerCase().trim()));
+        activeUsers.forEach(u => {
           const uid = String(u.id || u.empId || '').trim();
           if (uid) userLookup[uid] = u.name;
         });
@@ -153,7 +157,11 @@ export default function TaskManagement() {
             attachment_name: String(task.attachment_name || '').trim(),
             attachment_data: task.attachment_data || ''
           };
-        }).filter(t => t.display_title !== 'Untitled' && t.display_title.length > 0);
+        }).filter(t => {
+           // Ensure task assignee is an active user (either by matched name or lookup)
+           const assignName = String(t.assignee_name || '').toLowerCase().trim();
+           return t.display_title !== 'Untitled' && t.display_title.length > 0 && activeUserNames.has(assignName);
+        });
 
         setTasks(finalData);
         setDebugInfo('');

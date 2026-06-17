@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { API_ENDPOINTS } from '../../config';
+import { filterActiveEmployees } from '../../utils/employeeUtils';
 import './PMDashboard.css';
 
 export default function EmployeeModule() {
@@ -29,13 +30,15 @@ export default function EmployeeModule() {
     const fetchEmployees = async () => {
       if (!user?.token) return;
       try {
-        const response = await fetch(API_ENDPOINTS.EMPLOYEES, {
+        const response = await fetch(API_ENDPOINTS.USERS, {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
         if (response.ok) {
           const data = await response.json();
-          const filtered = Array.isArray(data) ? data.filter(emp => String(emp.id || emp.EmpID || '').trim() !== '20250') : [];
-          setEmployees(filtered);
+          const rawUsers = Array.isArray(data) ? data : (data?.data || []);
+          const filtered = rawUsers.filter(emp => String(emp.employee_id || emp.id || emp.EmpID || '').trim() !== '20250');
+          const activeEmployees = filterActiveEmployees(filtered);
+          setEmployees(activeEmployees);
         }
       } catch (err) {
         console.error('Employee fetch error:', err);

@@ -273,9 +273,7 @@ export default function TicketManagement() {
             >
               <option>All Status</option>
               <option value="Open">Pending</option>
-              <option>In Progress</option>
               <option>Resolved</option>
-              <option>Closed</option>
             </select>
             <select
               value={priorityFilter}
