@@ -279,13 +279,19 @@ const QuizModule = ({ onBack }) => {
       const merged = Array.from(deduplicatedMap, ([name, score]) => ({ name, score }));
       const sorted = merged.sort((a, b) => b.score - a.score);
 
-      const list = sorted.map((u, i) => ({
-        name: u.name,
-        score: u.score,
-        rank: i + 1,
-        color: ['#FBBC05', '#EA4335', '#34A853', '#4285F4', '#FBBC05'][i % 5],
-        initial: u.name ? u.name.charAt(0).toUpperCase() : 'U'
-      }));
+      let currentRank = 1;
+      const list = sorted.map((u, i) => {
+        if (i > 0 && u.score !== sorted[i - 1].score) {
+          currentRank = i + 1;
+        }
+        return {
+          name: u.name,
+          score: u.score,
+          rank: currentRank,
+          color: ['#FBBC05', '#EA4335', '#34A853', '#4285F4', '#FBBC05'][i % 5],
+          initial: u.name ? u.name.charAt(0).toUpperCase() : 'U'
+        };
+      });
 
       if (list.length > 0) setLeaderboard(list);
     } catch (err) {
