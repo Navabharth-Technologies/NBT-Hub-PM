@@ -6,22 +6,22 @@ import { useAuth } from '../../context/AuthContext';
 import { useThread } from '../../context/ThreadContext';
 import { API_ENDPOINTS } from '../../config';
 import TaskNotification from './TaskNotification';
-import { Calendar, ArrowRight, Clock, ChevronRight, User } from 'lucide-react';
+import { Calendar, ArrowRight, Clock, ChevronRight, User, Users, CheckCircle, Shield, Bell, Package, Sparkles, Lightbulb, Crown, HelpCircle, Gamepad2, Plus, Gift, Umbrella, XCircle } from 'lucide-react';
 import { filterActiveEmployees } from '../../utils/employeeUtils';
 import './PMDashboard.css';
 
 
 // Mock icons as SVG components or simple strings for now
 const Icons = {
-  Teams: () => <span>👥</span>,
-  Employees: () => <span>👤</span>,
-  Tasks: () => <span>✅</span>,
+  Teams: ({ size = 20, color }) => <Users size={size} color={color} />,
+  Employees: ({ size = 20, color }) => <User size={size} color={color} />,
+  Tasks: ({ size = 20, color }) => <CheckCircle size={size} color={color} />,
 
-  Compliance: () => <span>🛡️</span>,
-  Alert: () => <span>🔔</span>,
-  Asset: () => <span>📦</span>,
-  Add: () => <span>+</span>,
-  Quiz: () => <span>🎮</span>,
+  Compliance: ({ size = 20, color }) => <Shield size={size} color={color} />,
+  Alert: ({ size = 20, color }) => <Bell size={size} color={color} />,
+  Asset: ({ size = 20, color }) => <Package size={size} color={color} />,
+  Add: ({ size = 20, color }) => <Plus size={size} color={color} />,
+  Quiz: ({ size = 20, color }) => <Gamepad2 size={size} color={color} />,
 };
 
 const parseLogDate = (log) => {
@@ -506,13 +506,13 @@ export default function PMDashboard() {
 
   // Dynamically calculate metrics from live data
   const dynamicMetrics = [
-    { label: 'Total Teams', value: teams?.length || 'View', icon: <Icons.Teams />, color: '#6366f1', trend: 'Live', trendUp: true, path: '/teams' },
-    { label: 'Total Employess', value: employeesCount || 'View', icon: <Icons.Employees />, color: '#8b5cf6', trend: 'Live', trendUp: true, path: '/employees' },
-    { label: 'New Joinee', value: newJoineesCount || 'View', icon: <span>✨</span>, color: '#0ea5e9', trend: 'This Month', trendUp: true, path: '/new-joinees' },
-    { label: 'Suggestions', value: 'Manage', icon: <span>💡</span>, color: '#315A9E', trend: 'Active', trendUp: true, path: '/suggestions' },
+    { label: 'Total Teams', value: teams?.length || 'View', icon: <Icons.Teams size={winWidth < 768 ? 18 : 24} />, color: '#6366f1', trend: 'Live', trendUp: true, path: '/teams' },
+    { label: 'Total Employess', value: employeesCount || 'View', icon: <Icons.Employees size={winWidth < 768 ? 18 : 24} />, color: '#8b5cf6', trend: 'Live', trendUp: true, path: '/employees' },
+    { label: 'New Joinee', value: newJoineesCount || 'View', icon: <Sparkles size={winWidth < 768 ? 18 : 24} />, color: '#0ea5e9', trend: 'This Month', trendUp: true, path: '/new-joinees' },
+    { label: 'Suggestions', value: 'Manage', icon: <Lightbulb size={winWidth < 768 ? 18 : 24} />, color: '#315A9E', trend: 'Active', trendUp: true, path: '/suggestions' },
 
-    { label: 'Assets Management', value: 'Manage', icon: <span>📦</span>, color: '#f59e0b', trend: 'New', trendUp: true, path: '/assets' },
-    { label: 'Fun and Quiz', value: 'Play', icon: <Icons.Quiz />, color: '#ec4899', trend: 'Active', trendUp: true, path: '/quiz' },
+    { label: 'Assets Management', value: 'Manage', icon: <Package size={winWidth < 768 ? 18 : 24} />, color: '#f59e0b', trend: 'New', trendUp: true, path: '/assets' },
+    { label: 'Fun and Quiz', value: 'Play', icon: <Icons.Quiz size={winWidth < 768 ? 18 : 24} />, color: '#ec4899', trend: 'Active', trendUp: true, path: '/quiz' },
   ];
 
   // Helper for PDF encoding
@@ -527,7 +527,7 @@ export default function PMDashboard() {
 
   const handleAssignTask = async (taskData) => {
     if (!navigator.onLine) {
-      setToastMessage('Submission failed: Network disconnected ❌');
+      setToastMessage('Submission failed: Network disconnected');
       setToastType('error');
       setShowSuccessToast(true);
       // No timeout - stays until user takes action or reconnects
@@ -535,7 +535,7 @@ export default function PMDashboard() {
     }
 
     if (!taskData.assigneeId) {
-      setToastMessage('Selection Required: Please choose an assignee! ⚠️');
+      setToastMessage('Selection Required: Please choose an assignee!');
       setToastType('error');
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 3000);
@@ -585,7 +585,7 @@ export default function PMDashboard() {
       }
 
       if (response.ok) {
-        setToastMessage('Task assigned Successfully ✅');
+        setToastMessage('Task assigned Successfully');
         setToastType('success');
         setShowSuccessToast(true);
         setTimeout(() => setShowSuccessToast(false), 3000);
@@ -624,7 +624,7 @@ export default function PMDashboard() {
 
   const handleCreateTeam = async () => {
     if (!newTeam.teamName) {
-      setToastMessage('Required: Mission name is needed! ⚠️');
+      setToastMessage('Required: Mission name is needed!');
       setToastType('error');
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 3000);
@@ -647,7 +647,7 @@ export default function PMDashboard() {
       });
 
       if (response.ok) {
-        setToastMessage('Unit Established Successfully! ✅');
+        setToastMessage('Unit Established Successfully!');
         setToastType('success');
         setShowSuccessToast(true);
         setTimeout(() => setShowSuccessToast(false), 3000);
@@ -731,10 +731,10 @@ export default function PMDashboard() {
                   }}
                 >
                   <button className="add-menu-item" onClick={() => { setShowLeadModal(true); setShowAssignDropdown(false); }}>
-                    <span style={{ fontSize: '16px' }}>👑</span> To Team Lead
+                    <Crown size={16} style={{ marginRight: '8px' }} /> To Team Lead
                   </button>
                   <button className="add-menu-item" onClick={() => { setShowEmployeeModal(true); setShowAssignDropdown(false); }}>
-                    <span style={{ fontSize: '16px' }}>👤</span> To Employee
+                    <User size={16} style={{ marginRight: '8px' }} /> To Employee
                   </button>
                 </div>
               )}
@@ -918,7 +918,7 @@ export default function PMDashboard() {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', border: '1.5px solid #e2e8f0' }}>🛡️</div>
+                          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #e2e8f0' }}><Shield size={20} color="#3863a8" /></div>
                           <div>
                             <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>{team.name}</div>
                             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{team.members || 0} Operatives</div>
@@ -952,7 +952,7 @@ export default function PMDashboard() {
               gap: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: winWidth < 768 ? '10px' : '15px' }}>
-                <div style={{ width: winWidth < 768 ? '38px' : '48px', height: winWidth < 768 ? '38px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3163aa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '16px' : '22px', boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.1)', flexShrink: 0 }}>📅</div>
+                <div style={{ width: winWidth < 768 ? '38px' : '48px', height: winWidth < 768 ? '38px' : '48px', borderRadius: '14px', background: '#eff6ff', color: '#3163aa', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.1)', flexShrink: 0 }}><Calendar size={winWidth < 768 ? 18 : 22} /></div>
                 <h2 style={{ fontSize: winWidth < 768 ? '16px' : winWidth < 1024 ? '18px' : '22px', fontWeight: '900', color: '#1e293b', margin: 0 }}>Task Command</h2>
               </div>
               <button
@@ -976,7 +976,7 @@ export default function PMDashboard() {
                       boxShadow: '0 2px 4px rgba(0,0,0,0.02)', cursor: 'default', transition: '0.2s', width: '100%', boxSizing: 'border-box'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden', flex: 1 }}>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#eff6ff', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>✅</div>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#eff6ff', border: '1px solid #dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><CheckCircle size={18} color="#22c55e" /></div>
                         <div style={{ overflow: 'hidden', flex: 1 }}>
                           <div style={{ fontSize: '14px', fontWeight: '900', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{task.title || task.task_name || 'Active Task'}</div>
                           <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{task.assignee_name || 'Staff'} • {task.status || 'Active'}</div>
@@ -1128,7 +1128,7 @@ export default function PMDashboard() {
           {/* Upcoming Birthdays Section */}
           <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.8s', cursor: 'pointer', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }} onClick={() => navigate('/birthdays')}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 className="section-title">🎂 Upcoming Birthdays</h2>
+              <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Gift size={20} color="#ec4899" /> Upcoming Birthdays</h2>
               <button
                 className="btn-view-all btn-pink"
                 onClick={(e) => { e.stopPropagation(); navigate('/birthdays'); }}
@@ -1144,8 +1144,8 @@ export default function PMDashboard() {
                   borderRadius: '16px', background: '#ffffff', border: '3px solid #cbd5e1',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                 }}>
-                  <div style={{ background: '#fdf2f8', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                    🎈
+                  <div style={{ background: '#fdf2f8', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Gift size={20} color="#ec4899" />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '15px', fontWeight: '950', color: '#0f172a' }}>{bday.name || bday.employee_name}</div>
@@ -1171,7 +1171,7 @@ export default function PMDashboard() {
           {/* List of Holidays Section */}
           <section className="dashboard-section animate-fade-in" style={{ animationDelay: '1.0s', cursor: 'pointer', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }} onClick={() => navigate('/holidays')}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 className="section-title">🏖️ List of Holidays</h2>
+              <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Umbrella size={20} color="#0d9488" /> List of Holidays</h2>
               <button
                 className="btn-view-all btn-teal"
                 onClick={(e) => { e.stopPropagation(); navigate('/holidays'); }}
@@ -1187,8 +1187,8 @@ export default function PMDashboard() {
                   borderRadius: '16px', background: '#f8fafc', border: '3px solid #cbd5e1',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                 }}>
-                  <div style={{ background: '#ffffff', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0', fontSize: '20px' }}>
-                    📅
+                  <div style={{ background: '#ffffff', width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0' }}>
+                    <Calendar size={20} color="#0d9488" />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '15px', fontWeight: '950', color: '#1e293b' }}>{holiday.name || holiday.title}</div>
@@ -1221,7 +1221,7 @@ export default function PMDashboard() {
           <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '480px', borderRadius: '40px', padding: winWidth < 600 ? '20px' : '32px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative', maxHeight: '95vh', overflowY: 'auto' }}>
             <button onClick={() => setShowCreateTeam(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: '#f8fafc', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#64748b' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '16px', backgroundColor: '#eff6ff', color: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', margin: '0 auto 8px' }}>👥</div>
+              <div style={{ width: '48px', height: '48px', borderRadius: '16px', backgroundColor: '#eff6ff', color: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}><Users size={24} color="#3863a8" /></div>
               <h2 style={{ fontSize: '18px', fontWeight: '900', color: '#1e293b' }}>Establish Management Unit</h2>
             </div>
             <div style={{ paddingRight: '4px' }}>
@@ -1258,7 +1258,7 @@ export default function PMDashboard() {
           <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '520px', borderRadius: '40px', padding: winWidth < 600 ? '20px' : '25px 40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative', maxHeight: '95vh', overflowY: 'auto' }}>
             <button onClick={() => setShowLeadModal(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: '#f8fafc', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#64748b' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ width: '60px', height: '60px', borderRadius: '20px', backgroundColor: '#fff7ed', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 10px' }}>👑</div>
+              <div style={{ width: '60px', height: '60px', borderRadius: '20px', backgroundColor: '#fff7ed', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}><Crown size={28} color="#f59e0b" /></div>
               <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.5px' }}>Assign to Team Lead</h2>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: winWidth >= 768 ? 'calc(100vh - 410px)' : '60vh', overflowY: 'auto', padding: '5px 15px' }}>
@@ -1303,7 +1303,7 @@ export default function PMDashboard() {
           <div className="animate-slide-up" style={{ backgroundColor: 'white', width: '100%', maxWidth: '520px', borderRadius: '40px', padding: winWidth < 600 ? '20px' : '25px 40px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #f1f5f9', position: 'relative', maxHeight: '95vh', overflowY: 'auto' }}>
             <button onClick={() => setShowEmployeeModal(false)} style={{ position: 'absolute', top: '25px', right: '25px', background: '#f8fafc', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#64748b' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ width: '60px', height: '60px', borderRadius: '20px', backgroundColor: '#f5f3ff', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 10px' }}>👤</div>
+              <div style={{ width: '60px', height: '60px', borderRadius: '20px', backgroundColor: '#f5f3ff', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}><User size={28} color="#8b5cf6" /></div>
               <h2 style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.5px' }}>Assign to Employee</h2>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxHeight: winWidth >= 768 ? 'calc(100vh - 410px)' : '60vh', overflowY: 'auto', padding: '5px 15px' }}>
@@ -1343,7 +1343,9 @@ export default function PMDashboard() {
       )}
       {showSuccessToast && (
         <div style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)', padding: '20px 40px', borderRadius: '25px', boxShadow: toastType === 'success' ? '0 15px 40px -10px rgba(16, 185, 129, 0.3)' : '0 15px 40px -10px rgba(239, 68, 68, 0.3)', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '20px', border: toastType === 'success' ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid rgba(239, 68, 68, 0.2)', animation: 'slideDown 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: toastType === 'success' ? '#ecfdf5' : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>{toastType === 'success' ? '✅' : '❌'}</div>
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: toastType === 'success' ? '#ecfdf5' : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {toastType === 'success' ? <CheckCircle size={20} color="#10b981" /> : <XCircle size={20} color="#ef4444" />}
+          </div>
           <div>
             <h3 style={{ fontSize: '15px', fontWeight: '900', color: toastType === 'success' ? '#065f46' : '#991b1b', margin: 0 }}>{toastMessage}</h3>
             <p style={{ fontSize: '11px', color: toastType === 'success' ? '#059669' : '#b91c1c', fontWeight: '700', margin: 0 }}></p>
