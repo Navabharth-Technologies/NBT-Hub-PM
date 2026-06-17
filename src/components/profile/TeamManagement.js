@@ -5,6 +5,7 @@ import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS, BASE_URL } from '../../config';
+import { filterActiveEmployees } from '../../utils/employeeUtils';
 import './PMDashboard.css';
 
 const Icons = {
@@ -46,6 +47,10 @@ export default function TeamManagement() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedTeamForDelete, setSelectedTeamForDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Custom centered alert (replaces native browser alert)
+  const [customAlert, setCustomAlert] = useState({ show: false, message: '', type: 'error' });
+  const showAlert = (message, type = 'error') => setCustomAlert({ show: true, message, type });
 
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -95,52 +100,57 @@ export default function TeamManagement() {
   };
 
   useEffect(() => {
-    const fetchTeams = async () => {
+    const fetchTeamsAndUsers = async () => {
       if (!user?.token) return;
       try {
-        const response = await fetch(API_ENDPOINTS.TEAMS, {
-          headers: { 'Authorization': `Bearer ${user.token}` }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const normalizedTeams = (Array.isArray(data) ? data : []).map(t => {
+        const [teamsRes, usersRes] = await Promise.all([
+          fetch(API_ENDPOINTS.TEAMS, { headers: { 'Authorization': `Bearer ${user.token}` } }).catch(() => null),
+          fetch(API_ENDPOINTS.USERS, { headers: { 'Authorization': `Bearer ${user.token}` } }).catch(() => null)
+        ]);
+
+        let activeUsers = [];
+        let activeUserNames = new Set();
+        
+        if (usersRes && usersRes.ok) {
+          const userData = await usersRes.json();
+          let parsedData = Array.isArray(userData) ? userData : (userData?.data || []);
+          activeUsers = filterActiveEmployees(parsedData);
+          setUsersList(activeUsers);
+          activeUserNames = new Set(activeUsers.map(u => String(u.name || '').toLowerCase().trim()));
+        }
+
+        if (teamsRes && teamsRes.ok) {
+          const data = await teamsRes.json();
+          const parsedTeams = Array.isArray(data) ? data : (data?.data || data?.teams || []);
+          const normalizedTeams = parsedTeams.map(t => {
             if (!t) return t;
+            const rawMembers = t.membersList || (Array.isArray(t.members) ? t.members : []);
+            const activeMembers = rawMembers.filter(m => activeUserNames.has(String(m.name || '').toLowerCase().trim()));
+            const isLeadActive = activeUserNames.has(String(t.lead || '').toLowerCase().trim());
             return {
               ...t,
-              name: t.name || t.team_name || t.teamName || 'Unnamed Team'
+              name: t.name || t.team_name || t.teamName || 'Unnamed Team',
+              membersList: activeMembers,
+              members: activeMembers.length,
+              lead: isLeadActive ? t.lead : 'Unassigned',
+              leadRole: isLeadActive ? t.leadRole : 'N/A'
             };
           });
           setTeamsData(normalizedTeams);
         }
       } catch (err) {
-        console.error('Teams fetch error:', err);
+        console.error('Fetch teams/users error:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    const fetchUsers = async () => {
-      if (!user?.token) return;
-      try {
-        const response = await fetch(API_ENDPOINTS.USERS, {
-          headers: { 'Authorization': `Bearer ${user.token}` }
-        });
-        if (response.ok) {
-          const userData = await response.json();
-          setUsersList(userData);
-        }
-      } catch (err) {
-        console.error('Users fetch error:', err);
-      }
-    };
-
-    fetchTeams();
-    fetchUsers();
+    fetchTeamsAndUsers();
   }, [user]);
 
   const handleCreateTeam = async () => {
     if (!newTeam.teamName) {
-      alert('Required: Mission name is needed! ⚠️');
+      showAlert('Required: Mission name is needed! ⚠️', 'error');
       return;
     }
 
@@ -181,10 +191,10 @@ export default function TeamManagement() {
         }
       } else {
         const errData = await response.json().catch(() => ({}));
-        alert(`Establishment Failed: ${errData.error || 'Request rejected'}`);
+        showAlert(`Establishment Failed: ${errData.error || 'Request rejected'}`, 'error');
       }
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      showAlert(`Error: ${err.message}`, 'error');
     } finally {
       setSaving(false);
     }
@@ -226,11 +236,11 @@ export default function TeamManagement() {
           const errorData = JSON.parse(errorText);
           errorMessage = errorData.message || errorData.error || errorMessage;
         } catch { }
-        alert(errorMessage + ' Please try again.');
+        showAlert(errorMessage + ' Please try again.', 'error');
       }
     } catch (err) {
       console.error('Save team error:', err);
-      alert('An error occurred while saving.');
+      showAlert('An error occurred while saving.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -311,11 +321,11 @@ export default function TeamManagement() {
             errorMessage = responseText;
           }
         }
-        alert(errorMessage + ' Please try again.');
+        showAlert(errorMessage + ' Please try again.', 'error');
       }
     } catch (err) {
       console.error('Delete team error:', err);
-      alert('An error occurred while deleting the team.');
+      showAlert('An error occurred while deleting the team.', 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -557,11 +567,11 @@ export default function TeamManagement() {
       } else {
         const errorText = await response.text();
         console.error('Realignment Sync Error:', errorText);
-        alert(`Failed to sync. Backend rejected individual table updates. Status: ${response.status}`);
+        showAlert(`Failed to sync. Backend rejected individual table updates. Status: ${response.status}`, 'error');
       }
     } catch (err) {
       console.error('Alignment save error:', err);
-      alert('Network error while saving alignment.');
+      showAlert('Network error while saving alignment.', 'error');
     } finally {
       setSaving(false);
     }
@@ -569,6 +579,55 @@ export default function TeamManagement() {
 
   return (
     <div className="pm-dashboard-container">
+
+      {/* ── Centered Custom Alert Modal ── */}
+      {customAlert.show && (
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(15,23,42,0.5)',
+          backdropFilter: 'blur(6px)',
+          zIndex: 99999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '28px',
+            padding: '40px 36px',
+            maxWidth: '420px',
+            width: '100%',
+            textAlign: 'center',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.2)',
+            fontFamily: "'Outfit', sans-serif"
+          }}>
+            <div style={{
+              width: '64px', height: '64px', borderRadius: '50%',
+              margin: '0 auto 20px',
+              background: customAlert.type === 'success' ? '#f0fdf4' : '#fef2f2',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '30px'
+            }}>
+              {customAlert.type === 'success' ? '✅' : '⚠️'}
+            </div>
+            <p style={{
+              fontSize: '15px', fontWeight: '800', color: '#0f172a',
+              margin: '0 0 28px', lineHeight: '1.6'
+            }}>{customAlert.message}</p>
+            <button
+              onClick={() => setCustomAlert({ show: false, message: '', type: 'error' })}
+              style={{
+                padding: '14px 48px', borderRadius: '16px', border: 'none',
+                background: customAlert.type === 'success' ? '#0f172a' : '#ef4444',
+                color: 'white', fontWeight: '900', fontSize: '15px',
+                cursor: 'pointer', fontFamily: 'inherit',
+                boxShadow: customAlert.type === 'success'
+                  ? '0 8px 20px rgba(15,23,42,0.2)'
+                  : '0 8px 20px rgba(239,68,68,0.25)'
+              }}
+            >OK</button>
+          </div>
+        </div>
+      )}
       {/* CANDY CRUSH STYLE VISUAL ONBOARDING (Shows on Refresh) */}
       {showVisualOnboarding && (
         <div className="onboarding-overlay-v2">
