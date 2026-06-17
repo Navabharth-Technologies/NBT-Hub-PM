@@ -5,7 +5,8 @@ import { Sparkles, Pencil, Trash2, ArrowLeft, X } from 'lucide-react';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { useAuth } from '../../context/AuthContext';
-import { API_ENDPOINTS } from '../../config';
+import { API_ENDPOINTS, BASE_URL } from '../../config';
+import { filterActiveEmployees } from '../../utils/employeeUtils';
 const toDisplayDate = (dateStr) => {
   if (!dateStr) return '';
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
@@ -218,14 +219,17 @@ export default function NewJoineeModule() {
 
   const fetchLeads = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.EMPLOYEES, {
+      const response = await fetch(API_ENDPOINTS.USERS || `${BASE_URL}/api/users`, {
         headers: { 'Authorization': `Bearer ${user.token}` }
       });
       if (response.ok) {
         const data = await response.json();
-        const teamLeads = (data || []).filter(emp =>
-          emp.role?.toUpperCase().includes('LEAD') ||
-          emp.role?.toUpperCase().includes('MANAGER')
+        const list = Array.isArray(data) ? data : (data.data || []);
+        const filtered = list.filter(emp => String(emp.employee_id || emp.id || emp.EmpID || '').trim() !== '20250');
+        const activeOnly = filterActiveEmployees(filtered);
+        const teamLeads = activeOnly.filter(emp =>
+          (emp.role || emp.designation || '').toUpperCase().includes('LEAD') ||
+          (emp.role || emp.designation || '').toUpperCase().includes('MANAGER')
         );
         setLeads(teamLeads);
       }

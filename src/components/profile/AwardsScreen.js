@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import { API_ENDPOINTS, BASE_URL } from '../../config';
+import { filterActiveEmployees } from '../../utils/employeeUtils';
 
 const parsePoints = (val) => {
     if (val === undefined || val === null) return 0;
@@ -215,26 +216,18 @@ export default function AwardsScreen() {
 
             setRewardNames(["Visionary Lead", "Goal Achiever", "Team Growth", "Star Performer", "Problem Solver", "Collaborative Hero"]);
 
-            let allStaff = [];
-            try {
-                const empRes = await fetch(API_ENDPOINTS.EMPLOYEES, { headers: { 'Authorization': `Bearer ${user.token}` } });
-                if (empRes.ok) {
-                    const resJson = await empRes.json();
-                    allStaff = [...allStaff, ...(Array.isArray(resJson) ? resJson : (resJson.data || []))];
-                }
-            } catch (e) { }
-
             try {
                 const userRes = await fetch(API_ENDPOINTS.USERS, { headers: { 'Authorization': `Bearer ${user.token}` } });
                 if (userRes.ok) {
                     const resJson = await userRes.json();
-                    allStaff = [...allStaff, ...(Array.isArray(resJson) ? resJson : (resJson.data || []))];
+                    const rawUsers = Array.isArray(resJson) ? resJson : (resJson.data || []);
+                    const filtered = rawUsers.filter(emp => String(emp.employee_id || emp.id || emp.EmpID || '').trim() !== '20250');
+                    const activeOnly = filterActiveEmployees(filtered);
+                    setEmployees(activeOnly);
                 }
-            } catch (e) { }
-
-            // Deduplicate
-            const unique = Array.from(new Map(allStaff.map(s => [s.id || s.employee_id || s.userId, s])).values());
-            setEmployees(unique);
+            } catch (e) {
+                console.error("Error fetching active employees:", e);
+            }
 
             // Fetch ALL quiz completion records from the rewards leaderboard API (returns cumulative all-time quiz scores for all users)
             let qList = [];
@@ -449,6 +442,7 @@ export default function AwardsScreen() {
                 String(e.userId) === rawId ||
                 String(e.emp_id) === rawId
             );
+            if (!emp) return;
             const id = emp ? String(emp.id || emp.employee_id || emp.userId || rawId) : rawId;
             const score = parsePoints(q.total_score || q.points || q.quiz_score || q.score || 0);
             if (score <= 0) return;
@@ -507,7 +501,16 @@ export default function AwardsScreen() {
             }
         });
 
-        return [...rewards, ...quizRewards];
+        const activeRewards = rewards.filter(r => {
+            const empId = String(r.employee_id || '');
+            return employees.some(e =>
+                String(e.id) === empId ||
+                String(e.employee_id) === empId ||
+                String(e.userId) === empId
+            );
+        });
+
+        return [...activeRewards, ...quizRewards];
     }, [rewards, quizScores, employees]);
 
     const filteredRewards = combinedRewards.filter(r => {
@@ -571,6 +574,7 @@ export default function AwardsScreen() {
                 const mappedList = list.map((item) => {
                     const empId = item.employee_id || item.id;
                     const emp = employees.find(e => String(e.id) === String(empId) || String(e.employee_id) === String(empId) || String(e.userId) === String(empId));
+                    if (!emp) return null;
 
                     let itemHistory = [];
                     if (Array.isArray(item.history)) itemHistory = [...item.history];
@@ -593,7 +597,7 @@ export default function AwardsScreen() {
                         profile_picture: item.profile_picture || item.profile_pic || item.photo || (emp ? (emp.profile_picture || emp.profile_pic || emp.photo) : null),
                         history: itemHistory
                     };
-                });
+                }).filter(Boolean);
                 mappedList.sort((a, b) => b.total_points - a.total_points);
                 const rankedList = mappedList.map((item, index) => ({
                     ...item,

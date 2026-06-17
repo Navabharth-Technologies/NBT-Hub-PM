@@ -5,6 +5,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../../context/AuthContext';
+import { filterActiveEmployees } from '../../utils/employeeUtils';
 
 import { API_ENDPOINTS, BASE_URL } from '../../config';
 import AppHeader from './AppHeader';
@@ -152,15 +153,17 @@ export default function LeaveManagement() {
 
   useEffect(() => {
     if (user?.token) {
-      // Fetch master employee profiles for complete data including photos
-      fetch(API_ENDPOINTS.EMPLOYEES || `${BASE_URL}/api/employee-profile`, {
+      // Fetch active users only
+      fetch(API_ENDPOINTS.USERS || `${BASE_URL}/api/users`, {
         headers: { 'Authorization': `Bearer ${user.token}` }
       })
         .then(res => res.json())
         .then(data => {
           const list = Array.isArray(data) ? data : (data.data || []);
           if (Array.isArray(list)) {
-            const sorted = [...list].sort((a, b) => {
+            const filtered = list.filter(emp => String(emp.employee_id || emp.id || emp.EmpID || '').trim() !== '20250');
+            const activeOnly = filterActiveEmployees(filtered);
+            const sorted = [...activeOnly].sort((a, b) => {
               const idA = parseInt(String(a.employee_id || a.id || '').replace(/[^\d]/g, ''), 10) || 0;
               const idB = parseInt(String(b.employee_id || b.id || '').replace(/[^\d]/g, ''), 10) || 0;
               if (idA !== idB) return idA - idB;
@@ -169,7 +172,7 @@ export default function LeaveManagement() {
             setAllEmployees(sorted);
           }
         })
-        .catch(err => console.error("Error fetching master employees:", err));
+        .catch(err => console.error("Error fetching active employees:", err));
 
       fetchLeaves();
     }
