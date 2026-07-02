@@ -129,7 +129,7 @@ const TaskNotification = ({ onOpenTask }) => {
       if (path.includes('/attendance') && combine.includes('leave')) return false;
       if (path.includes('/tickets') && combine.includes('ticket')) return false;
       if (path.includes('/threads') && combine.includes('thread')) return false;
-      if (path.includes('/admin/resignations') && combine.includes('resignation')) return false;
+      if (path.includes('/resignation-history') && combine.includes('resignation')) return false;
       if (path.includes('/admin/certificates') && combine.includes('certificate')) return false;
       if (path.includes('/job-applications') && combine.includes('job')) return false;
       if (path.includes('/assets') && combine.includes('asset')) return false;
@@ -230,7 +230,7 @@ const TaskNotification = ({ onOpenTask }) => {
         let displayTitle = '';
         if (n.isBlockedAlert) displayTitle = 'ACCESS BLOCKED';
         else if (dL.includes('leave') || tL.includes('leave')) displayTitle = 'LEAVE REQUEST';
-        else if (dL.includes('resignation') || tL.includes('resignation')) displayTitle = 'RESIGNATION';
+        else if (dL.includes('resignation') || tL.includes('resignation') || dL.includes('exit formalities') || tL.includes('exit formalities') || (n.type && n.type.toUpperCase() === 'RESIGNATION')) displayTitle = 'Resignation Updates';
         else if (dL.includes('certificate') || tL.includes('certificate')) displayTitle = 'SERVICE CERTIFICATE';
         else if (dL.includes('job') || tL.includes('job')) displayTitle = 'JOB APPLICATION';
         else if (dL.includes('task') || tL.includes('task')) displayTitle = 'TASK ASSIGNMENT';
@@ -286,7 +286,7 @@ const TaskNotification = ({ onOpenTask }) => {
     let path = '/';
     if (notif.isBlockedAlert)                                               path = '/new-joinees#blocked';
     else if (desc.includes('leave')  || title.includes('leave'))            path = '/leaves';
-    else if (desc.includes('resignation') || title.includes('resignation')) path = '/admin/resignations';
+    else if (desc.includes('resignation') || title.includes('resignation')) path = '/resignation-history';
     else if (desc.includes('certificate') || title.includes('certificate')) path = '/admin/certificates';
     else if (desc.includes('job')    || title.includes('job'))              path = '/job-applications';
     else if (desc.includes('ticket') || title.includes('ticket'))           path = '/tickets';

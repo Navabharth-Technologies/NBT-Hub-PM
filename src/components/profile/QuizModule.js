@@ -8,6 +8,7 @@ import { BASE_URL, API_ENDPOINTS } from '../../config';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 // import CartmanGif from '../../assets/images/cartman_no.gif';
+import { filterActiveEmployees } from '../../utils/employeeUtils';
 
 const QuizModule = ({ onBack }) => {
   const { user } = useAuth();
@@ -103,17 +104,23 @@ const QuizModule = ({ onBack }) => {
       const headers = { 'Authorization': `Bearer ${token}` };
 
       // 1. Fetch Users from both Rewards Leaderboard AND Subordinates for maximum coverage
-      const [allRes, rewHistoryRes, subRes] = await Promise.all([
+      const [allRes, rewHistoryRes, subRes, empRes] = await Promise.all([
         fetch(API_ENDPOINTS.LEADERBOARD_ALL || `${BASE_URL}/api/employees/leaderboard/all`, { headers }),
         fetch(API_ENDPOINTS.REWARDS_HISTORY || `${BASE_URL}/api/admin/rewards/history`, { headers }),
-        fetch(typeof API_ENDPOINTS.SUBORDINATES === 'function' ? API_ENDPOINTS.SUBORDINATES(uid) : `${BASE_URL}/api/subordinates/${uid}`, { headers })
+        fetch(typeof API_ENDPOINTS.SUBORDINATES === 'function' ? API_ENDPOINTS.SUBORDINATES(uid) : `${BASE_URL}/api/subordinates/${uid}`, { headers }),
+        fetch(API_ENDPOINTS.USERS || `${BASE_URL}/api/users`, { headers })
       ]);
 
       const allData = allRes.ok ? await allRes.json() : { success: false, data: [] };
       const rewHistoryData = rewHistoryRes.ok ? await rewHistoryRes.json() : [];
       const subData = subRes.ok ? await subRes.json() : [];
+      const empData = empRes.ok ? await empRes.json() : [];
 
-      const employeesList = allData.data || [];
+      const activeEmployees = filterActiveEmployees(Array.isArray(empData) ? empData : []);
+      const activeEmpIds = new Set(activeEmployees.map(emp => String(emp.employee_id || emp.id)));
+
+      const rawEmployeesList = allData.data || [];
+      const employeesList = rawEmployeesList.filter(emp => activeEmpIds.has(String(emp.id || emp.employee_id)));
       const rewardSums = {};
       rewHistoryData.forEach(r => {
         const empId = String(r.employee_id || '');
@@ -145,7 +152,7 @@ const QuizModule = ({ onBack }) => {
 
       const userList = [
         ...employeesList.map(u => ({ id: u.id || u.employee_id, name: u.name || u.employee_name })),
-        ...(Array.isArray(subData) ? subData : (subData.data || [])).map(u => ({ id: u.employee_id || u.id, name: u.employee_name || u.name }))
+        ...(Array.isArray(subData) ? subData : (subData.data || [])).filter(u => activeEmpIds.has(String(u.employee_id || u.id))).map(u => ({ id: u.employee_id || u.id, name: u.employee_name || u.name }))
       ];
 
       // Local Cache & Merge Strategy to prevent historical score loss when quiz is deleted
@@ -245,6 +252,12 @@ const QuizModule = ({ onBack }) => {
           console.error("Local quiz score cache fallback error:", cacheErr);
         }
       }
+
+      // Filter scoreList to only keep active employees
+      scoreList = scoreList.filter(s => {
+        const targetId = String(s.employee_id || s.user_id || s.id || '');
+        return targetId && activeEmpIds.has(targetId);
+      });
 
       // 2. Map and Deduplicate precise quiz scores to exact employee name strings, preventing double-counting
       const userGroup = {}; // name -> { dated: Map, cumulative: 0 }

@@ -757,13 +757,28 @@ export default function MyLeaves() {
                   onChange={e => setFormData({ ...formData, leave_type: e.target.value })}
                   style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '2px solid #315A9E', backgroundColor: '#f8fafc', color: '#0f172a', fontWeight: '900', fontSize: '15px', outline: 'none', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(49, 90, 158, 0.1)' }}
                 >
-                  <option value="Casual Leave" style={{ fontWeight: '700' }}>Casual Leaves</option>
-                  <option value="LOP (Loss of Pay)" style={{ fontWeight: '700' }}>LOP Leaves</option>
-                  <option value="Earned Leave" style={{ fontWeight: '700', color: '#000' }}>Earned Leaves</option>
+                  {(() => {
+                    const joiningDate = user?.joining_date || user?.date_of_joining || user?.joiningDate || null;
+                    const hasOneYear = joiningDate
+                      ? (Date.now() - new Date(joiningDate).getTime()) >= 365 * 24 * 60 * 60 * 1000
+                      : false;
+                    const hasCasualBalance = Number(leaveStats.cl_available || 0) > 0;
+                    return (
+                      <>
+                        <option value="Casual Leave" disabled={!hasCasualBalance} style={{ fontWeight: '700', color: !hasCasualBalance ? '#94a3b8' : undefined }}>
+                          Casual Leaves{!hasCasualBalance ? ' (No balance)' : ''}
+                        </option>
+                        <option value="LOP (Loss of Pay)" style={{ fontWeight: '700' }}>LOP Leaves</option>
+                        <option value="Earned Leave" disabled={!hasOneYear} style={{ fontWeight: '700', color: !hasOneYear ? '#94a3b8' : '#000' }}>
+                          Earned Leaves{!hasOneYear ? ' (Available after 1 year)' : ''}
+                        </option>
+                      </>
+                    );
+                  })()}
                 </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>From Date</label>
                   <input

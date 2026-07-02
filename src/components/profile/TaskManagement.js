@@ -158,9 +158,9 @@ export default function TaskManagement() {
             attachment_data: task.attachment_data || ''
           };
         }).filter(t => {
-           // Ensure task assignee is an active user (either by matched name or lookup)
-           const assignName = String(t.assignee_name || '').toLowerCase().trim();
-           return t.display_title !== 'Untitled' && t.display_title.length > 0 && activeUserNames.has(assignName);
+          // Ensure task assignee is an active user (either by matched name or lookup)
+          const assignName = String(t.assignee_name || '').toLowerCase().trim();
+          return t.display_title !== 'Untitled' && t.display_title.length > 0 && activeUserNames.has(assignName);
         });
 
         setTasks(finalData);
@@ -360,15 +360,15 @@ export default function TaskManagement() {
       // 1. Header & Branding
       doc.setFontSize(22);
       doc.setTextColor(30, 41, 59); // Indigo-900
-      doc.text('TITAN MANAGEMENT HUB', 14, 20);
+      doc.text('TASK MANAGEMENT HUB', 14, 20);
 
       doc.setFontSize(10);
       doc.setTextColor(100, 116, 139); // Slate-500
-      doc.text('OFFICIAL TASK PERFORMANCE REPORT', 14, 28);
+      doc.text('OFFICIAL TASK REPORT', 14, 28);
       doc.text(`Generated on: ${today}`, 14, 34);
 
       // 2. Prepare Data
-      const tableColumn = ["ID", "Work Item Description", "Assignee", "Progress", "Status", "Verification", "Date"];
+      const tableColumn = ["ID", "Work Description", "Assignee", "Progress", "Status", "Verification", "Date"];
       const tableRows = filteredTasks.map(task => [
         task.id || 'N/A',
         task.display_title,
@@ -400,7 +400,7 @@ export default function TaskManagement() {
           0: { cellWidth: 20, halign: 'center' },
           1: { cellWidth: 'auto' },
           2: { cellWidth: 40 },
-          3: { cellWidth: 20, halign: 'center' },
+          3: { cellWidth: 30, halign: 'center' },
           4: { cellWidth: 30, halign: 'center' },
           5: { cellWidth: 30, halign: 'center' },
           6: { cellWidth: 30, halign: 'center' }
@@ -411,7 +411,7 @@ export default function TaskManagement() {
       });
 
       // 4. Save
-      doc.save(`Titan_Task_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.save(`Task_Report_${new Date().toISOString().split('T')[0]}.pdf`);
       console.log('DEBUG: PDF Report Generated Successfully! 📄');
     } catch (err) {
       console.error('PDF Generation Error:', err);
@@ -555,7 +555,6 @@ export default function TaskManagement() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <span style={{ fontSize: '10px', fontWeight: '800', color: '#3863a8', backgroundColor: '#f0f4ff', padding: '4px 8px', borderRadius: '6px' }}>#{task.id}</span>
-                        <span style={{ fontSize: '10px', fontWeight: '900', color: '#3b82f6', backgroundColor: '#eff6ff', padding: '4px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>{task.type || 'TASK'}</span>
                       </div>
                       <span style={{
                         fontSize: '9px', fontWeight: '900', padding: '4px 10px', borderRadius: '8px', textTransform: 'uppercase',
@@ -642,8 +641,7 @@ export default function TaskManagement() {
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '1.5px solid #f1f5f9' }}>
                     <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '5%' }}>ID</th>
-                    <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '7%' }}>Type</th>
-                    <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '24%' }}>Task Information</th>
+                    <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '31%' }}>Task Information</th>
                     <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '14%' }}>Assignee</th>
                     <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Status</th>
                     <th style={{ padding: '16px 12px', fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>Progress</th>
@@ -654,18 +652,13 @@ export default function TaskManagement() {
                 </thead>
                 <tbody className="animate-fade-in">
                   {loading ? (
-                    <tr><td colSpan="10" style={{ textAlign: 'center', padding: '40px' }}>Loading tasks...</td></tr>
+                    <tr><td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>Loading tasks...</td></tr>
                   ) : filteredTasks.length > 0 ? (
                     filteredTasks.map((task, index) => (
                       <tr key={task.id || index} style={{ borderBottom: '1.5px solid #f8fafc', transition: 'all 0.2s ease' }}>
                         <td style={{ padding: '16px 12px' }}>
                           <span style={{ fontSize: '12px', fontWeight: '800', color: '#3863a8', backgroundColor: '#f0f4ff', padding: '4px 8px', borderRadius: '6px' }}>
                             {String(task.id || 'N/A')}
-                          </span>
-                        </td>
-                        <td style={{ padding: '16px 12px' }}>
-                          <span style={{ fontSize: '10px', fontWeight: '900', color: '#3b82f6', backgroundColor: '#eff6ff', padding: '4px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
-                            {task.type || 'TASK'}
                           </span>
                         </td>
                         <td style={{ padding: '16px 12px' }}>

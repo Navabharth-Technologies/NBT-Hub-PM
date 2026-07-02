@@ -603,7 +603,7 @@ export default function PerformanceModule() {
       alignItems: 'center',
       justifyContent: 'space-between',
       cursor: 'pointer',
-      transition: '0.2s transform'
+      transition: '0.2s transform, 0.2s box-shadow'
     },
     docCard: {
       background: 'white',
@@ -614,7 +614,8 @@ export default function PerformanceModule() {
       alignItems: 'center',
       justifyContent: 'space-between',
       cursor: 'pointer',
-      boxShadow: '0 4px 10px rgba(0,0,0,0.02)'
+      boxShadow: '0 4px 10px rgba(0,0,0,0.02)',
+      transition: '0.2s transform, 0.2s box-shadow'
     }
   };
 
@@ -761,7 +762,26 @@ export default function PerformanceModule() {
           <div style={{ display: 'grid', gridTemplateColumns: winWidth < 600 ? '1fr' : winWidth < 900 ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '24px' }}>
 
             {/* Card 1 – Security Settings */}
-            <div onClick={() => setShowSecurityModal(true)} style={{ ...dashboardStyles.serviceCard, background: '#dbeafe' }}>
+            <div
+              onClick={() => setShowSecurityModal(true)}
+              style={{ ...dashboardStyles.serviceCard, background: '#dbeafe' }}
+              onMouseOver={(e) => {
+                if (winWidth >= 768) {
+                  e.currentTarget.style.transform = 'scale(1.03)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(59, 130, 246, 0.15)';
+                }
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.transform = 'scale(0.97)';
+              }}
+              onTouchEnd={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                 <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Shield color="#3b82f6" size={20} />
@@ -775,21 +795,58 @@ export default function PerformanceModule() {
             </div>
 
             {/* Card 2 – Support & Maintenance */}
-            <div onClick={() => navigate('/tickets')} style={{ ...dashboardStyles.serviceCard, background: '#ffedd5' }}>
+            <div
+              onClick={() => navigate('/raise-ticket')}
+              style={{ ...dashboardStyles.serviceCard, background: '#ffedd5' }}
+              onMouseOver={(e) => {
+                if (winWidth >= 768) {
+                  e.currentTarget.style.transform = 'scale(1.03)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(249, 115, 22, 0.15)';
+                }
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.transform = 'scale(0.97)';
+              }}
+              onTouchEnd={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                 <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <LifeBuoy color="#f97316" size={20} />
                 </div>
                 <div>
                   <p style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: '#9a3412', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Support &amp; Maintenance</p>
-                  <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '900', color: '#0f172a' }}>View Tickets</p>
+                  <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '900', color: '#0f172a' }}>Raise Ticket</p>
                 </div>
               </div>
               <ChevronRight size={winWidth < 768 ? 16 : 20} color="#9a3412" />
             </div>
 
             {/* Card 3 – Total Tenurity */}
-            <div style={{ ...dashboardStyles.serviceCard, background: '#dcfce7', cursor: 'default' }}>
+            <div
+              style={{ ...dashboardStyles.serviceCard, background: '#dcfce7', cursor: 'default' }}
+              onMouseOver={(e) => {
+                if (winWidth >= 768) {
+                  e.currentTarget.style.transform = 'scale(1.03)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(34, 197, 94, 0.15)';
+                }
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.transform = 'scale(0.97)';
+              }}
+              onTouchEnd={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                 <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <RefreshCw color="#16a34a" size={20} />
@@ -813,6 +870,22 @@ export default function PerformanceModule() {
             <div
               style={{ ...dashboardStyles.docCard, cursor: 'pointer' }}
               onClick={() => navigate('/salary-statements')}
+              onMouseOver={(e) => {
+                if (winWidth >= 768) {
+                  e.currentTarget.style.transform = 'scale(1.03)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.08)';
+                }
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.02)';
+              }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.transform = 'scale(0.97)';
+              }}
+              onTouchEnd={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
             >
               <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <div style={{ width: '60px', height: '60px', borderRadius: '20px', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FileText color="#22c55e" size={26} /></div>
@@ -827,12 +900,28 @@ export default function PerformanceModule() {
             <div
               style={{ ...dashboardStyles.docCard, background: '#0f172a', border: 'none', cursor: 'pointer' }}
               onClick={() => navigate('/service-certificates')}
+              onMouseOver={(e) => {
+                if (winWidth >= 768) {
+                  e.currentTarget.style.transform = 'scale(1.03)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(15, 23, 42, 0.3)';
+                }
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.transform = 'scale(0.97)';
+              }}
+              onTouchEnd={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
             >
               <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <div style={{ width: '60px', height: '60px', borderRadius: '20px', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Fingerprint color="white" size={26} /></div>
                 <div>
                   <p style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Experience Letter</p>
-                  <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '900', color: 'white' }}>Apply for service certificate</p>
+                  <p style={{ margin: 0, fontSize: winWidth < 768 ? '14px' : '16px', fontWeight: '900', color: 'white' }}>Apply for Experience Letter</p>
                 </div>
               </div>
               <ChevronRight size={winWidth < 768 ? 16 : 24} color="white" />
@@ -841,6 +930,22 @@ export default function PerformanceModule() {
             <div
               style={{ ...dashboardStyles.docCard, gridColumn: winWidth < 1024 && winWidth >= 600 ? 'span 2' : 'auto', cursor: 'pointer' }}
               onClick={() => navigate('/resignations')}
+              onMouseOver={(e) => {
+                if (winWidth >= 768) {
+                  e.currentTarget.style.transform = 'scale(1.03)';
+                  e.currentTarget.style.boxShadow = '0 10px 25px -5px rgba(239, 68, 68, 0.1)';
+                }
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 4px 10px rgba(0,0,0,0.02)';
+              }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.transform = 'scale(0.97)';
+              }}
+              onTouchEnd={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
             >
               <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                 <div style={{ width: '60px', height: '60px', borderRadius: '20px', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><LogOut color="#ef4444" size={26} /></div>

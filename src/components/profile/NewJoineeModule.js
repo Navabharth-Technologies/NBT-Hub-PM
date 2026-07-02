@@ -84,6 +84,7 @@ export default function NewJoineeModule() {
   }, []);
   const [toastType, setToastType] = useState('success');
   const [leads, setLeads] = useState([]);
+  const [activeEmployees, setActiveEmployees] = useState([]);
   const [deleteConfirmJoinee, setDeleteConfirmJoinee] = useState(null);
 
   const [viewBlocked, setViewBlocked] = useState(false);
@@ -227,6 +228,7 @@ export default function NewJoineeModule() {
         const list = Array.isArray(data) ? data : (data.data || []);
         const filtered = list.filter(emp => String(emp.employee_id || emp.id || emp.EmpID || '').trim() !== '20250');
         const activeOnly = filterActiveEmployees(filtered);
+        setActiveEmployees(activeOnly);
         const teamLeads = activeOnly.filter(emp =>
           (emp.role || emp.designation || '').toUpperCase().includes('LEAD') ||
           (emp.role || emp.designation || '').toUpperCase().includes('MANAGER')
@@ -646,6 +648,13 @@ export default function NewJoineeModule() {
   const filteredJoinees = joinees.filter(j => {
     const matchesSearch = (j.name || '').toLowerCase().startsWith(searchTerm.toLowerCase());
     const isBlocked = Number(j.is_blocked) === 1;
+
+    // Filter out if they are already in the active users table (promoted)
+    const isAlreadyEmployee = activeEmployees.some(emp => 
+      String(emp.name || '').toLowerCase().trim() === String(j.name || '').toLowerCase().trim()
+    );
+    if (isAlreadyEmployee) return false;
+
     if (viewBlocked) return matchesSearch && isBlocked;
     return matchesSearch && !isBlocked;
   });
@@ -1124,6 +1133,7 @@ export default function NewJoineeModule() {
                         setPromoteEmpId('');
                         fetchJoinees();
                         fetchReminders();
+                        fetchLeads();
                       }}
                       style={{ flex: 1.5, padding: '12px', background: '#315A9E', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '900', fontSize: '13px', cursor: 'pointer', boxShadow: '0 6px 16px rgba(49, 90, 158, 0.35)' }}
                     >

@@ -10,6 +10,7 @@ import {
   Camera, Headphones, Tablet as TabletIcon, HardDrive, ScrollText, Calendar,
   ShieldCheck, Sparkles, Check, ArrowLeft
 } from 'lucide-react';
+import { filterActiveEmployees } from '../../utils/employeeUtils';
 
 export default function AssetsManagement() {
   const navigate = useNavigate();
@@ -138,10 +139,11 @@ export default function AssetsManagement() {
 
       // 1. Fetch Employees
       try {
-        const empRes = await fetch(API_ENDPOINTS.EMPLOYEES, { headers });
+        const empRes = await fetch(API_ENDPOINTS.USERS, { headers });
         if (empRes.ok) {
           const empData = await empRes.json();
-          setEmployees(Array.isArray(empData) ? empData : (empData.recordset || empData.data || []));
+          const rawEmps = Array.isArray(empData) ? empData : (empData.recordset || empData.data || []);
+          setEmployees(filterActiveEmployees(rawEmps));
         }
       } catch (e) { console.error('Emp fetch failed:', e); }
 
@@ -770,22 +772,13 @@ export default function AssetsManagement() {
   };
 
   const filteredEmployees = React.useMemo(() => {
-    // Combine employees and asset-only records
-    const allIds = new Set([
-      ...employees.map(e => String(e.id || e.EmpID)),
-      ...Object.keys(assets)
-    ]);
-
-    const combined = Array.from(allIds).map(id => {
-      const emp = employees.find(e => String(e.id || e.EmpID) === id);
-      const asset = assets[id];
-      if (emp) return { ...emp };
+    // Only map active employees
+    const combined = employees.map(emp => {
+      const id = String(emp.id || emp.EmpID || emp.employee_id);
+      const asset = assets[id] || {};
       return {
-        id: id,
-        EmpID: id,
-        name: asset.employee_name || asset.name || 'New Member',
-        role: asset.designation || 'Assigned Asset',
-        is_virtual: true
+        ...emp,
+        laptop_details: asset.laptop_details || ''
       };
     });
 
@@ -877,14 +870,6 @@ export default function AssetsManagement() {
             >
               <Plus size={16} />
               Add All Assets
-            </button>
-            <button
-              onClick={() => setAvailableAssetsModal(true)}
-              style={{ flex: 1, background: 'white', color: '#0ea5e9', border: '2px solid #0ea5e9', padding: '12px 20px', borderRadius: '14px', fontWeight: '800', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all 0.3s' }}
-            >
-
-              <Package size={16} />
-              Submitted Assets
             </button>
             <button
               onClick={() => {

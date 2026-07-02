@@ -103,15 +103,15 @@ export default function EmployeeModule() {
         fontSize: 8.5,
         cellPadding: { top: 5, bottom: 5, left: 3, right: 3 },
         valign: 'middle',
-        overflow: 'linebreak'
+        overflow: 'ellipsize'
       },
       columnStyles: {
         0: { cellWidth: 16, halign: 'center' }, // ID
-        1: { cellWidth: 'auto' },               // Name (auto-sized to fit complete name)
-        2: { cellWidth: 'auto' },               // Role
-        3: { cellWidth: 'auto' },               // Team
-        4: { cellWidth: 'auto' },               // Email
-        5: { cellWidth: 25, halign: 'center' }  // Status
+        1: { cellWidth: 35 },                   // Name (allocated enough space to fit complete name)
+        2: { cellWidth: 40 },                   // Role
+        3: { cellWidth: 35 },                   // Team
+        4: { cellWidth: 'auto' },               // Email (takes remaining space)
+        5: { cellWidth: 20, halign: 'center' }  // Status
       },
       headStyles: { fillColor: [49, 99, 170], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [248, 250, 252] },
@@ -253,16 +253,16 @@ export default function EmployeeModule() {
                   }}>
                     {emp.name.charAt(0)}
                   </div>
-                  <div style={{ overflow: 'hidden' }}>
+                  <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
                     <h3 style={{ fontSize: winWidth < 480 ? '14px' : '16px', fontWeight: '800', color: '#1e293b', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.name}</h3>
-                    <div style={{ fontSize: winWidth < 480 ? '9px' : '11px', fontWeight: '700', color: '#312e81' }}>{emp.role}</div>
+                    <div style={{ fontSize: winWidth < 480 ? '9px' : '11px', fontWeight: '700', color: '#312e81', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.role}</div>
                   </div>
 
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: winWidth < 480 ? '5px' : '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: winWidth < 480 ? '11px' : '12px', color: '#64748b' }}>
-                    <span style={{ fontSize: winWidth < 480 ? '12px' : '13px', flexShrink: 0 }}>🏢</span> <span style={{ fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.team}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: winWidth < 480 ? '11px' : '12px', color: '#64748b', overflow: 'hidden' }}>
+                    <span style={{ fontSize: winWidth < 480 ? '12px' : '13px', flexShrink: 0 }}>🏢</span> <span style={{ fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, flex: 1 }}>{emp.team}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: winWidth < 480 ? '11px' : '12px', color: '#64748b' }}>
                     <span style={{ fontSize: winWidth < 480 ? '12px' : '13px', flexShrink: 0 }}>📧</span> <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.email}</span>

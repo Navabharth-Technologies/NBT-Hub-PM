@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThreadProvider } from './context/ThreadContext';
 import { WifiOff, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BASE_URL } from './config';
 import PMDashboard from './components/profile/PMDashboard';
 import TeamManagement from './components/profile/TeamManagement';
 import TeamDetail from './components/profile/TeamDetail';
@@ -21,6 +22,7 @@ import BirthdayScreen from './components/profile/BirthdayScreen';
 import HolidayScreen from './components/profile/HolidayScreen';
 import TicketManagement from './components/profile/TicketManagement';
 import ReportScreen from './components/profile/ReportScreen';
+import RaiseTicket from './components/profile/RaiseTicket';
 
 import AttendanceManagement from './components/profile/AttendanceManagement';
 import LeaveManagement from './components/profile/LeaveManagement';
@@ -30,20 +32,72 @@ import AttendanceReportScreen from './components/profile/AttendanceReportScreen'
 import LeaveRequestDetail from './components/profile/LeaveRequestDetail';
 import AwardsScreen from './components/profile/AwardsScreen';
 import ResignationUserScreen from './components/profile/ResignationUserScreen';
-import ServiceCertificateUserScreen from './components/profile/ServiceCertificateUserScreen';
+import ExperienceLetterUser from './components/profile/ExperienceLetterUser';
+import ExperienceLetterManagement from './components/profile/ExperienceLetterManagement';
 import PayslipScreen from './components/profile/PayslipScreen';
 import SalaryStatements from './components/profile/SalaryStatements';
 import PersonalInfo from './components/profile/PersonalInfo';
 import AssetsManagement from './components/profile/AssetsManagement';
 import MyLeaves from './components/profile/MyLeaves';
+import ExitFormalities from './components/profile/ExitFormalities';
 
 
 
 
 import LoginScreen from './components/profile/LoginScreen';
 
+// 🔄 Service Certificate Revocation → Re-activation Check
+// If HR deletes a service cert from DB, the resigned employee is re-activated automatically.
+function useCertRevocationReactivation(user, setUser) {
+  useEffect(() => {
+    if (!user) return;
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!token) return;
+    const cleanToken = token.replace(/['"+]+/g, '').trim();
+
+    // Only run for users that appear resigned/deactivated
+    const status = String(user?.status || '').toLowerCase().trim();
+    const empStatus = String(user?.employment_status || user?.employmentStatus || '').toLowerCase().trim();
+    const isInactive =
+      ['relieved', 'resigned', 'inactive', 'terminated', 'former'].includes(status) ||
+      ['relieved', 'resigned', 'inactive', 'terminated', 'former'].includes(empStatus) ||
+      Number(user?.is_active) === 0 ||
+      user?.is_active === false;
+
+    if (!isInactive) return;
+
+    (async () => {
+      try {
+        const certRes = await fetch(`${BASE_URL}/api/service-certificates/my`, {
+          headers: { Authorization: `Bearer ${cleanToken}` }
+        });
+        if (!certRes.ok) return;
+        const certData = await certRes.json();
+        const certs = Array.isArray(certData) ? certData : (certData.data || certData.requests || []);
+
+        // If NO service certificate record exists (was deleted from DB) → re-activate
+        if (certs.length === 0) {
+          if (setUser) {
+            setUser(prev => ({
+              ...prev,
+              status: 'active',
+              employment_status: 'active',
+              is_active: 1,
+              isActive: true
+            }));
+          }
+        }
+      } catch (e) {
+        // Network error — fail gracefully, never lock user out
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.employee_id]);
+}
+
 function AppRoutes() {
-  const { user, loading } = useAuth();
+  const { user, loading, setUser } = useAuth();
+  useCertRevocationReactivation(user, setUser);
 
   if (loading) return null; // Wait for localStorage to be read
 
@@ -63,6 +117,7 @@ function AppRoutes() {
       <Route path="/teams/:id" element={<TeamDetail />} />
       <Route path="/tasks" element={<TaskManagement />} />
       <Route path="/tickets" element={<TicketManagement />} />
+      <Route path="/raise-ticket" element={<RaiseTicket />} />
       <Route path="/performance" element={<PerformanceModule />} />
       <Route path="/profile" element={<Navigate to="/performance" />} />
       <Route path="/courses" element={<CourseModule />} />
@@ -81,8 +136,10 @@ function AppRoutes() {
       <Route path="/attendance/report" element={<AttendanceReportScreen />} />
       <Route path="/quiz" element={<QuizModule />} />
       <Route path="/awards" element={<AwardsScreen />} />
-      <Route path="/resignations" element={<ResignationUserScreen />} />
-      <Route path="/service-certificates" element={<ServiceCertificateUserScreen />} />
+      <Route path="/resignations" element={<ResignationUserScreen defaultTab="submit" />} />
+      <Route path="/resignation-history" element={<ResignationUserScreen defaultTab="history" />} />
+      <Route path="/service-certificates" element={<ExperienceLetterUser />} />
+      <Route path="/admin/certificates" element={<ExperienceLetterManagement />} />
       <Route path="/payslips" element={<PayslipScreen />} />
       <Route path="/salary-statements" element={<SalaryStatements />} />
       <Route path="/personal-info" element={<PersonalInfo onBack={() => window.history.back()} />} />
@@ -90,6 +147,7 @@ function AppRoutes() {
       <Route path="/my-leaves" element={<MyLeaves />} />
       <Route path="/birthdays" element={<BirthdayScreen />} />
       <Route path="/holidays" element={<HolidayScreen />} />
+      <Route path="/exit-formalities/:id" element={<ExitFormalities />} />
 
     </Routes>
   );

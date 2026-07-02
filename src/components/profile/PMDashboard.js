@@ -88,7 +88,6 @@ export default function PMDashboard() {
   const [holidays, setHolidays] = useState([]);
   const [winWidth, setWinWidth] = useState(window.innerWidth);
   const [currentMetricIndex, setCurrentMetricIndex] = useState(0);
-  const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
 
   useEffect(() => {
     const handleResize = () => setWinWidth(window.innerWidth);
@@ -232,6 +231,11 @@ export default function PMDashboard() {
 
             // RESOLVE: Use the optimized lookup map for instant name resolution
             const targetUid = String(task.assignee_id || '').trim();
+
+            // FILTER: Skip tasks assigned to resigned/inactive employees
+            // If assignee_id is set but not found in active userLookup, the employee is no longer active
+            if (targetUid && !userLookup[targetUid]) return;
+
             task.assignee_name = userLookup[targetUid] || task.assignee_name || task.member_name || 'Unassigned';
 
             uniqueTasksMap.set(tid, task);
@@ -285,15 +289,41 @@ export default function PMDashboard() {
         ]);
 
         let totalActiveJoinees = 0;
+        const activeNamesSet = new Set(
+          (Array.isArray(currentUsers) ? currentUsers : []).map(u => String(u.name || '').toLowerCase().trim())
+        );
+        const activeEmailsSet = new Set(
+          (Array.isArray(currentUsers) ? currentUsers : []).map(u => String(u.email || '').toLowerCase().trim())
+        );
+        const activeIdsSet = new Set(
+          (Array.isArray(currentUsers) ? currentUsers : []).map(u => String(u.employee_id || u.id || u.empId || '').trim())
+        );
+
         if (joineeRes && joineeRes.ok) {
           const jData = await joineeRes.json();
-          const activeJoinees = (Array.isArray(jData) ? jData : []).filter(j => Number(j.is_blocked) !== 1);
+          const activeJoinees = (Array.isArray(jData) ? jData : []).filter(j => {
+            const name = String(j.name || '').toLowerCase().trim();
+            const email = String(j.email_id || j.emailId || j.email || '').toLowerCase().trim();
+            const id = String(j.employee_id || j.employeeId || j.id || '').trim();
+            return Number(j.is_blocked) !== 1 &&
+              !activeNamesSet.has(name) &&
+              (!email || !activeEmailsSet.has(email)) &&
+              (!id || !activeIdsSet.has(id));
+          });
           totalActiveJoinees += activeJoinees.length;
         }
         if (internRes && internRes.ok) {
           const iData = await internRes.json();
           const internsList = Array.isArray(iData) ? iData : (iData.data || []);
-          const activeInterns = internsList.filter(i => Number(i.is_blocked) !== 1);
+          const activeInterns = internsList.filter(i => {
+            const name = String(i.name || '').toLowerCase().trim();
+            const email = String(i.email_id || i.emailId || i.email || '').toLowerCase().trim();
+            const id = String(i.employee_id || i.employeeId || i.id || '').trim();
+            return Number(i.is_blocked) !== 1 &&
+              !activeNamesSet.has(name) &&
+              (!email || !activeEmailsSet.has(email)) &&
+              (!id || !activeIdsSet.has(id));
+          });
           totalActiveJoinees += activeInterns.length;
         }
         setNewJoineesCount(totalActiveJoinees);
@@ -513,6 +543,8 @@ export default function PMDashboard() {
 
     { label: 'Assets Management', value: 'Manage', icon: <Package size={winWidth < 768 ? 18 : 24} />, color: '#f59e0b', trend: 'New', trendUp: true, path: '/assets' },
     { label: 'Fun and Quiz', value: 'Play', icon: <Icons.Quiz size={winWidth < 768 ? 18 : 24} />, color: '#ec4899', trend: 'Active', trendUp: true, path: '/quiz' },
+    { label: 'Resignation History', value: 'View', icon: <Clock size={winWidth < 768 ? 18 : 24} />, color: '#ef4444', trend: 'Live', trendUp: true, path: '/resignation-history' },
+    { label: 'Experience Letter Request', value: 'View', icon: <Clock size={winWidth < 768 ? 18 : 24} />, color: '#3b82f6', trend: 'Live', trendUp: true, path: '/admin/certificates' }
   ];
 
   // Helper for PDF encoding
@@ -744,13 +776,69 @@ export default function PMDashboard() {
           </div>
         </header>
 
+        {/* Row 1 Metrics (4 cards) */}
+        <section style={{ marginBottom: '20px' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: winWidth < 640 ? 'repeat(2, 1fr)' : winWidth < 1024 ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
+            gap: winWidth < 768 ? '12px' : '20px'
+          }}>
+            {dynamicMetrics.slice(0, 4).map((m, i) => (
+              <div
+                key={i}
+                className="metric-card animate-fade-in"
+                style={{
+                  cursor: m.path ? 'pointer' : 'default',
+                  padding: winWidth < 768 ? '16px' : '24px',
+                  borderRadius: '24px',
+                  background: 'white',
+                  border: '1.5px solid #3863a8',
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  transition: '0.2s transform, 0.2s box-shadow'
+                }}
+                onClick={() => m.path && navigate(m.path)}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.02)';
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{
+                    background: `${m.color}15`, color: m.color, width: winWidth < 768 ? '36px' : '48px', height: winWidth < 768 ? '36px' : '48px',
+                    borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: winWidth < 768 ? '18px' : '24px'
+                  }}>
+                    {m.icon}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: winWidth < 768 ? '11px' : '13px', color: '#64748b', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{m.label}</div>
+                  <div style={{
+                    fontSize: winWidth < 768 ? '20px' : '28px',
+                    fontWeight: '950',
+                    color: '#0f172a',
+                    lineHeight: 1
+                  }}>{m.value}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Row 2 Metrics (4 cards) */}
         <section style={{ marginBottom: winWidth < 768 ? '32px' : '40px' }}>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: winWidth < 640 ? 'repeat(2, 1fr)' : winWidth < 1024 ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)',
+            gridTemplateColumns: winWidth < 640 ? 'repeat(2, 1fr)' : winWidth < 1024 ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
             gap: winWidth < 768 ? '12px' : '20px'
           }}>
-            {dynamicMetrics.map((m, i) => (
+            {dynamicMetrics.slice(4, 8).map((m, i) => (
               <div
                 key={i}
                 className="metric-card animate-fade-in"
@@ -799,138 +887,6 @@ export default function PMDashboard() {
         </section>
 
         <div className="main-dashboard-grid">
-          {/* Column 1: Team Overview (Spans 2 columns on Desktop) */}
-          <section className="dashboard-section team-overview-section animate-fade-in" style={{
-            animationDelay: '0.4s',
-            position: 'relative',
-            borderRadius: '32px',
-            width: winWidth < 600 ? 320 : '100%',
-            marginLeft: 'auto',
-            marginRight: '20px',
-            boxSizing: 'border-box'
-          }}>
-            <div className="section-header" style={{
-              marginBottom: '20px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <h2 className="section-title" style={{ margin: 0, fontSize: '22px' }}>Team Overview</h2>
-                <button style={{ background: 'none', border: 'none', color: '#3863a8', fontWeight: '800', cursor: 'pointer', fontSize: '13px', textAlign: 'left', padding: '4px 0' }} onClick={() => navigate('/teams')}></button>
-              </div>
-
-              {winWidth < 768 && (
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button
-                    onClick={() => setCurrentTeamIndex(prev => Math.max(0, prev - 1))}
-                    disabled={currentTeamIndex === 0}
-                    style={{
-                      width: '28px', height: '28px', borderRadius: '50%', border: '1px solid #e2e8f0',
-                      background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', opacity: currentTeamIndex === 0 ? 0.3 : 1, fontSize: '14px'
-                    }}
-                  >
-                    ←
-                  </button>
-                  <button
-                    onClick={() => setCurrentTeamIndex(prev => Math.min(teams.length - 1, prev + 1))}
-                    disabled={currentTeamIndex === teams.length - 1}
-                    style={{
-                      width: '28px', height: '28px', borderRadius: '50%', border: '1px solid #e2e8f0',
-                      background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', opacity: currentTeamIndex === teams.length - 1 ? 0.3 : 1, fontSize: '14px'
-                    }}
-                  >
-                    →
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div style={{
-              overflow: winWidth < 768 ? 'hidden' : 'visible',
-              width: '100%'
-            }}>
-              {winWidth < 768 ? (
-                <div style={{
-                  display: 'flex',
-                  gap: '20px',
-                  transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                  transform: `translateX(calc(-${currentTeamIndex} * (100% + 20px)))`,
-                  width: '100%',
-                  touchAction: 'pan-y'
-                }}>
-                  {teams.map(team => (
-                    <div
-                      key={team.id}
-                      className="team-card"
-                      style={{
-                        flex: '0 0 100%',
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        padding: '0 5px',
-                        cursor: 'default',
-                        background: 'white',
-                        borderRadius: '24px',
-                        margin: '0',
-                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)',
-                        minHeight: '160px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
-                        <h3 style={{ fontWeight: '900', fontSize: '18px', margin: 0, color: '#1e293b' }}>{team.name}</h3>
-                      </div>
-                      <div style={{ fontSize: '14px', color: '#64748b', marginBottom: '15px' }}>Lead: <span style={{ color: '#1e293b', fontWeight: '700' }}>{team.lead}</span></div>
-
-                      <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3863a8' }}></span>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}><span style={{ fontWeight: '900', color: '#3863a8' }}>{team.members}</span> Members</div>
-                        </div>
-                      </div>
-
-                      <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '20px', overflow: 'hidden' }}>
-                        <div style={{ width: `${team.progress}%`, height: '100%', background: 'linear-gradient(90deg, #3863a8, #1e40af)', borderRadius: '20px', transition: 'width 1s ease' }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="team-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-                  {teams.map(team => (
-                    <div key={team.id}
-                      style={{
-                        padding: '20px',
-                        borderRadius: '24px',
-                        background: '#ffffff',
-                        border: '3px solid #cbd5e1',
-                        boxShadow: '0 10px 30px rgba(0,0,0,0.04)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '15px',
-                        cursor: 'default',
-                        transition: '0.3s transform'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid #e2e8f0' }}><Shield size={20} color="#3863a8" /></div>
-                          <div>
-                            <div style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b' }}>{team.name}</div>
-                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{team.members || 0} Operatives</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </section>
 
           {/* Column 2: Task Hub */}
           <section className="dashboard-section animate-fade-in" style={{
@@ -1126,12 +1082,12 @@ export default function PMDashboard() {
           </section>
 
           {/* Upcoming Birthdays Section */}
-          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.8s', cursor: 'pointer', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }} onClick={() => navigate('/birthdays')}>
+          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '0.8s', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Gift size={20} color="#ec4899" /> Upcoming Birthdays</h2>
               <button
                 className="btn-view-all btn-pink"
-                onClick={(e) => { e.stopPropagation(); navigate('/birthdays'); }}
+                onClick={() => navigate('/birthdays')}
               >
                 View All <ArrowRight size={14} />
               </button>
@@ -1169,12 +1125,12 @@ export default function PMDashboard() {
 
 
           {/* List of Holidays Section */}
-          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '1.0s', cursor: 'pointer', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }} onClick={() => navigate('/holidays')}>
+          <section className="dashboard-section animate-fade-in" style={{ animationDelay: '1.0s', width: winWidth < 600 ? '92%' : '100%', marginLeft: 'auto', marginRight: 'auto', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Umbrella size={20} color="#0d9488" /> List of Holidays</h2>
               <button
                 className="btn-view-all btn-teal"
-                onClick={(e) => { e.stopPropagation(); navigate('/holidays'); }}
+                onClick={() => navigate('/holidays')}
               >
                 View All <ArrowRight size={14} />
               </button>

@@ -72,10 +72,12 @@ export const API_ENDPOINTS = {
   BANK_IFSC: (code) => `${BASE_URL}/api/bank/ifsc/${code}`,
   SERVICE_CERTIFICATES_GET: `${BASE_URL}/api/service_certificate_requests`,
   SERVICE_CERTIFICATES_ALT: `${BASE_URL}/api/admin/service-certificates`,
-  SERVICE_CERTIFICATE_UPDATE: (id) => `${BASE_URL}/api/service_certificate_requests/${id}`,
+  SERVICE_CERTIFICATES_ADMIN: `${BASE_URL}/api/service-certificates`,
+  SERVICE_CERTIFICATE_UPDATE: (id) => `${BASE_URL}/api/service-certificates/${id}`,
   RESIGNATIONS_GET: `${BASE_URL}/api/admin/resignations`,
   RESIGNATION_UPDATE: (id) => `${BASE_URL}/api/admin/resignations/${id}/review`,
   RESIGNATION_REQUEST: `${BASE_URL}/api/resignations`,
+  EXIT_FORMALITIES: `${BASE_URL}/api/exit-formalities`,
   SERVICE_CERTIFICATE_REQUEST: `${BASE_URL}/api/service-certificates`,
   PAYSLIPS_GET: `${BASE_URL}/api/payslips`,
   REWARDS_HISTORY: `${BASE_URL}/api/admin/rewards/history`,
@@ -115,5 +117,6 @@ export const API_ENDPOINTS = {
   QUIZ_LEADERBOARD: `${BASE_URL}/api/fun-quizzes/leaderboard`,
   ONBOARDING_REMINDERS: `${BASE_URL}/api/admin/onboarding/reminders`,
   ONBOARDING_PROMOTE: `${BASE_URL}/api/admin/onboarding/promote`,
+  EXIT_FEEDBACK: `${BASE_URL}/api/exit-feedback`
 };
 

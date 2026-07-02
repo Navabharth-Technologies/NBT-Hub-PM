@@ -7,7 +7,7 @@ import { API_ENDPOINTS } from '../../config';
 import {
     ArrowLeft, FileText,
     Search, AlertCircle,
-    LogOut
+    LogOut, Calendar, Clock, CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -28,9 +28,12 @@ export default function ResignationManagement() {
         hr_remark: ''
     });
     const [updating, setUpdating] = useState(false);
+    const [noticePeriodCard, setNoticePeriodCard] = useState(false);
 
     useEffect(() => {
-        if (user?.role !== 'admin' && user?.role !== 'hr') {
+        const r = String(user?.role || user?.designation || '').toLowerCase();
+        const isAuthorized = r.includes('hr') || r.includes('human resource') || r.includes('admin') || r.includes('pm') || r.includes('project manager') || r.includes('ceo') || r.includes('manager') || r.includes('founder');
+        if (!isAuthorized) {
             navigate('/performance');
             return;
         }
@@ -126,9 +129,15 @@ export default function ResignationManagement() {
             if (res.ok) {
                 setSelectedRequest(null);
                 fetchRequests();
+                alert('Resignation review saved successfully! ✅');
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                console.error('Update Resignation Error:', errData);
+                alert(`Failed to save: ${errData.error || 'Server error'}`);
             }
         } catch (error) {
             console.error('Update Resignation Error:', error);
+            alert('Failed to save. Please check your connection.');
         } finally {
             setUpdating(false);
         }
@@ -449,7 +458,10 @@ export default function ResignationManagement() {
                                         {['Pending', 'Approved', 'Rejected'].map(status => (
                                             <button
                                                 key={status}
-                                                onClick={() => setUpdatePayload(prev => ({ ...prev, status }))}
+                                                onClick={() => {
+                                                    setUpdatePayload(prev => ({ ...prev, status }));
+                                                    if (status === 'Approved') setNoticePeriodCard(true);
+                                                }}
                                                 style={{
                                                     flex: 1, padding: '12px', borderRadius: '12px', border: '2px solid',
                                                     borderColor: updatePayload.status === status ? '#0f172a' : '#f1f5f9',
@@ -506,6 +518,171 @@ export default function ResignationManagement() {
                                 >
                                     {updating ? 'Saving...' : 'Submit Review'}
                                 </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Notice Period Card — centered overlay shown when Approved is selected */}
+            <AnimatePresence>
+                {noticePeriodCard && selectedRequest && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.55)',
+                        backdropFilter: 'blur(6px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        zIndex: 2000, padding: '20px'
+                    }}>
+                        <motion.div
+                            initial={{ scale: 0.85, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.85, opacity: 0, y: 20 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                            style={{
+                                background: 'white',
+                                borderRadius: '28px',
+                                width: '100%',
+                                maxWidth: '440px',
+                                boxShadow: '0 30px 80px rgba(0,0,0,0.25)',
+                                overflow: 'hidden',
+                                fontFamily: "'Outfit', sans-serif"
+                            }}
+                        >
+                            {/* Top accent bar */}
+                            <div style={{ height: '5px', background: 'linear-gradient(90deg, #10b981, #34d399)' }} />
+
+                            <div style={{ padding: '32px' }}>
+                                {/* Icon + Title */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
+                                    <div style={{
+                                        width: '52px', height: '52px', borderRadius: '16px',
+                                        background: '#f0fdf4', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        border: '1.5px solid #bbf7d0', flexShrink: 0
+                                    }}>
+                                        <CheckCircle2 size={26} color="#16a34a" />
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '17px', fontWeight: '950', color: '#0f172a', letterSpacing: '-0.3px' }}>Notice Period Details</div>
+                                        <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginTop: '2px' }}>Approval confirmation summary</div>
+                                    </div>
+                                </div>
+
+                                {/* Employee chip */}
+                                <div style={{
+                                    background: '#f8fafc', borderRadius: '12px',
+                                    padding: '10px 14px', marginBottom: '20px',
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                    border: '1px solid #e2e8f0'
+                                }}>
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '12px', fontWeight: '900', flexShrink: 0 }}>
+                                        {(selectedRequest.employee_name || 'U').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '13px', fontWeight: '900', color: '#0f172a' }}>{selectedRequest.employee_name || '—'}</div>
+                                        <div style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8' }}>ID: {selectedRequest.employee_id || '—'}</div>
+                                    </div>
+                                </div>
+
+                                {/* Reason */}
+                                <div style={{ marginBottom: '16px' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px' }}>Notice Period Reason</div>
+                                    <div style={{
+                                        background: '#fffbeb',
+                                        border: '1.5px solid #fef3c7',
+                                        borderRadius: '12px',
+                                        padding: '12px 14px',
+                                        fontSize: '13px',
+                                        fontWeight: '700',
+                                        color: '#92400e',
+                                        lineHeight: '1.5'
+                                    }}>
+                                        {selectedRequest.reason || selectedRequest.reason_for_leaving || '—'}
+                                    </div>
+                                </div>
+
+                                {/* Date Range */}
+                                <div style={{ marginBottom: '28px' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <Calendar size={12} />
+                                        Notice Period
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        {/* FROM */}
+                                        <div style={{
+                                            flex: 1, background: '#f0fdf4',
+                                            border: '1.5px solid #bbf7d0',
+                                            borderRadius: '14px', padding: '14px',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{ fontSize: '9px', fontWeight: '900', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>FROM</div>
+                                            <div style={{ fontSize: '14px', fontWeight: '950', color: '#0f172a' }}>
+                                                {selectedRequest.resignation_date
+                                                    ? new Date(selectedRequest.resignation_date).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+                                                    : selectedRequest.created_at
+                                                        ? new Date(selectedRequest.created_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+                                                        : 'N/A'}
+                                            </div>
+                                        </div>
+
+                                        {/* Arrow */}
+                                        <div style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                            <Clock size={18} />
+                                        </div>
+
+                                        {/* TO */}
+                                        <div style={{
+                                            flex: 1, background: '#fef2f2',
+                                            border: '1.5px solid #fecaca',
+                                            borderRadius: '14px', padding: '14px',
+                                            textAlign: 'center'
+                                        }}>
+                                            <div style={{ fontSize: '9px', fontWeight: '900', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>TO</div>
+                                            <div style={{ fontSize: '14px', fontWeight: '950', color: '#0f172a' }}>
+                                                {selectedRequest.last_working_day
+                                                    ? new Date(selectedRequest.last_working_day).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+                                                    : 'N/A'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Action buttons */}
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <button
+                                        onClick={() => {
+                                            setNoticePeriodCard(false);
+                                            setUpdatePayload(prev => ({ ...prev, status: 'Pending' }));
+                                        }}
+                                        style={{
+                                            flex: 1, padding: '13px',
+                                            borderRadius: '14px',
+                                            border: '1.5px solid #e2e8f0',
+                                            background: 'white',
+                                            color: '#64748b',
+                                            fontWeight: '800', fontSize: '13px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Go Back
+                                    </button>
+                                    <button
+                                        onClick={() => setNoticePeriodCard(false)}
+                                        style={{
+                                            flex: 1.5, padding: '13px',
+                                            borderRadius: '14px',
+                                            border: 'none',
+                                            background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                                            color: 'white',
+                                            fontWeight: '900', fontSize: '13px',
+                                            cursor: 'pointer',
+                                            boxShadow: '0 6px 20px rgba(22,163,74,0.3)'
+                                        }}
+                                    >
+                                        Confirm Approval
+                                    </button>
+                                </div>
                             </div>
                         </motion.div>
                     </div>

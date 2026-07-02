@@ -564,6 +564,32 @@ export default function AttendanceManagement() {
     }
   };
 
+  const fetchIPLocation = async () => {
+    try {
+      const response = await fetch('https://ipapi.co/json/');
+      if (response.ok) {
+        const data = await response.json();
+        if (data && (data.city || data.region)) {
+          return `${data.city || ''}, ${data.region || ''}, ${data.country_name || ''}`;
+        }
+      }
+    } catch (err) {
+      console.warn("ipapi.co failed, trying fallback...", err);
+    }
+    try {
+      const response = await fetch('https://geolocation-db.com/json/');
+      if (response.ok) {
+        const data = await response.json();
+        if (data && (data.city || data.state)) {
+          return `${data.city || ''}, ${data.state || ''}, ${data.country_name || ''}`;
+        }
+      }
+    } catch (err) {
+      console.warn("geolocation-db failed", err);
+    }
+    return null;
+  };
+
   const handleCheckIn = async () => {
     setIsProcessing(true);
     try {
@@ -580,7 +606,17 @@ export default function AttendanceManagement() {
         }
         setUserLocation(currentLoc);
         localStorage.setItem('savedUserLocation', currentLoc);
-      } catch (e) { console.log("Location refresh failed, using last known."); }
+      } catch (e) {
+        console.log("Location refresh failed, using last known / IP fallback.", e);
+        if (!currentLoc || currentLoc.includes("Permission Denied") || currentLoc.includes("blocked") || currentLoc === "Location required") {
+          const ipLoc = await fetchIPLocation();
+          if (ipLoc) {
+            currentLoc = ipLoc + " (IP Verified)";
+            setUserLocation(currentLoc);
+            localStorage.setItem('savedUserLocation', currentLoc);
+          }
+        }
+      }
 
       const res = await fetch((API_ENDPOINTS.ATTENDANCE_LOGS_GET || '').split('/api/')[0] + '/api/attendance_logs/punch', {
         method: 'POST',
@@ -628,7 +664,17 @@ export default function AttendanceManagement() {
         }
         setUserLocation(currentLoc);
         localStorage.setItem('savedUserLocation', currentLoc);
-      } catch (e) { console.log("Location refresh failed, using last known."); }
+      } catch (e) {
+        console.log("Location refresh failed, using last known / IP fallback.", e);
+        if (!currentLoc || currentLoc.includes("Permission Denied") || currentLoc.includes("blocked") || currentLoc === "Location required") {
+          const ipLoc = await fetchIPLocation();
+          if (ipLoc) {
+            currentLoc = ipLoc + " (IP Verified)";
+            setUserLocation(currentLoc);
+            localStorage.setItem('savedUserLocation', currentLoc);
+          }
+        }
+      }
 
       const res = await fetch((API_ENDPOINTS.ATTENDANCE_LOGS_GET || '').split('/api/')[0] + '/api/attendance_logs/punch', {
         method: 'POST',
@@ -664,7 +710,16 @@ export default function AttendanceManagement() {
 
   const getUserCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setUserLocation("Location blocked");
+      setIsLocating(true);
+      fetchIPLocation().then(ipLoc => {
+        if (ipLoc) {
+          setUserLocation(ipLoc + " (IP Verified)");
+          localStorage.setItem('savedUserLocation', ipLoc + " (IP Verified)");
+        } else {
+          setUserLocation("Location blocked");
+        }
+        setIsLocating(false);
+      });
       return;
     }
 
@@ -689,8 +744,14 @@ export default function AttendanceManagement() {
           setIsLocating(false);
         }
       },
-      () => {
-        setUserLocation("GPS Permission Denied");
+      async () => {
+        const ipLoc = await fetchIPLocation();
+        if (ipLoc) {
+          setUserLocation(ipLoc + " (IP Verified)");
+          localStorage.setItem('savedUserLocation', ipLoc + " (IP Verified)");
+        } else {
+          setUserLocation("GPS Permission Denied");
+        }
         setIsLocating(false);
       }
     );

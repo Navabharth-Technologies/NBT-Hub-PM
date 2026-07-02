@@ -110,7 +110,7 @@ export default function TeamManagement() {
 
         let activeUsers = [];
         let activeUserNames = new Set();
-        
+
         if (usersRes && usersRes.ok) {
           const userData = await usersRes.json();
           let parsedData = Array.isArray(userData) ? userData : (userData?.data || []);
@@ -860,7 +860,7 @@ export default function TeamManagement() {
                               <div style={{ fontSize: '9px', color: '#0369a1', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Team Leader</div>
                             </div>
                           </div>
-                          <div style={{ padding: '3px 6px', background: 'white', borderRadius: '6px', fontSize: '9px', fontWeight: '900', color: '#3863a8', border: '1px solid #bae6fd', flexShrink: 0, marginLeft: '8px' }}>ACTIVE</div>
+                          <div style={{ padding: '3px 6px', background: 'white', borderRadius: '6px', fontSize: '9px', fontWeight: '900', color: '#3863a8', border: '1px solid #bae6fd', flexShrink: 0, marginLeft: '8px' }}></div>
                         </div>
                       )}
                     </div>
@@ -1387,9 +1387,9 @@ export default function TeamManagement() {
             <div style={{ paddingRight: '4px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', opacity: 0.7 }}>UNIT MISSION NAME</label>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b', opacity: 0.7 }}>ADD TEAM NAME</label>
                   <input
-                    type="text" placeholder="e.g. Backend Sigma Hub"
+                    type="text" placeholder="Enter team name"
                     value={newTeam.teamName}
                     onChange={(e) => setNewTeam({ ...newTeam, teamName: e.target.value })}
                     style={{ width: '100%', padding: '10px 16px', borderRadius: '10px', border: '1.5px solid #eef2f6', background: '#f8fafc', fontWeight: '700', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
@@ -1413,7 +1413,7 @@ export default function TeamManagement() {
                   boxShadow: '0 8px 12px rgba(56,99,168,0.2)'
                 }}
               >
-                {saving ? 'Establishing...' : 'Confirm Unit'}
+                {saving ? 'Establishing...' : 'Confirm'}
               </button>
             </div>
           </div>
