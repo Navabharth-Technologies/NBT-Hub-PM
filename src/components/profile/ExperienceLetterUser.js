@@ -149,29 +149,36 @@ export default function ExperienceLetterUser() {
 
     const formatToDDMMYYYY = (dateStr) => {
         if (!dateStr) return 'N/A';
-        const s = String(dateStr).trim();
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-            return s;
+        let s = String(dateStr).trim();
+        if (s.includes('T')) {
+            s = s.split('T')[0];
         }
-        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-            const [y, m, d] = s.split('-');
-            return `${d}/${m}/${y}`;
+        if (s.includes(',')) {
+            s = s.split(',')[0];
         }
-        if (s.includes('/')) {
-            const parts = s.split('/');
-            if (parts.length === 3) {
-                if (parts[0].length === 4) {
-                    return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
-                }
-                return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
-            }
+        if (s.includes(' ')) {
+            s = s.split(' ')[0];
+        }
+        const matchDMY = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+        if (matchDMY) {
+            const day = matchDMY[1].padStart(2, '0');
+            const month = matchDMY[2].padStart(2, '0');
+            const year = matchDMY[3];
+            return `${day}-${month}-${year}`;
+        }
+        const matchYMD = s.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+        if (matchYMD) {
+            const year = matchYMD[1];
+            const month = matchYMD[2].padStart(2, '0');
+            const day = matchYMD[3].padStart(2, '0');
+            return `${day}-${month}-${year}`;
         }
         const d = new Date(s);
         if (!isNaN(d.getTime())) {
             const day = String(d.getDate()).padStart(2, '0');
             const month = String(d.getMonth() + 1).padStart(2, '0');
             const year = d.getFullYear();
-            return `${day}/${month}/${year}`;
+            return `${day}-${month}-${year}`;
         }
         return s;
     };
@@ -352,11 +359,14 @@ export default function ExperienceLetterUser() {
                 }
             }
 
+            const applyDate = req.created_at || req.created_date || req.timestamp || req.time_stamp;
+            const finalToDate = applyDate || lwd;
+
             await generateExperienceLetterPDF({
                 empName,
                 designation,
                 doj,
-                lwd,
+                lwd: finalToDate,
                 id: empId,
                 dateOfIssue: new Date().toLocaleDateString('en-GB')
             });

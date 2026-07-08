@@ -19,5 +19,14 @@ export const isActiveEmployee = (user) => {
 
 export const filterActiveEmployees = (employees) => {
     if (!Array.isArray(employees)) return [];
-    return employees.filter(isActiveEmployee);
+    return employees.filter(isActiveEmployee).map(emp => {
+        const empId = String(emp.employee_id || emp.id || '').trim();
+        if (empId === '202512') {
+            return { ...emp, name: 'Rakesh Gowda H N', user_name: 'Rakesh Gowda H N' };
+        }
+        if (empId === '202522') {
+            return { ...emp, name: 'Ravi Kumar B M', user_name: 'Ravi Kumar B M' };
+        }
+        return emp;
+    });
 };
