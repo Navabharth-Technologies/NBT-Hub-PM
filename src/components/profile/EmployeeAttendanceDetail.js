@@ -163,7 +163,15 @@ export default function EmployeeAttendanceDetail() {
         });
         const users = await userRes.json();
         const validUsers = Array.isArray(users) ? users : (users?.data || []);
-        const found = validUsers.find(u => String(u.id) === String(id) || String(u.Empcode) === String(id));
+        let found = validUsers.find(u => String(u.id) === String(id) || String(u.Empcode) === String(id));
+        if (found) {
+          const empId = String(found.employee_id || found.id || '').trim();
+          if (empId === '202512') {
+            found = { ...found, name: 'Rakesh Gowda H N', user_name: 'Rakesh Gowda H N' };
+          } else if (empId === '202522') {
+            found = { ...found, name: 'Ravi Kumar B M', user_name: 'Ravi Kumar B M' };
+          }
+        }
         setEmployee(found);
 
         // 2. Fetch INDIVIDUAL Attendance Logs with a very wide range to get ALL historical data

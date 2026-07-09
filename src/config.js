@@ -1,4 +1,4 @@
-export const BASE_URL = 'http://192.168.1.6:5000';
+export const BASE_URL = 'http://192.168.1.13:5000';
 export const TEAM_OFFICE_BASE_URL = '/api/etimeoffice';
 export const TEAM_OFFICE_AUTH_TOKEN = 'c3VwcG9ydDpzdXBwb3J0OnN1cHBvcnRAMTp0cnVl';
 
