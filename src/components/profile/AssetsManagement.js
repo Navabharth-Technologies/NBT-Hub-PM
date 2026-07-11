@@ -1466,6 +1466,9 @@ export default function AssetsManagement() {
             </div>
 
             <div style={{ padding: '40px', overflowY: 'auto', flex: 1, position: 'relative', background: '#fcfdfe' }}>
+              {editModal.isReadOnly && (
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 5, cursor: 'not-allowed' }} />
+              )}
               {editModal.isCertificate ? (
                 /* Premium Certificate Declaration UI */
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
@@ -1544,6 +1547,7 @@ export default function AssetsManagement() {
                               type="text"
                               placeholder="Enter ID"
                               value={form.employee_id}
+                              readOnly={editModal.isReadOnly}
                               onChange={(e) => {
                                 const newId = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
                                 const existingEmp = employees.find(emp => String(emp.id || emp.EmpID) === newId);
@@ -1558,7 +1562,18 @@ export default function AssetsManagement() {
                                   setForm({ ...form, employee_id: newId });
                                 }
                               }}
-                              style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #1e3a8a', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }}
+                              style={{
+                                width: '100%',
+                                padding: '14px 18px',
+                                borderRadius: '14px',
+                                border: editModal.isReadOnly ? '1.5px solid #cbd5e1' : '1.5px solid #1e3a8a',
+                                background: editModal.isReadOnly ? '#f1f5f9' : '#f8fafc',
+                                color: editModal.isReadOnly ? '#64748b' : '#000',
+                                fontWeight: '600',
+                                fontSize: '14px',
+                                outline: 'none',
+                                cursor: editModal.isReadOnly ? 'not-allowed' : 'text'
+                              }}
                             />
                           </div>
                           <div>
@@ -1567,14 +1582,44 @@ export default function AssetsManagement() {
                               type="text"
                               placeholder="Enter Name"
                               value={form.employee_name}
+                              readOnly={editModal.isReadOnly}
                               onChange={(e) => setForm({ ...form, employee_name: e.target.value.replace(/[^a-zA-Z\s]/g, '') })}
-                              style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #1e3a8a', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }}
+                              style={{
+                                width: '100%',
+                                padding: '14px 18px',
+                                borderRadius: '14px',
+                                border: editModal.isReadOnly ? '1.5px solid #cbd5e1' : '1.5px solid #1e3a8a',
+                                background: editModal.isReadOnly ? '#f1f5f9' : '#f8fafc',
+                                color: editModal.isReadOnly ? '#64748b' : '#000',
+                                fontWeight: '600',
+                                fontSize: '14px',
+                                outline: 'none',
+                                cursor: editModal.isReadOnly ? 'not-allowed' : 'text'
+                              }}
                             />
                           </div>
                         </div>
                         <div>
                           <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: '#000000', marginBottom: '8px', paddingLeft: '4px' }}>DESIGNATION</label>
-                          <input type="text" placeholder="e.g. Lead Software Engineer" value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value.replace(/[^a-zA-Z\s]/g, '') })} style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #1e3a8a', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none' }} />
+                          <input
+                            type="text"
+                            placeholder="e.g. Lead Software Engineer"
+                            value={form.designation}
+                            readOnly={editModal.isReadOnly}
+                            onChange={(e) => setForm({ ...form, designation: e.target.value.replace(/[^a-zA-Z\s]/g, '') })}
+                            style={{
+                              width: '100%',
+                              padding: '14px 18px',
+                              borderRadius: '14px',
+                              border: editModal.isReadOnly ? '1.5px solid #cbd5e1' : '1.5px solid #1e3a8a',
+                              background: editModal.isReadOnly ? '#f1f5f9' : '#f8fafc',
+                              color: editModal.isReadOnly ? '#64748b' : '#000',
+                              fontWeight: '600',
+                              fontSize: '14px',
+                              outline: 'none',
+                              cursor: editModal.isReadOnly ? 'not-allowed' : 'text'
+                            }}
+                          />
                         </div>
                       </>
                     )}
@@ -1589,7 +1634,26 @@ export default function AssetsManagement() {
                       <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: '800', color: '#000000', marginBottom: '8px', paddingLeft: '4px' }}>
                         <Laptop size={14} /> LAPTOP UNIT DETAILS
                       </label>
-                      <textarea placeholder="Model, Serial Number, OS details..." value={form.laptop_details} onChange={(e) => setForm({ ...form, laptop_details: e.target.value })} style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #1e3a8a', background: '#f8fafc', fontWeight: '600', fontSize: '14px', minHeight: '80px', resize: 'none', outline: 'none' }} />
+                      <textarea
+                        placeholder="Model, Serial Number, OS details..."
+                        value={form.laptop_details}
+                        readOnly={editModal.isReadOnly}
+                        onChange={(e) => setForm({ ...form, laptop_details: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '14px 18px',
+                          borderRadius: '14px',
+                          border: editModal.isReadOnly ? '1.5px solid #cbd5e1' : '1.5px solid #1e3a8a',
+                          background: editModal.isReadOnly ? '#f1f5f9' : '#f8fafc',
+                          color: editModal.isReadOnly ? '#64748b' : '#000',
+                          fontWeight: '600',
+                          fontSize: '14px',
+                          minHeight: '80px',
+                          resize: 'none',
+                          outline: 'none',
+                          cursor: editModal.isReadOnly ? 'not-allowed' : 'text'
+                        }}
+                      />
 
                       {/* Real-Time Database Indicator */}
                       {loadingCheck && <p style={{ fontSize: '11px', color: '#64748b', margin: '8px 0 0 4px', fontWeight: '750' }}>🔍 Checking existing catalog...</p>}
@@ -1633,14 +1697,39 @@ export default function AssetsManagement() {
                             min="0"
                             placeholder="Enter quantity"
                             value={form[item.key]}
+                            disabled={editModal.isReadOnly}
                             onChange={(e) => setForm({ ...form, [item.key]: e.target.value })}
-                            style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #1e3a8a', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                            style={{
+                              width: '100%',
+                              padding: '14px 18px',
+                              borderRadius: '14px',
+                              border: editModal.isReadOnly ? '1.5px solid #cbd5e1' : '1.5px solid #1e3a8a',
+                              background: editModal.isReadOnly ? '#f1f5f9' : '#f8fafc',
+                              color: editModal.isReadOnly ? '#64748b' : '#000',
+                              fontWeight: '600',
+                              fontSize: '14px',
+                              outline: 'none',
+                              boxSizing: 'border-box',
+                              cursor: editModal.isReadOnly ? 'not-allowed' : 'text'
+                            }}
                           />
                         ) : (
                           <select
                             value={form[item.key]}
+                            disabled={editModal.isReadOnly}
                             onChange={(e) => setForm({ ...form, [item.key]: e.target.value })}
-                            style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #1e3a8a', background: '#f8fafc', fontWeight: '600', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+                            style={{
+                              width: '100%',
+                              padding: '14px 18px',
+                              borderRadius: '14px',
+                              border: editModal.isReadOnly ? '1.5px solid #cbd5e1' : '1.5px solid #1e3a8a',
+                              background: editModal.isReadOnly ? '#f1f5f9' : '#f8fafc',
+                              color: editModal.isReadOnly ? '#64748b' : '#000',
+                              fontWeight: '600',
+                              fontSize: '14px',
+                              outline: 'none',
+                              cursor: editModal.isReadOnly ? 'not-allowed' : 'pointer'
+                            }}
                           >
                             <option value="" disabled>Select Option</option>
                             <option value="Yes">Yes</option>

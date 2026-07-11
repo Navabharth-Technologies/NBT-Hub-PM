@@ -276,15 +276,17 @@ export default function NewJoineeModule() {
       }
       filteredValue = digits;
     } else if (name === 'joining_date') {
-      if (value.length < (formData.joining_date || '').length) {
+      const targetEl = e.target;
+      const cursor = targetEl ? targetEl.selectionStart : null;
+      const oldVal = formData.joining_date || '';
+
+      if (value.length < oldVal.length) {
         filteredValue = value;
       } else {
-        let clean = value.replace(/[^0-9]/g, '');
-        clean = clean.slice(0, 8);
-
-        let dd = clean.slice(0, 2);
-        let mm = clean.slice(2, 4);
-        let yyyy = clean.slice(4, 8);
+        const parts = value.split('/');
+        let dd = (parts[0] || '').replace(/\D/g, '').slice(0, 2);
+        let mm = (parts[1] || '').replace(/\D/g, '').slice(0, 2);
+        let yyyy = (parts[2] || '').replace(/\D/g, '').slice(0, 4);
 
         if (dd.length === 2) {
           const ddVal = parseInt(dd, 10);
@@ -307,13 +309,29 @@ export default function NewJoineeModule() {
           if (yyyyVal > 2099) yyyy = '2099';
         }
 
-        const validatedDigits = dd + mm + yyyy;
-        let formatted = '';
-        if (validatedDigits.length > 0) formatted += validatedDigits.slice(0, 2);
-        if (validatedDigits.length > 2) formatted += '/' + validatedDigits.slice(2, 4);
-        if (validatedDigits.length > 4) formatted += '/' + validatedDigits.slice(4, 8);
+        let formatted = dd;
+        if (dd.length === 2 || parts.length > 1) {
+          formatted += '/' + mm;
+        }
+        if (mm.length === 2 || parts.length > 2) {
+          formatted += '/' + yyyy;
+        }
 
-        filteredValue = formatted;
+        filteredValue = formatted.slice(0, 10);
+      }
+
+      if (targetEl && cursor !== null) {
+        setTimeout(() => {
+          let newCursor = cursor;
+          if (filteredValue.length > oldVal.length) {
+            if (filteredValue[cursor - 1] === '/' && oldVal[cursor - 1] !== '/') {
+              newCursor = cursor + 1;
+            }
+          }
+          try {
+            targetEl.setSelectionRange(newCursor, newCursor);
+          } catch (err) {}
+        }, 0);
       }
     } else if (name === 'email_id') {
       const atIndex = value.indexOf('@');

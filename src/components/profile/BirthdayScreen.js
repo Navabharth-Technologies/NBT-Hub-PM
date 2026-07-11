@@ -54,7 +54,7 @@ export default function BirthdayScreen() {
 
             let formattedDate = 'N/A';
             if (!isNaN(dob.getTime())) {
-              formattedDate = dob.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: dob.getFullYear() > 1900 ? 'numeric' : undefined });
+              formattedDate = dob.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: dob.getFullYear() >= 1900 ? 'numeric' : undefined });
             }
 
             if (isNaN(dob.getTime())) {
@@ -77,7 +77,7 @@ export default function BirthdayScreen() {
               status,
               month: bMonth,
               day: bDay,
-              formattedDate: dob.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: bYear > 1900 ? 'numeric' : undefined })
+              formattedDate: dob.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: bYear >= 1900 ? 'numeric' : undefined })
             };
           });
 

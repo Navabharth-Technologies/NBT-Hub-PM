@@ -823,7 +823,6 @@ export default function AttendanceManagement() {
           const pIn = parseTimeStr(inTime);
           const pOut = parseTimeStr(outTime);
           let rawStatus = String(logsForEmp[0].status || logsForEmp[0].Status || 'PRESENT').trim().toUpperCase();
-          if (inTime !== '----' && inTime !== '--:--' && rawStatus === 'ABSENT') rawStatus = 'PRESENT';
 
           if (rawStatus === 'PRESENT' || rawStatus === 'P' || rawStatus === 'IN OFFICE' || rawStatus === 'IN-OFFICE') {
             displayStatus = 'In Office';
@@ -995,9 +994,11 @@ export default function AttendanceManagement() {
           const dayPunchInLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_IN' || (!log.remark?.includes('OUT') && !checkHasPunchOut(log))) || firstLog;
           const dayPunchOutLog = [...sortedDayLogs].reverse().find(log => log.remark === 'MANUAL_EDIT_OUT' || (checkHasPunchOut(log) && log.remark !== 'MANUAL_EDIT_IN'));
 
-          const extractTime = (log) => {
+          const extractTime = (log, isOut = false) => {
             if (!log) return '----';
-            const t = log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime || log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric;
+            const t = isOut
+              ? (log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric || log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime)
+              : (log.punch_time || log.in_time || log.INTime || log.PunchIn || log.PunchTime || log.out_time || log.OUTTime || log.PunchOut || log.punch_time_out || log.out_time_biometric);
             if (t && t !== '----' && t !== '--:--' && t !== '00:00' && t !== '00:00:00') return t;
             if (log.created_at) {
               const d = new Date(log.created_at);
@@ -1006,8 +1007,8 @@ export default function AttendanceManagement() {
             return '----';
           };
 
-          const punchIn = extractTime(dayPunchInLog);
-          const punchOut = (latestDate === todayStr && !dayPunchOutLog) ? '----' : (dayPunchOutLog ? extractTime(dayPunchOutLog) : '----');
+          const punchIn = extractTime(dayPunchInLog, false);
+          const punchOut = (latestDate === todayStr && !dayPunchOutLog) ? '----' : (dayPunchOutLog ? extractTime(dayPunchOutLog, true) : '----');
 
           const hasValidPunchIn = punchIn && punchIn !== '----' && punchIn !== '--:--' && punchIn !== '00:00';
           const status = String(firstLog?.status || firstLog?.Status || '').toUpperCase();
@@ -1504,7 +1505,6 @@ export default function AttendanceManagement() {
                 let displayStatus = 'Absent';
                 if (logsForEmp.length > 0) {
                   let rawStatus = String(logsForEmp[0].status || logsForEmp[0].Status || 'PRESENT').trim().toUpperCase();
-                  if (punchIn !== '----' && punchIn !== '--:--' && rawStatus === 'ABSENT') rawStatus = 'PRESENT';
                   if (rawStatus === 'PRESENT' || rawStatus === 'P' || rawStatus === 'IN OFFICE' || rawStatus === 'IN-OFFICE') displayStatus = 'In Office';
                   else if (rawStatus === 'ABSENT' || rawStatus === 'A') displayStatus = 'Absent';
                   else if (rawStatus === 'HALF_DAY' || rawStatus === 'HD' || rawStatus === 'HALF DAY') displayStatus = 'Half Day';

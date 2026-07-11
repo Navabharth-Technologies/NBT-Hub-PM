@@ -537,7 +537,7 @@ export default function PMDashboard() {
   // Dynamically calculate metrics from live data
   const dynamicMetrics = [
     { label: 'Total Teams', value: teams?.length || 'View', icon: <Icons.Teams size={winWidth < 768 ? 18 : 24} />, color: '#6366f1', trend: 'Live', trendUp: true, path: '/teams' },
-    { label: 'Total Employess', value: employeesCount || 'View', icon: <Icons.Employees size={winWidth < 768 ? 18 : 24} />, color: '#8b5cf6', trend: 'Live', trendUp: true, path: '/employees' },
+    { label: 'Total Employees', value: employeesCount || 'View', icon: <Icons.Employees size={winWidth < 768 ? 18 : 24} />, color: '#8b5cf6', trend: 'Live', trendUp: true, path: '/employees' },
     { label: 'New Joinee', value: newJoineesCount || 'View', icon: <Sparkles size={winWidth < 768 ? 18 : 24} />, color: '#0ea5e9', trend: 'This Month', trendUp: true, path: '/new-joinees' },
     { label: 'Suggestions', value: 'Manage', icon: <Lightbulb size={winWidth < 768 ? 18 : 24} />, color: '#315A9E', trend: 'Active', trendUp: true, path: '/suggestions' },
 
