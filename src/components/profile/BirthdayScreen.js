@@ -29,41 +29,68 @@ export default function BirthdayScreen() {
           const currentMonth = today.getMonth();
           const currentDay = today.getDate();
 
-          const parseDate = (dateStr) => {
-            if (!dateStr) return new Date(NaN);
-            if (dateStr instanceof Date) return dateStr;
+          const parseDobAgnostic = (dateStr) => {
+            if (!dateStr) return null;
             const s = String(dateStr).trim();
-            // Handle ISO YYYY-MM-DD
-            if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s);
-            // Handle DD-MM-YYYY or DD/MM/YYYY
-            if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(s)) {
-              const [d, m, y] = s.split(/[-/]/);
-              return new Date(y, m - 1, d);
+            
+            let day, month, year;
+            
+            const dmyMatch = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+            if (dmyMatch) {
+              day = parseInt(dmyMatch[1], 10);
+              month = parseInt(dmyMatch[2], 10);
+              year = parseInt(dmyMatch[3], 10);
+            } else {
+              const ymdMatch = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+              if (ymdMatch) {
+                year = parseInt(ymdMatch[1], 10);
+                month = parseInt(ymdMatch[2], 10);
+                day = parseInt(ymdMatch[3], 10);
+              } else {
+                const dmMatch = s.match(/^(\d{1,2})[-/](\d{1,2})$/);
+                if (dmMatch) {
+                  day = parseInt(dmMatch[1], 10);
+                  month = parseInt(dmMatch[2], 10);
+                  year = new Date().getFullYear();
+                }
+              }
             }
-            // Handle DD-MM or DD/MM
-            if (/^\d{1,2}[-/]\d{1,2}$/.test(s)) {
-              const [d, m] = s.split(/[-/]/);
-              return new Date(new Date().getFullYear(), m - 1, d);
+
+            if (!day || !month) {
+              const d = new Date(dateStr);
+              if (isNaN(d.getTime())) return null;
+              if (s.includes('T') || s.includes('-')) {
+                day = d.getUTCDate();
+                month = d.getUTCMonth() + 1;
+                year = d.getUTCFullYear();
+              } else {
+                day = d.getDate();
+                month = d.getMonth() + 1;
+                year = d.getFullYear();
+              }
             }
-            return new Date(s);
+
+            if (day && month) {
+              const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+              ];
+              const monthName = monthNames[month - 1];
+              const formattedDate = year && year >= 1900 ? `${day} ${monthName} ${year}` : `${day} ${monthName}`;
+              return { day, month: month - 1, year, formattedDate };
+            }
+            return null;
           };
 
           const processed = list.map(emp => {
-            const rawDob = emp.dob || emp.birthday || emp.date || emp.date_of_birth || emp.birthday_date;
-            const dob = parseDate(rawDob);
+            const rawDob = emp.birthday || emp.date_of_birth || emp.dob || emp.dateOfBirth || emp.birthday_date || emp.date;
+            const dobInfo = parseDobAgnostic(rawDob);
 
-            let formattedDate = 'N/A';
-            if (!isNaN(dob.getTime())) {
-              formattedDate = dob.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: dob.getFullYear() >= 1900 ? 'numeric' : undefined });
-            }
-
-            if (isNaN(dob.getTime())) {
+            if (!dobInfo) {
               return { ...emp, status: 'Upcoming', formattedDate: 'N/A' };
             }
 
-            const bMonth = dob.getMonth();
-            const bDay = dob.getDate();
-            const bYear = dob.getFullYear();
+            const { day: bDay, month: bMonth, year: bYear, formattedDate } = dobInfo;
 
             let status = 'Upcoming';
             if (bMonth < currentMonth || (bMonth === currentMonth && bDay < currentDay)) {
@@ -77,11 +104,22 @@ export default function BirthdayScreen() {
               status,
               month: bMonth,
               day: bDay,
-              formattedDate: dob.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: bYear >= 1900 ? 'numeric' : undefined })
+              formattedDate
             };
           });
 
-          const sorted = processed.sort((a, b) => {
+          // Ensure uniqueness of employee IDs/names to prevent duplicate cards
+          const uniqueProcessed = [];
+          const seen = new Set();
+          for (const emp of processed) {
+            const uid = emp.id || emp.employee_id || emp.EmpID || emp.name;
+            if (!seen.has(uid)) {
+              seen.add(uid);
+              uniqueProcessed.push(emp);
+            }
+          }
+
+          const sorted = uniqueProcessed.sort((a, b) => {
             if (a.month !== b.month) return a.month - b.month;
             return a.day - b.day;
           });

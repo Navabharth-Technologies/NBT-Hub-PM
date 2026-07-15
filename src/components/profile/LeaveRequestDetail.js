@@ -305,7 +305,7 @@ export default function LeaveRequestDetail() {
             masterEmp?.profile_picture || masterEmp?.profile_pic || masterEmp?.ProfilePic ||
             found.profile_pic || found.profilePic || found.profile_picture;
 
-          const resolvedRole = (freshProfile?.designation || freshProfile?.role || masterEmp?.role || masterEmp?.designation || found.user_role || found.designation || found.role || 'Employee').toUpperCase();
+          const resolvedRole = (freshProfile?.base_designation || freshProfile?.base_role || masterEmp?.role || freshProfile?.designation || masterEmp?.designation || found.designation || found.user_role || found.role || 'Employee').toUpperCase();
           const isLeadRequester = resolvedRole.includes('LEAD') || resolvedRole.includes('MANAGER') || resolvedRole.includes('CEO') || resolvedRole.includes('ADMIN');
 
           const empTeam = masterEmp?.team || found.team || '';
@@ -339,13 +339,14 @@ export default function LeaveRequestDetail() {
           ) : null;
           const ceoName = ceoUser ? (ceoUser.name || ceoUser.full_name) : 'Dinesh';
 
-          // Resolve HR name dynamically from employee ID or Role
+          // Resolve HR name strictly by role — matches backend isHRRole logic (human resource / hr only)
           const hrUser = Array.isArray(empData) ? empData.find(e => {
-            const eid = String(e.employee_id || e.id || e.EmpID || '').trim();
-            const r = String(e.role || e.designation || '').toUpperCase();
-            return eid === '202515' || r === 'HR' || r.includes('HUMAN RESOURCE');
+            const eid = String(e.id || e.employee_id || e.EmpID || '').trim();
+            const r = String(e.role || '').toLowerCase().trim();
+            return eid === '202522' || r === 'hr' || r.includes('human resource');
           }) : null;
-          const dynamicHRName = hrUser ? (hrUser.name || hrUser.full_name) : '';
+          // Append role tag so HR name is unambiguous (e.g. "Ashwini B G (HR)")
+          const dynamicHRName = hrUser ? `${hrUser.name || hrUser.full_name} (HR)` : 'HR Team';
 
           // Resolve RM for Project Managers (Dinesh)
           let dynamicPMName = found.l3_name || 'Anish V N';
@@ -406,7 +407,7 @@ export default function LeaveRequestDetail() {
             profile_pic: finalPic,
             approvals: {
               l1: { name: dynamicLeadName, status: l1Status, stage: 'L1' },
-              l2: { name: isHRRequester ? ceoName : (found.l2_name || dynamicHRName), status: l2Status, stage: 'L2' },
+              l2: { name: isHRRequester ? ceoName : dynamicHRName, status: l2Status, stage: 'L2' },
               l3: { name: dynamicPMName, status: l3Status, stage: 'L3' }
             }
           });

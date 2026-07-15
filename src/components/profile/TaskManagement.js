@@ -930,19 +930,9 @@ export default function TaskManagement() {
               <div style={{ padding: '30px 35px', background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)', color: 'white', position: 'relative' }}>
                 <button onClick={() => setSelectedAssignee(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.15)', border: 'none', width: '32px', height: '32px', borderRadius: '50%', color: 'white', cursor: 'pointer', fontSize: '16px' }}>✕</button>
                 <div style={{ position: 'absolute', top: '15px', right: '55px' }}>
-                  <button onClick={() => setShowExportMenu(!showExportMenu)} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    Export <span style={{ fontSize: '10px' }}>▼</span>
+                  <button onClick={() => handleExportModalPDF(empTasks, selectedAssignee, { total: empTasks.length, completed, inProgress, pending, avgProgress })} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '8px', color: 'white', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    📄 Export as PDF
                   </button>
-                  {showExportMenu && (
-                    <div style={{ position: 'absolute', top: '35px', right: '0', background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', zIndex: 100, minWidth: '170px', border: '1px solid #e2e8f0' }}>
-                      <button onClick={() => handleExportModalPDF(empTasks, selectedAssignee, { total: empTasks.length, completed, inProgress, pending, avgProgress })} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px 16px', border: 'none', background: 'white', color: '#1e293b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: '700', borderBottom: '1px solid #f1f5f9' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'white'}>
-                        <span style={{ fontSize: '16px' }}>📄</span> Export as PDF
-                      </button>
-                      <button onClick={() => handleExportModalExcel(empTasks, selectedAssignee)} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px 16px', border: 'none', background: 'white', color: '#1e293b', textAlign: 'left', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }} onMouseOver={e => e.currentTarget.style.background = '#f8fafc'} onMouseOut={e => e.currentTarget.style.background = 'white'}>
-                        <span style={{ fontSize: '16px' }}>📊</span> Export as Excel
-                      </button>
-                    </div>
-                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
                   <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '900' }}>

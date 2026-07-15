@@ -43,6 +43,7 @@ export const API_ENDPOINTS = {
   SPRINT_UPDATES_GET: `${BASE_URL}/api/sprint-updates`,
   SUBORDINATES_GET: `${BASE_URL}/api/subordinates`,
   ALERTS: `${BASE_URL}/api/notifications`,
+  NOTIFICATIONS: `${BASE_URL}/api/notifications`,
   USERS: `${BASE_URL}/api/users`,
   BIRTHDAYS: `${BASE_URL}/api/birthdays`,
   SUPPORT_TICKETS: `${BASE_URL}/api/support-tickets`,

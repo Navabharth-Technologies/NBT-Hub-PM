@@ -14,6 +14,15 @@ import AppFooter from './AppFooter';
 
 const LOCKED_FIELDS = ['age'];
 
+const VALID_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 
+  'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 
+  'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Orissa', 'Punjab', 
+  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 
+  'West Bengal', 'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu', 
+  'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
+];
+
 const SECTIONS = [
   {
     id: 'primary',
@@ -664,13 +673,18 @@ export default function PersonalInfo({ onBack }) {
 
 
     if (key === 'personal_email' || key === 'official_email' || key === 'personal_email_id' || key === 'official_email_id') {
-      const atIndex = value.indexOf('@');
+      const lowerVal = value.toLowerCase();
+      const atIndex = lowerVal.indexOf('@');
       if (atIndex !== -1) {
-        const domainPart = value.substring(atIndex + 1);
+        const domainPart = lowerVal.substring(atIndex + 1);
         const comIndex = domainPart.indexOf('.com');
         if (comIndex !== -1) {
-          sanitizedValue = value.substring(0, atIndex + 1 + comIndex + 4);
+          sanitizedValue = lowerVal.substring(0, atIndex + 1 + comIndex + 4);
+        } else {
+          sanitizedValue = lowerVal;
         }
+      } else {
+        sanitizedValue = lowerVal;
       }
     }
 
@@ -890,6 +904,14 @@ export default function PersonalInfo({ onBack }) {
       setToast({ type: 'error', msg: `Please enter a valid Official Email (e.g., name@company.com)` });
       return;
     }
+    if (activeSectionFields.includes('state') && form.state) {
+      const stateClean = form.state.trim().toLowerCase();
+      const isValid = VALID_STATES.some(s => s.toLowerCase() === stateClean);
+      if (!isValid) {
+        setToast({ type: 'error', msg: 'Please enter a valid Indian state name (e.g., Karnataka, Tamil Nadu, Maharashtra)' });
+        return;
+      }
+    }
     if (activeSectionFields.includes('contact_no') && form.contact_no) {
       if (form.contact_no.length !== 10) {
         setToast({ type: 'error', msg: `Contact No must be 10 digits${getSection('contact_no')}` });
@@ -986,6 +1008,11 @@ export default function PersonalInfo({ onBack }) {
 
       if (!payload.personal_email && (form.personal_email || form.personal_email_id)) payload.personal_email = form.personal_email || form.personal_email_id;
       if (!payload.personal_email_id && (form.personal_email || form.personal_email_id)) payload.personal_email_id = form.personal_email || form.personal_email_id;
+
+      if (payload.personal_email) payload.personal_email = payload.personal_email.toLowerCase();
+      if (payload.personal_email_id) payload.personal_email_id = payload.personal_email_id.toLowerCase();
+      if (payload.official_email) payload.official_email = payload.official_email.toLowerCase();
+      if (payload.official_email_id) payload.official_email_id = payload.official_email_id.toLowerCase();
 
       // Send ft_pt with all common backend column name variants
       if (payload.ft_pt) {

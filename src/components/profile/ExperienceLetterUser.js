@@ -683,7 +683,7 @@ export default function ExperienceLetterUser() {
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                     {requests.map((req, i) => {
-                                        const isEitherApproved = (req.status || '').toLowerCase() === 'approved' || (req.pm_status || '').toLowerCase() === 'approved';
+                                        const isEitherApproved = (req.status || '').toLowerCase() === 'approved' || (req.status || '').toLowerCase() === 'completed';
                                         const downloadUrl = req.certificate_url || req.file_path;
                                         return (
                                             <div key={i}

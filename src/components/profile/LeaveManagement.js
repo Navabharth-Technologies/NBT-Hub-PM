@@ -34,7 +34,7 @@ export default function LeaveManagement() {
       const rName = String(req.employee_name || req.name || req.full_name || '').toLowerCase().trim();
       return eName && rName && eName === rName;
     });
-    const reqRole = String(emp?.designation || emp?.role || req.user_role || req.role || '').toUpperCase();
+    const reqRole = String(emp?.role || emp?.designation || req.role || req.user_role || '').toUpperCase();
     const isPMReq = reqRole.includes('PROJECT MANAGER') || reqRole === 'PM';
 
     if (isPMReq) return 'APPROVED';

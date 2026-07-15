@@ -110,8 +110,7 @@ export default function AppHeader() {
       </div>
 
       <div 
-        onClick={handleLogoClick}
-        style={{ ...styles.center, cursor: 'pointer' }}
+        style={styles.center}
       >
         <div style={{
           display: 'flex',
