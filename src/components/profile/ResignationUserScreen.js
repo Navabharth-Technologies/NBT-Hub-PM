@@ -1703,7 +1703,7 @@ export default function ResignationUserScreen({ defaultTab = 'submit' }) {
                                     REJECT
                                 </button>
                                 {(() => {
-                                    const isApproved = selectedRequest.status === 'Approved';
+                                    const isApproved = selectedRequest.pm_status === 'Approved';
                                     const btnDisabled = updating || isActionsDisabled || isApproved;
                                     return (
                                         <button
