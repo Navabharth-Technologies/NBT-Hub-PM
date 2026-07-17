@@ -1083,84 +1083,93 @@ export default function ExperienceLetterManagement() {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '5px' }}>
                                         {(() => {
                                             const isEitherApproved = (selectedRequest.status || '').toLowerCase() === 'approved' || (selectedRequest.pm_status || '').toLowerCase() === 'approved';
-                                            return isEitherApproved ? (
-                                            <button
-                                                onClick={() => handleDownloadCertificate(selectedRequest)}
-                                                disabled={downloadingId === selectedRequest.id}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '14px',
-                                                    borderRadius: '14px',
-                                                    border: 'none',
-                                                    background: '#0f172a',
-                                                    color: 'white',
-                                                    fontWeight: '800',
-                                                    fontSize: '16px',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '10px',
-                                                    boxShadow: '0 4px 12px rgba(15, 23, 42, 0.25)',
-                                                    transition: '0.2s'
-                                                }}
-                                            >
-                                                {downloadingId === selectedRequest.id ? (
-                                                    <>
-                                                        <div style={{ width: '18px', height: '18px', border: '3px solid white', borderTop: '3px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                                                        Generating PDF...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Download size={18} /> Download official PDF
-                                                    </>
-                                                )}
-                                            </button>
-                                        ) : (
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                                                <button
-                                                    onClick={() => handleSaveWithStatus('Approved')}
-                                                    disabled={updating}
-                                                    style={{
-                                                        background: '#10b981',
-                                                        color: 'white',
-                                                        padding: '14px',
-                                                        borderRadius: '14px',
-                                                        border: 'none',
-                                                        fontWeight: '800',
-                                                        fontSize: '16px',
-                                                        cursor: 'pointer',
-                                                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
-                                                        transition: '0.2s'
-                                                    }}
-                                                    onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                                                    onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
-                                                >
-                                                    {updating ? 'Saving...' : 'Approve'}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleSaveWithStatus('Rejected')}
-                                                    disabled={updating}
-                                                    style={{
-                                                        background: '#ef4444',
-                                                        color: 'white',
-                                                        padding: '14px',
-                                                        borderRadius: '14px',
-                                                        border: 'none',
-                                                        fontWeight: '800',
-                                                        fontSize: '16px',
-                                                        cursor: 'pointer',
-                                                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
-                                                        transition: '0.2s'
-                                                    }}
-                                                    onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                                                    onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
-                                                >
-                                                    {updating ? 'Saving...' : 'Reject'}
-                                                </button>
-                                            </div>
-                                        );
-                                    })()}
+                                            const showDecideButtons = (selectedRequest.pm_status || '').toLowerCase() !== 'approved' && (selectedRequest.pm_status || '').toLowerCase() !== 'rejected';
+                                            
+                                            return (
+                                                <>
+                                                    {isEitherApproved && (
+                                                        <button
+                                                            onClick={() => handleDownloadCertificate(selectedRequest)}
+                                                            disabled={downloadingId === selectedRequest.id}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '14px',
+                                                                borderRadius: '14px',
+                                                                border: 'none',
+                                                                background: '#0f172a',
+                                                                color: 'white',
+                                                                fontWeight: '800',
+                                                                fontSize: '16px',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: '10px',
+                                                                boxShadow: '0 4px 12px rgba(15, 23, 42, 0.25)',
+                                                                transition: '0.2s',
+                                                                marginBottom: showDecideButtons ? '8px' : '0'
+                                                            }}
+                                                        >
+                                                            {downloadingId === selectedRequest.id ? (
+                                                                <>
+                                                                    <div style={{ width: '18px', height: '18px', border: '3px solid white', borderTop: '3px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                                                    Generating PDF...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Download size={18} /> Download official PDF
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    )}
+
+                                                    {showDecideButtons && (
+                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                                            <button
+                                                                onClick={() => handleSaveWithStatus('Approved')}
+                                                                disabled={updating}
+                                                                style={{
+                                                                    background: '#10b981',
+                                                                    color: 'white',
+                                                                    padding: '14px',
+                                                                    borderRadius: '14px',
+                                                                    border: 'none',
+                                                                    fontWeight: '800',
+                                                                    fontSize: '16px',
+                                                                    cursor: 'pointer',
+                                                                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
+                                                                    transition: '0.2s'
+                                                                }}
+                                                                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                                                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                                            >
+                                                                {updating ? 'Saving...' : 'Approve'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleSaveWithStatus('Rejected')}
+                                                                disabled={updating}
+                                                                style={{
+                                                                    background: '#ef4444',
+                                                                    color: 'white',
+                                                                    padding: '14px',
+                                                                    borderRadius: '14px',
+                                                                    border: 'none',
+                                                                    fontWeight: '800',
+                                                                    fontSize: '16px',
+                                                                    cursor: 'pointer',
+                                                                    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+                                                                    transition: '0.2s'
+                                                                }}
+                                                                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                                                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                                            >
+                                                                {updating ? 'Saving...' : 'Reject'}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             </motion.div>
