@@ -217,8 +217,9 @@ const TaskNotification = ({ onOpenTask }) => {
       const aggregatedMap = new Map();
       const parseDate = (d) => {
         if (!d) return new Date();
-        const clean = String(d).replace(/Z|GMT.*|[+-]\d{2}:?\d{2}$/gi, '').trim();
-        const r = new Date(clean);
+        if (d instanceof Date) return d;
+        // Parse directly — preserves timezone info (Z = UTC) so local time shows correctly
+        const r = new Date(d);
         return isNaN(r.getTime()) ? new Date() : r;
       };
       const savedRead = JSON.parse(localStorage.getItem(`read_hr_notifs_${uid}`) || '[]');
