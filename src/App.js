@@ -140,6 +140,7 @@ function AppRoutes() {
       <Route path="/resignation-history" element={<ResignationUserScreen defaultTab="history" />} />
       <Route path="/service-certificates" element={<ExperienceLetterUser />} />
       <Route path="/admin/certificates" element={<ExperienceLetterManagement />} />
+      <Route path="/experience-letter-requests" element={<ExperienceLetterManagement />} />
       <Route path="/payslips" element={<PayslipScreen />} />
       <Route path="/salary-statements" element={<SalaryStatements />} />
       <Route path="/personal-info" element={<PersonalInfo onBack={() => window.history.back()} />} />

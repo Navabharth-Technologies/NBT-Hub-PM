@@ -544,7 +544,7 @@ export default function PMDashboard() {
     { label: 'Assets Management', value: 'Manage', icon: <Package size={winWidth < 768 ? 18 : 24} />, color: '#f59e0b', trend: 'New', trendUp: true, path: '/assets' },
     { label: 'Fun and Quiz', value: 'Play', icon: <Icons.Quiz size={winWidth < 768 ? 18 : 24} />, color: '#ec4899', trend: 'Active', trendUp: true, path: '/quiz' },
     { label: 'Resignation History', value: 'View', icon: <Clock size={winWidth < 768 ? 18 : 24} />, color: '#ef4444', trend: 'Live', trendUp: true, path: '/resignation-history' },
-    { label: 'Experience Letter Request', value: 'View', icon: <Clock size={winWidth < 768 ? 18 : 24} />, color: '#3b82f6', trend: 'Live', trendUp: true, path: '/admin/certificates' }
+    { label: 'Experience Letter Request', value: 'View', icon: <Clock size={winWidth < 768 ? 18 : 24} />, color: '#3b82f6', trend: 'Live', trendUp: true, path: '/experience-letter-requests' }
   ];
 
   // Helper for PDF encoding

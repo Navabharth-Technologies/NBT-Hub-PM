@@ -131,7 +131,7 @@ const TaskNotification = ({ onOpenTask }) => {
       if (path.includes('/tickets') && combine.includes('ticket')) return false;
       if (path.includes('/threads') && combine.includes('thread')) return false;
       if (path.includes('/resignation-history') && combine.includes('resignation')) return false;
-      if (path.includes('/admin/certificates') && combine.includes('certificate')) return false;
+      if ((path.includes('/admin/certificates') || path.includes('/experience-letter-requests')) && combine.includes('certificate')) return false;
       if (path.includes('/job-applications') && combine.includes('job')) return false;
       if (path.includes('/assets') && combine.includes('asset')) return false;
       if (path.includes('/performance') && combine.includes('performance')) return false;
@@ -288,7 +288,7 @@ const TaskNotification = ({ onOpenTask }) => {
     if (notif.isBlockedAlert)                                               path = '/new-joinees#blocked';
     else if (desc.includes('leave')  || title.includes('leave'))            path = '/leaves';
     else if (desc.includes('resignation') || title.includes('resignation')) path = '/resignation-history';
-    else if (desc.includes('certificate') || title.includes('certificate')) path = '/admin/certificates';
+    else if (desc.includes('certificate') || title.includes('certificate')) path = '/experience-letter-requests';
     else if (desc.includes('job')    || title.includes('job'))              path = '/job-applications';
     else if (desc.includes('ticket') || title.includes('ticket'))           path = '/tickets';
     else if (desc.includes('asset')  || title.includes('asset'))            path = '/assets';
