@@ -217,9 +217,11 @@ const TaskNotification = ({ onOpenTask }) => {
       const aggregatedMap = new Map();
       const parseDate = (d) => {
         if (!d) return new Date();
-        if (d instanceof Date) return d;
-        // Parse directly — preserves timezone info (Z = UTC) so local time shows correctly
-        const r = new Date(d);
+        // The MSSQL driver adds +5:30 to IST-stored datetimes, producing an ISO UTC string
+        // where the UTC components are actually the correct IST time. Strip timezone
+        // marker and parse as local to display the correct IST time.
+        const clean = String(d).replace(/Z|GMT.*|[+-]\d{2}:?\d{2}$/gi, '').trim();
+        const r = new Date(clean);
         return isNaN(r.getTime()) ? new Date() : r;
       };
       const savedRead = JSON.parse(localStorage.getItem(`read_hr_notifs_${uid}`) || '[]');
