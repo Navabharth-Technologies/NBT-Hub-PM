@@ -259,16 +259,36 @@ export default function LeaveRequestDetail() {
     const fetchDetail = async () => {
       try {
         setLoading(true);
-        const [res, resEmp] = await Promise.all([
-          fetch(API_ENDPOINTS.LEAVES_GET, { headers: { 'Authorization': `Bearer ${user?.token || localStorage.getItem('token')}` } }),
-          fetch(API_ENDPOINTS.USERS, { headers: { 'Authorization': `Bearer ${user?.token || localStorage.getItem('token')}` } })
+        const token = user?.token || localStorage.getItem('token');
+        let found = null;
+        let empData = [];
+
+        // Fetch direct leave and users list in parallel
+        const [directRes, resEmp] = await Promise.all([
+          fetch(`${BASE_URL}/api/leaves/${id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }).catch(() => null),
+          fetch(API_ENDPOINTS.USERS, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }).catch(() => null)
         ]);
 
-        const responseData = await res.json();
-        const empData = await resEmp.json().catch(() => []);
+        if (directRes && directRes.ok) {
+          found = await directRes.json().catch(() => null);
+        }
+        if (resEmp && resEmp.ok) {
+          empData = await resEmp.json().catch(() => []);
+        }
 
-        const allLeaves = Array.isArray(responseData) ? responseData : (responseData?.data || responseData?.all || responseData?.leaves || responseData?.requests || []);
-        const found = (allLeaves || []).find(l => l && String(l.id || l.ID) === String(id));
+        if (!found) {
+          // Fallback to comprehensive list-based search if direct fetch failed
+          const res = await fetch(API_ENDPOINTS.LEAVES_GET, { headers: { 'Authorization': `Bearer ${token}` } }).catch(() => null);
+          if (res && res.ok) {
+            const responseData = await res.json().catch(() => null);
+            const allLeaves = Array.isArray(responseData) ? responseData : (responseData?.data || responseData?.all || responseData?.leaves || responseData?.requests || []);
+            found = (allLeaves || []).find(l => l && String(l.id || l.ID) === String(id));
+          }
+        }
 
         // Helper to pick best status from multiple fields
         const pickStatus = (...fields) => {
