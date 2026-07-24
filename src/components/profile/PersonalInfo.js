@@ -800,6 +800,16 @@ export default function PersonalInfo({ onBack }) {
       updates.dob = sanitizedValue;
       updates.date_of_birth = sanitizedValue;
     }
+    // Net Salary validation — warn in real-time if net > gross
+    if ((key === 'salary' || key === 'gross_salary_a') && updates) {
+      const newSalary = key === 'salary' ? sanitizedValue : form.salary;
+      const newGross = key === 'gross_salary_a' ? sanitizedValue : form.gross_salary_a;
+      const netVal = parseFloat(newSalary || '0');
+      const grossVal = parseFloat(newGross || '0');
+      if (grossVal > 0 && netVal > grossVal) {
+        setToast({ type: 'error', msg: 'Net Salary cannot exceed Gross Salary (' + newGross + ')' });
+      }
+    }
     setForm(prev => ({ ...prev, ...updates }));
   };
 
@@ -941,6 +951,15 @@ export default function PersonalInfo({ onBack }) {
     if (activeSectionFields.includes('pan_number') && form.pan_number) {
       if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(form.pan_number)) {
         setToast({ type: 'error', msg: `Please enter a valid PAN Number (e.g. ABCDE1234F)${getSection('pan_number')}` });
+        return;
+      }
+    }
+    // Net Salary cannot exceed Gross Salary
+    if (activeSectionFields.includes('salary') && form.salary && form.gross_salary_a) {
+      const netVal = parseFloat(form.salary || '0');
+      const grossVal = parseFloat(form.gross_salary_a || '0');
+      if (grossVal > 0 && netVal > grossVal) {
+        setToast({ type: 'error', msg: `Net Salary (₹${form.salary}) cannot exceed Gross Salary (₹${form.gross_salary_a})` });
         return;
       }
     }

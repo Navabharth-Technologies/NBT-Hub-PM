@@ -24,7 +24,9 @@ export default function ThreadScreen() {
     const [mediaType, setMediaType] = useState(null); 
     const [mediaPreview, setMediaPreview] = useState(null);
     const [uploading, setUploading] = useState(false);
-    const fileInputRef = useRef(null);
+    const [uploadType, setUploadType] = useState('photo');
+    const photoFileInputRef = useRef(null);
+    const videoFileInputRef = useRef(null);
 
     const [activeEmojiPicker, setActiveEmojiPicker] = useState(null);
     const [activeCommentPost, setActiveCommentPost] = useState(null);
@@ -183,11 +185,47 @@ export default function ThreadScreen() {
         } catch (err) { console.error("Profiles error:", err); }
     };
 
-    const handleFileSelect = (e) => {
+    const handlePhotoSelect = (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
+        const isVideo = file.type.startsWith('video') || ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv'].some(ext => file.name.toLowerCase().endsWith(ext));
+        const allowedImageTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+
+        if (isVideo || (!allowedImageTypes.includes(file.type) && !allowedExtensions.includes(fileExtension))) {
+            alert('Photo Upload accepts only image formats (.jpg, .jpeg, .png, .webp). Video files are not allowed.');
+            e.target.value = '';
+            return;
+        }
+
+        setUploadType('photo');
         setMediaFile(file);
-        setMediaType(file.type.startsWith('video') ? 'video' : 'image');
+        setMediaType('image');
+        const reader = new FileReader();
+        reader.onloadend = () => setMediaPreview(reader.result);
+        reader.readAsDataURL(file);
+    };
+
+    const handleVideoSelect = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const isImage = file.type.startsWith('image') || ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp', '.svg'].some(ext => file.name.toLowerCase().endsWith(ext));
+        const allowedVideoTypes = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/x-m4v', 'video/mov', 'video/avi', 'video/mkv'];
+        const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        const allowedExtensions = ['.mp4', '.mov', '.avi', '.mkv'];
+
+        if (isImage || (!allowedVideoTypes.includes(file.type) && !allowedExtensions.includes(fileExtension))) {
+            alert('Video Upload accepts only video formats (.mp4, .mov, .avi, .mkv). Image files are not allowed.');
+            e.target.value = '';
+            return;
+        }
+
+        setUploadType('video');
+        setMediaFile(file);
+        setMediaType('video');
         const reader = new FileReader();
         reader.onloadend = () => setMediaPreview(reader.result);
         reader.readAsDataURL(file);
@@ -196,6 +234,32 @@ export default function ThreadScreen() {
     const handleEditFileSelect = (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
+        const post = threads.find(p => p.id === editingPostId);
+        const hasMedia = post ? !!(post.media_url || post.mediaUrl || post.media || post.image) : false;
+        if (hasMedia) {
+            const isPostVideo = post.media_type === 'video' || post.mediaType === 'video' || (post.media_url || '').toLowerCase().includes('video') || (post.media_url || '').toLowerCase().endsWith('.mp4');
+            if (isPostVideo) {
+                const allowedVideoTypes = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/x-m4v', 'video/mov', 'video/avi', 'video/mkv'];
+                const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                const allowedExtensions = ['.mp4', '.mov', '.avi', '.mkv'];
+                if (!allowedVideoTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+                    alert('Please upload a valid video file (.mp4, .mov, .avi, .mkv)');
+                    e.target.value = '';
+                    return;
+                }
+            } else {
+                const allowedImageTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+                const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+                if (!allowedImageTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+                    alert('Please upload a valid image file (.jpg, .jpeg, .png, .webp)');
+                    e.target.value = '';
+                    return;
+                }
+            }
+        }
+
         setEditMediaFile(file);
         setEditMediaType(file.type.startsWith('video') ? 'video' : 'image');
         const reader = new FileReader();
@@ -487,11 +551,23 @@ export default function ThreadScreen() {
             <div style={{ ...styles.card, borderTop: '5px solid #FDB913' }}>
                 <textarea style={styles.mainInput} placeholder="Share an update with the team..." value={newPost} onChange={e => setNewPost(e.target.value)} />
 
-                <input type="file" ref={fileInputRef} onChange={handleFileSelect} hidden accept="image/*,video/*" />
+                <input type="file" ref={photoFileInputRef} onChange={handlePhotoSelect} hidden accept="image/jpeg,image/png,image/jpg,image/webp" />
+                <input type="file" ref={videoFileInputRef} onChange={handleVideoSelect} hidden accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/x-m4v,video/mov,video/avi,video/mkv" />
+                <input type="file" ref={editFileInputRef} onChange={handleEditFileSelect} hidden accept="image/jpeg,image/png,image/jpg,image/webp,video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/x-m4v,video/mov,video/avi,video/mkv" />
                 
                 <div style={{ display: 'flex', gap: '15px', marginTop: '15px', alignItems: 'center' }}>
-                    <div style={styles.mediaBtn} onClick={() => fileInputRef.current?.click()}><ImageIcon size={18} color="#10b981" /> Photo</div>
-                    <div style={styles.mediaBtn} onClick={() => fileInputRef.current?.click()}><Film size={18} color="#ef4444" /> Video</div>
+                    <div style={styles.mediaBtn} onClick={() => {
+                        if (photoFileInputRef.current) {
+                            photoFileInputRef.current.value = '';
+                            photoFileInputRef.current.click();
+                        }
+                    }}><ImageIcon size={18} color="#10b981" /> Photo</div>
+                    <div style={styles.mediaBtn} onClick={() => {
+                        if (videoFileInputRef.current) {
+                            videoFileInputRef.current.value = '';
+                            videoFileInputRef.current.click();
+                        }
+                    }}><Film size={18} color="#ef4444" /> Video</div>
                     <div style={{ flex: 1 }} />
                     <button style={styles.postBtn} onClick={handlePost} disabled={uploading}>
                         {uploading ? 'Publishing...' : 'Publish Thread'}
@@ -703,7 +779,7 @@ export default function ThreadScreen() {
                             const src = mediaPath.startsWith('data:') ? mediaPath : `${BASE_URL}${mediaPath}`;
                             return (
                                 <div style={{ ...styles.postMedia, cursor: 'pointer' }} onClick={() => setFullscreenMedia({ src, type: isVideo ? 'video' : 'image' })}>
-                                    {isVideo ? ( <video src={src} style={{ width: '100%', height: 'auto', maxHeight: '500px', objectFit: 'contain', display: 'block' }} /> ) : ( <img src={src} style={{ width: '100%', height: 'auto', maxHeight: '500px', objectFit: 'contain', display: 'block' }} /> )}
+                                    {isVideo ? ( <video src={src} controls style={{ width: '100%', height: 'auto', maxHeight: '500px', objectFit: 'contain', display: 'block' }} /> ) : ( <img src={src} style={{ width: '100%', height: 'auto', maxHeight: '500px', objectFit: 'contain', display: 'block' }} /> )}
                                     <div style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(0,0,0,0.5)', padding: '6px 12px', borderRadius: '20px', color: 'white', fontSize: '11px', fontWeight: 'bold' }}>
                                         {isVideo ? '▶ Video' : '⛶ Fullscreen'}
                                     </div>

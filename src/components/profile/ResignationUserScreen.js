@@ -681,8 +681,8 @@ export default function ResignationUserScreen({ defaultTab = 'submit' }) {
                             <img src={logo} alt="Watermark" style={{ width: '500px' }} />
                         </div>
 
-                        <div style={{ marginBottom: '40px', position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                            <img src={logo} alt="Company Logo" style={{ height: '80px', marginBottom: '10px' }} />
+                        <div style={{ marginBottom: '40px', position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', textAlign: 'center' }}>
+                            <img src={logo} alt="Company Logo" style={{ height: '90px', marginBottom: '15px', objectFit: 'contain' }} />
                             <div style={{ fontSize: '14px', fontWeight: '900', color: '#1b2559', letterSpacing: '2px', marginTop: '5px' }}>
                                 NAVABHARATH TECHNOLOGIES
                             </div>
@@ -1054,8 +1054,8 @@ export default function ResignationUserScreen({ defaultTab = 'submit' }) {
                             <img src={logo} alt="Watermark" style={{ width: '500px' }} />
                         </div>
 
-                        <div style={{ marginBottom: '40px', position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                            <img src={logo} alt="Company Logo" style={{ height: '80px', marginBottom: '10px' }} />
+                        <div style={{ marginBottom: '40px', position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', textAlign: 'center' }}>
+                            <img src={logo} alt="Company Logo" style={{ height: '90px', marginBottom: '15px', objectFit: 'contain' }} />
                             <div style={{ fontSize: '14px', fontWeight: '900', color: '#1b2559', letterSpacing: '2px', marginTop: '5px' }}>
                                 NAVABHARATH TECHNOLOGIES
                             </div>
@@ -1450,7 +1450,7 @@ export default function ResignationUserScreen({ defaultTab = 'submit' }) {
 
                                             {/* Exit Formalities Button */}
                                             {(() => {
-                                                const isApproved = req.status === 'Approved' || req.pm_status === 'Approved';
+                                                const isApproved = (req.status || '').toUpperCase() === 'APPROVED' || (req.pm_status || '').toUpperCase() === 'APPROVED';
                                                 let isEnabled = false;
 
                                                 if (isApproved) {
@@ -1647,16 +1647,16 @@ export default function ResignationUserScreen({ defaultTab = 'submit' }) {
                                             <div style={{ background: 'white', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                                                 <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '8px' }}><strong style={{ color: '#0f172a', fontWeight: '950' }}>HR APPROVAL</strong> (<strong style={{ color: '#0f172a', fontWeight: '950' }}>{String(selectedRequest.hr_name || '').toUpperCase()}</strong>)</div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <span style={{ fontSize: '14px', fontWeight: '800', color: selectedRequest.hr_status === 'Approved' ? '#16a34a' : selectedRequest.hr_status === 'Rejected' ? '#dc2626' : '#d97706' }}>
-                                                        {selectedRequest.hr_status || 'Pending'}
+                                                    <span style={{ fontSize: '14px', fontWeight: '800', color: (selectedRequest.hr_status || '').toUpperCase() === 'APPROVED' ? '#16a34a' : (selectedRequest.hr_status || '').toUpperCase() === 'REJECTED' ? '#dc2626' : '#d97706' }}>
+                                                        {selectedRequest.hr_status ? (selectedRequest.hr_status.charAt(0).toUpperCase() + selectedRequest.hr_status.slice(1).toLowerCase()) : 'Pending'}
                                                     </span>
                                                 </div>
                                             </div>
                                             <div style={{ background: 'white', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                                                 <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '8px' }}><strong style={{ color: '#0f172a', fontWeight: '950' }}>PM APPROVAL</strong> (<strong style={{ color: '#0f172a', fontWeight: '950' }}>{String(selectedRequest.pm_name || '').toUpperCase()}</strong>)</div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <span style={{ fontSize: '14px', fontWeight: '800', color: selectedRequest.pm_status === 'Approved' ? '#16a34a' : selectedRequest.pm_status === 'Rejected' ? '#dc2626' : '#d97706' }}>
-                                                        {selectedRequest.pm_status || 'Pending'}
+                                                    <span style={{ fontSize: '14px', fontWeight: '800', color: (selectedRequest.pm_status || '').toUpperCase() === 'APPROVED' ? '#16a34a' : (selectedRequest.pm_status || '').toUpperCase() === 'REJECTED' ? '#dc2626' : '#d97706' }}>
+                                                        {selectedRequest.pm_status ? (selectedRequest.pm_status.charAt(0).toUpperCase() + selectedRequest.pm_status.slice(1).toLowerCase()) : 'Pending'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -1703,7 +1703,7 @@ export default function ResignationUserScreen({ defaultTab = 'submit' }) {
                                     REJECT
                                 </button>
                                 {(() => {
-                                    const isApproved = selectedRequest.pm_status === 'Approved';
+                                    const isApproved = (selectedRequest.pm_status || '').toUpperCase() === 'APPROVED';
                                     const btnDisabled = updating || isActionsDisabled || isApproved;
                                     return (
                                         <button

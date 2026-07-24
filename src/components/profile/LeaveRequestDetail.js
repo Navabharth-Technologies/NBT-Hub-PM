@@ -325,7 +325,7 @@ export default function LeaveRequestDetail() {
             masterEmp?.profile_picture || masterEmp?.profile_pic || masterEmp?.ProfilePic ||
             found.profile_pic || found.profilePic || found.profile_picture;
 
-          const resolvedRole = (freshProfile?.base_designation || freshProfile?.base_role || masterEmp?.role || freshProfile?.designation || masterEmp?.designation || found.designation || found.user_role || found.role || 'Employee').toUpperCase();
+          const resolvedRole = (freshProfile?.designation || freshProfile?.base_role || masterEmp?.role || freshProfile?.base_designation || masterEmp?.designation || found.designation || found.user_role || found.role || 'Employee').toUpperCase();
           const isLeadRequester = resolvedRole.includes('LEAD') || resolvedRole.includes('MANAGER') || resolvedRole.includes('CEO') || resolvedRole.includes('ADMIN');
 
           const empTeam = masterEmp?.team || found.team || '';

@@ -82,6 +82,7 @@ const TaskNotification = ({ onOpenTask }) => {
   const [hasUnread, setHasUnread] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [expandedNotifs, setExpandedNotifs] = useState(new Set());
   const [dismissedIds, setDismissedIds] = useState(() => {
     const saved = localStorage.getItem('nbt_dismissed_notifs');
     return saved ? new Set(JSON.parse(saved)) : new Set();
@@ -400,9 +401,42 @@ const TaskNotification = ({ onOpenTask }) => {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h4 style={{ margin: 0, fontSize: '13px', fontWeight: notif.isNew ? '900' : '500', color: notif.isNew ? '#0B1E3F' : '#64748b', marginBottom: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{notif.title}</h4>
-                      {!(notif.type === 'quiz' || String(notif.title || '').toLowerCase().includes('quiz')) && (
-                        <p style={{ margin: 0, fontSize: '11.5px', color: notif.isNew ? '#3B5998' : '#94a3b8', fontWeight: notif.isNew ? '700' : '400', lineHeight: '1.4', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{notif.description}</p>
-                      )}
+                      {!(notif.type === 'quiz' || String(notif.title || '').toLowerCase().includes('quiz')) && (() => {
+                        const isExpanded = expandedNotifs.has(notif.id);
+                        return (
+                          <>
+                            <p style={{ margin: 0, fontSize: '11.5px', color: notif.isNew ? '#3B5998' : '#94a3b8', fontWeight: notif.isNew ? '700' : '400', lineHeight: '1.4', display: isExpanded ? 'block' : '-webkit-box', WebkitLineClamp: isExpanded ? 'none' : 2, WebkitBoxOrient: 'vertical', overflow: isExpanded ? 'visible' : 'hidden', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{notif.description}</p>
+                            {notif.description && notif.description.length > 30 && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedNotifs(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(notif.id)) next.delete(notif.id);
+                                    else next.add(notif.id);
+                                    return next;
+                                  });
+                                }}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#3B5998',
+                                  cursor: 'pointer',
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  padding: '3px 0 0 0',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  textTransform: 'none',
+                                  textDecoration: 'underline'
+                                }}
+                              >
+                                {isExpanded ? 'View Less' : 'View More'}
+                              </button>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     {/* Unread Blue dot and Delete Button */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>

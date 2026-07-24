@@ -72,7 +72,7 @@ export default function RaiseTicket() {
     const handleResize = () => setWinWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     setDepartments(['Service letter', 'Payroll issues', 'payslips', 'ID card issues', 'Technical', 'HR']);
-    setDepartment('Service letter');
+    setDepartment('');
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -109,6 +109,7 @@ export default function RaiseTicket() {
   };
 
   const handleSubmit = async () => {
+    if (!department) return showModal("Please select Category", "error");
     if (!subject.trim() || !description.trim()) return showModal("Please fill all fields", "error");
     setLoading(true);
     try {
@@ -136,6 +137,7 @@ export default function RaiseTicket() {
       if (resp.ok) {
         setSubject('');
         setDescription('');
+        setDepartment('');
         fetchTickets();
         showModal("Ticket submitted successfully!", "success");
       } else {
@@ -378,6 +380,7 @@ export default function RaiseTicket() {
 
           <label style={s.label}>Department / Category</label>
           <select style={s.selectInput} value={department} onChange={e => setDepartment(e.target.value)}>
+            <option value="">Please select Category</option>
             {departments.map(d => (
               <option key={d} value={d}>{d}</option>
             ))}
