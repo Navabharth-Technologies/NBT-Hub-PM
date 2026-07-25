@@ -21,7 +21,61 @@ export default function AlertScreen() {
           headers: { 'Authorization': `Bearer ${user.token}` }
         });
         if (res.ok) {
-          setAlerts(await res.json());
+          const rawAlerts = await res.json();
+          const formattedAlerts = (Array.isArray(rawAlerts) ? rawAlerts : []).map(item => {
+            const rawMsg = item.message || item.content || item.description || '';
+            const lowerMsg = rawMsg.toLowerCase();
+            
+            // Format dynamic title
+            let title = item.title;
+            if (!title) {
+              if (lowerMsg.includes('completed') || lowerMsg.includes('status to completed')) {
+                title = 'Task Completed';
+              } else if (lowerMsg.includes('updated') || lowerMsg.includes('status to')) {
+                title = 'Task Updated';
+              } else if (lowerMsg.includes('assigned')) {
+                title = 'New Task Assigned';
+              } else {
+                title = 'System Alert';
+              }
+            }
+
+            // Determine type for color/icon styling
+            let alertType = 'info';
+            if (lowerMsg.includes('completed') || lowerMsg.includes('approved') || lowerMsg.includes('success')) {
+              alertType = 'success';
+            } else if (lowerMsg.includes('rejected') || lowerMsg.includes('failed') || lowerMsg.includes('critical')) {
+              alertType = 'critical';
+            } else if (lowerMsg.includes('warning') || lowerMsg.includes('pending') || lowerMsg.includes('attention')) {
+              alertType = 'warning';
+            }
+
+            // Format date/time
+            let time = '';
+            const rawDate = item.created_at || item.createdAt;
+            if (rawDate) {
+              const d = new Date(rawDate);
+              if (!isNaN(d.getTime())) {
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                let hours = d.getHours();
+                const minutes = String(d.getMinutes()).padStart(2, '0');
+                const ampm = hours >= 12 ? 'pm' : 'am';
+                hours = hours % 12 || 12;
+                time = `${day}/${month}/${year} at ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+              }
+            }
+
+            return {
+              id: item.id,
+              title: title,
+              time: time,
+              desc: rawMsg,
+              type: alertType
+            };
+          });
+          setAlerts(formattedAlerts);
         }
       } catch (err) {
         console.error('Alert fetch error:', err);
