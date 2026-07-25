@@ -40,6 +40,10 @@ export default function ExitFormalities() {
     const [authMessage, setAuthMessage] = useState('');
     const [showPrintDropdown, setShowPrintDropdown] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [feedback, setFeedback] = useState({ show: false, message: '', type: 'success' });
+    const showFeedback = (msg, type = 'success') => {
+        setFeedback({ show: true, message: msg, type });
+    };
     const [formData, setFormData] = useState({
         // Section 1: Employee Details
         employeeName: '',
@@ -435,21 +439,21 @@ export default function ExitFormalities() {
                     formData: formData,
                     timestamp: Date.now()
                 }));
-                alert('Exit formalities form saved successfully to database! ✅');
+                showFeedback('Exit formalities form saved successfully to database! ✅', 'success');
             } else {
                 const errData = await response.json();
                 console.error('Error saving to database:', errData);
                 if (errData.error && errData.error.includes('only submit your own')) {
-                    alert('Progress saved locally! 💾\n\nNote: The exit formalities record must be initiated by HR or the employee first before it can sync to the database.');
+                    showFeedback('Progress saved locally! 💾\n\nNote: The exit formalities record must be initiated by HR or the employee first before it can sync to the database.', 'warning');
                 } else if (errData.error && errData.error.includes('Unauthorized to modify')) {
-                    alert("Progress saved locally! 💾\n\nNote: You are not authorized to modify this employee's exit formalities in the database. Only their direct reporting manager, HR, or CEO can save modifications to the database.");
+                    showFeedback("Progress saved locally! 💾\n\nNote: You are not authorized to modify this employee's exit formalities in the database. Only their direct reporting manager, HR, or CEO can save modifications to the database.", 'warning');
                 } else {
-                    alert(`Form progress saved locally, but database sync failed: ${errData.error || 'Server error'}`);
+                    showFeedback(`Form progress saved locally, but database sync failed: ${errData.error || 'Server error'}`, 'error');
                 }
             }
         } catch (error) {
             console.error('Error saving exit formalities', error);
-            alert('Form progress saved locally! (Backend database offline/unreachable) 💾');
+            showFeedback('Form progress saved locally! (Backend database offline/unreachable) 💾', 'warning');
         }
     };
 
@@ -472,7 +476,7 @@ export default function ExitFormalities() {
             setIsExporting(true);
             const pages = document.querySelectorAll('.a4-page');
             if (pages.length === 0) {
-                alert('No document pages found to export.');
+                showFeedback('No document pages found to export.', 'error');
                 return;
             }
 
@@ -524,7 +528,7 @@ export default function ExitFormalities() {
             pdf.save(`Exit_Formalities_${formData.employeeName || 'Employee'}.pdf`);
         } catch (error) {
             console.error('PDF generation error:', error);
-            alert('Failed to export PDF.');
+            showFeedback('Failed to export PDF.', 'error');
         } finally {
             setIsExporting(false);
         }
@@ -560,7 +564,7 @@ export default function ExitFormalities() {
                     <button
                         onClick={() => {
                             if (!isAuthorized) {
-                                alert("You are not authorized to edit this form. Only the employee's direct reporting manager, HR, or CEO can edit exit formalities.");
+                                showFeedback("You are not authorized to edit this form. Only the employee's direct reporting manager, HR, or CEO can edit exit formalities.", 'error');
                                 return;
                             }
                             setIsEditable(!isEditable);
@@ -586,7 +590,7 @@ export default function ExitFormalities() {
                     <button
                         onClick={() => {
                             if (!isAuthorized) {
-                                alert("You are not authorized to save this form.");
+                                showFeedback("You are not authorized to save this form.", 'error');
                                 return;
                             }
                             handleSave();
@@ -1230,6 +1234,43 @@ export default function ExitFormalities() {
                     </div>
                 </div>
             </div>
+
+            {feedback.show && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(5px)',
+                    zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        backgroundColor: 'white', padding: '24px 32px', borderRadius: '24px',
+                        boxShadow: '0 20px 50px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', gap: '12px', border: `1.5px solid ${feedback.type === 'success' ? '#4ade80' : feedback.type === 'warning' ? '#f59e0b' : '#ef4444'}`,
+                        maxWidth: '360px', width: '100%', boxSizing: 'border-box'
+                    }}>
+                        <div style={{
+                            width: '48px', height: '48px', borderRadius: '50%',
+                            backgroundColor: feedback.type === 'success' ? '#ecfdf5' : feedback.type === 'warning' ? '#fffbeb' : '#fef2f2',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px'
+                        }}>
+                            {feedback.type === 'success' ? (
+                                <span style={{ color: '#10b981', fontSize: '24px', fontWeight: 'bold' }}>✓</span>
+                            ) : feedback.type === 'warning' ? (
+                                <span style={{ color: '#d97706', fontSize: '24px', fontWeight: 'bold' }}>!</span>
+                            ) : (
+                                <span style={{ color: '#ef4444', fontSize: '24px', fontWeight: 'bold' }}>✕</span>
+                            )}
+                        </div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a', textAlign: 'center', lineHeight: '1.5', whiteSpace: 'pre-line' }}>{feedback.message}</div>
+                        <button
+                            onClick={() => setFeedback({ show: false, message: '', type: 'success' })}
+                            style={{ padding: '10px 24px', borderRadius: '12px', border: 'none', backgroundColor: '#0f172a', color: 'white', fontWeight: '800', cursor: 'pointer', marginTop: '8px', fontSize: '13px' }}
+                        >
+                            Got it
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Print Media Queries CSS */}
             <style>{`
