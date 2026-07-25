@@ -400,7 +400,7 @@ const TaskNotification = ({ onOpenTask }) => {
                       {notif.type === 'quiz' ? <Zap size={17} fill="white" /> : notif.type === 'award' ? <Award size={17} /> : <Bell size={17} fill={notif.isNew ? 'white' : 'transparent'} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <h4 style={{ margin: 0, fontSize: '13px', fontWeight: notif.isNew ? '900' : '500', color: notif.isNew ? '#0B1E3F' : '#64748b', marginBottom: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{notif.title}</h4>
+                      <h4 style={{ margin: 0, fontSize: '13px', fontWeight: notif.isNew ? '900' : '500', color: notif.isNew ? '#0B1E3F' : '#64748b', marginBottom: '3px' }}>{notif.title}</h4>
                       {!(notif.type === 'quiz' || String(notif.title || '').toLowerCase().includes('quiz')) && (() => {
                         const isExpanded = expandedNotifs.has(notif.id);
                         return (
