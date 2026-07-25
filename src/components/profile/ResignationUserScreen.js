@@ -1331,6 +1331,7 @@ export default function ResignationUserScreen({ defaultTab = 'submit' }) {
                                 <label style={{ display: 'block', fontSize: '11px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>Proposed Last Working Day <span style={{ color: '#ef4444' }}>*</span></label>
                                 <input
                                     type="date"
+                                    min={formData.resignation_date}
                                     value={formData.last_working_day}
                                     onChange={(e) => setFormData({ ...formData, last_working_day: e.target.value })}
                                     style={{ width: '100%', padding: '14px 18px', borderRadius: '14px', border: '1.5px solid #cbd5e1', background: 'white', color: '#0f172a', fontWeight: '700', fontSize: '14px', cursor: 'pointer', outline: 'none', boxSizing: 'border-box', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
