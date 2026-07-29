@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }) => {
         }
         return { success: true };
       } else {
-        return { success: false, error: data.error || 'Authentication Failed' };
+        return { success: false, error: data.message || data.error || 'Authentication Failed' };
       }
 
     } catch (error) {
