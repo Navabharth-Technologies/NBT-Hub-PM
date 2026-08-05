@@ -72,7 +72,7 @@ const SECTIONS = [
       { key: 'personal_email_id', label: 'Personal Email ID', type: 'text', required: true },
       { key: 'present_address', label: 'Present Address', type: 'text', required: true },
       { key: 'permanent_address', label: 'Permanent Address', type: 'text', required: true },
-      { key: 'state', label: 'State', type: 'text' },
+      { key: 'state', label: 'State', type: 'select', options: VALID_STATES },
     ]
   },
   {

@@ -40,7 +40,7 @@ export default function AppHeader() {
           const currentId = user?.employee_id || user?.id || user?.empId || '20251';
           const target = users.find(u => String(u.employee_id || u.id || u.empId) === String(currentId));
           if (target) {
-            setFetchedRole(target.Role || target.role);
+            setFetchedRole(target.designation || target.Role || target.role);
           }
         }
       } catch (err) {
